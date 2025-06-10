@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=0.5, user-scalable=yes, shrink-to-fit=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes, shrink-to-fit=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Isle of Adventure</title>
@@ -17,11 +17,11 @@
             min-height: 100vh;
             font-family: Arial, sans-serif;
             overflow: auto;
+            /* Mobile optimizations */
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
-            -webkit-overflow-scrolling: touch;
         }
         #game-container {
             border: 2px solid #333;
@@ -31,51 +31,35 @@
             position: relative;
         }
         
-        /* Mobile-specific touch handling */
+        /* Mobile specific adjustments */
         @media (max-width: 768px) {
             body {
+                padding: 0;
+                margin: 0;
                 overflow: auto;
                 touch-action: pan-x pan-y pinch-zoom;
                 -webkit-overflow-scrolling: touch;
                 overscroll-behavior: contain;
-                padding: 0;
-                margin: 0;
             }
             
             #game-container {
-                touch-action: pan-x pan-y pinch-zoom;
-                overflow: auto;
                 border: 1px solid #333;
                 border-radius: 6px;
-                margin: 10px;
                 max-width: 100vw;
                 max-height: none;
                 width: 100%;
+                margin: 10px;
+                touch-action: pan-x pan-y pinch-zoom;
+                overflow: auto;
             }
             
-            /* Critical: Allow zoom/scroll on game canvas */
+            /* Allow zoom/scroll on game canvas */
             #game-container canvas {
                 touch-action: auto !important;
                 pointer-events: auto;
-                max-width: 100% !important;
-                height: auto !important;
             }
         }
         
-        /* Allow the game to be larger than viewport for zooming */
-        canvas {
-            display: block;
-            margin: 0 auto;
-            touch-action: auto !important;
-            pointer-events: auto !important;
-            -webkit-touch-callout: default !important;
-            -webkit-user-select: auto !important;
-        }
-        
-        /* Ensure parent containers don't block gestures */
-        #game-container, #game-container > * {
-            touch-action: auto !important;
-        }
         #inventory {
             position: absolute;
             top: 10px;
@@ -125,67 +109,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
-    
-    <!-- Additional mobile touch gesture handling -->
-    <script>
-        // Comprehensive mobile touch gesture enablement
-        document.addEventListener('DOMContentLoaded', function() {
-            // Force enable zoom and scroll on all elements
-            function enableTouchGestures() {
-                const elements = ['body', '#game-container', 'canvas'];
-                elements.forEach(selector => {
-                    const el = document.querySelector(selector);
-                    if (el) {
-                        el.style.touchAction = 'auto';
-                        el.style.pointerEvents = 'auto';
-                        el.style.webkitTouchCallout = 'default';
-                        el.style.webkitUserSelect = 'auto';
-                    }
-                });
-                
-                // Specifically target Phaser canvas after it's created
-                const observer = new MutationObserver(function(mutations) {
-                    mutations.forEach(function(mutation) {
-                        if (mutation.addedNodes) {
-                            mutation.addedNodes.forEach(function(node) {
-                                if (node.tagName === 'CANVAS') {
-                                    node.style.touchAction = 'auto';
-                                    node.style.pointerEvents = 'auto';
-                                    console.log('Canvas found and configured for mobile touch');
-                                }
-                            });
-                        }
-                    });
-                });
-                
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                });
-            }
-            
-            enableTouchGestures();
-            
-            // Re-apply after a delay to ensure Phaser has created the canvas
-            setTimeout(enableTouchGestures, 1000);
-            setTimeout(enableTouchGestures, 3000);
-        });
-    </script>
-    <script>
-        // Prevent default gesture events while allowing pinch-zoom and scrolling
-        document.addEventListener('gesturestart', function(e) {
-            // Allow pinch gestures but prevent other gestures
-            if (e.scale !== 1) {
-                return; // Allow pinch
-            }
-            e.preventDefault();
-        });
-        
-        // Enhanced touch handling for mobile devices
-        if ('ontouchstart' in window) {
-            console.log('Mobile device detected, enhanced touch handling enabled');
-        }
-    </script>
     
     <script type="module" src="js/Game.js"></script>
 </body>
