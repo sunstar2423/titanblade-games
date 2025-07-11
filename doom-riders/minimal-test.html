@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doom Riders - Minimal Test</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            background: #000; 
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #game-container { 
+            border: 2px solid red;
+            width: 1024px;
+            height: 768px;
+            margin: 20px auto;
+            background: #111;
+        }
+        #status {
+            background: #222;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Doom Riders - Minimal Test</h1>
+    
+    <div id="status">
+        <div id="log">Initializing...</div>
+    </div>
+    
+    <div id="game-container"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += '<br>' + message;
+            console.log(message);
+        }
+        
+        log('Starting minimal test...');
+        
+        // Minimal Phaser configuration
+        const config = {
+            type: Phaser.AUTO,
+            width: 1024,
+            height: 768,
+            parent: 'game-container',
+            backgroundColor: '#87CEEB',
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+        
+        let player;
+        let cursors;
+        
+        function preload() {
+            log('Preload function called');
+            
+            // Create simple colored rectangle textures
+            this.add.graphics()
+                .fillStyle(0xFF6600)
+                .fillRect(0, 0, 50, 25)
+                .generateTexture('player', 50, 25)
+                .destroy();
+                
+            log('Simple textures created');
+        }
+        
+        function create() {
+            log('Create function called');
+            
+            try {
+                // Create large visible objects
+                const testRect = this.add.rectangle(400, 300, 200, 200, 0xFF0000);
+                log('Red test rectangle created at (400, 300)');
+                
+                const testText = this.add.text(200, 100, 'MINIMAL TEST WORKING!', {
+                    fontSize: '32px',
+                    fill: '#FFFFFF',
+                    backgroundColor: '#000000',
+                    padding: { x: 10, y: 10 }
+                });
+                log('Test text created');
+                
+                // Create player
+                player = this.add.rectangle(100, 600, 50, 25, 0xFF6600);
+                log('Player rectangle created at (100, 600)');
+                
+                // Create ground line
+                const ground = this.add.rectangle(512, 700, 1024, 5, 0x00FF00);
+                log('Ground line created');
+                
+                // Keyboard input
+                cursors = this.input.keyboard.createCursorKeys();
+                log('Keyboard input setup');
+                
+                log('Create function completed successfully!');
+                
+            } catch (error) {
+                log('ERROR in create: ' + error.message);
+            }
+        }
+        
+        function update() {
+            if (player && cursors) {
+                if (cursors.left.isDown) {
+                    player.x -= 5;
+                }
+                if (cursors.right.isDown) {
+                    player.x += 5;
+                }
+                if (cursors.up.isDown) {
+                    player.y -= 5;
+                }
+                if (cursors.down.isDown) {
+                    player.y += 5;
+                }
+            }
+        }
+        
+        try {
+            log('Creating Phaser game...');
+            const game = new Phaser.Game(config);
+            log('Phaser game created successfully!');
+        } catch (error) {
+            log('CRITICAL ERROR: ' + error.message);
+        }
+    </script>
+</body>
+</html>

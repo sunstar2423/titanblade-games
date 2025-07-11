@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doom Riders - Phase 2: Engine Sound Test 🔧</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            background: #000; 
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #game-container { 
+            border: 2px solid #00ff00;
+            width: 1024px;
+            height: 768px;
+            margin: 20px auto;
+            background: #111;
+        }
+        .phase2-box {
+            background: linear-gradient(135deg, #1a4a1a, #4a1a4a);
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px solid #ff6600;
+            border-radius: 8px;
+        }
+        .test-result {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #ff6600;
+            border-radius: 4px;
+        }
+        .hypothesis {
+            background: #3a1a1a;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #ff4444;
+        }
+        .next-step {
+            background: #1a3a3a;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #44ffff;
+        }
+        .highlight { color: #ff6600; }
+        .success { color: #00ff00; }
+        .warning { color: #ff6600; }
+        .info { color: #44ffff; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Doom Riders - Phase 2: Engine Sound Test 🔧</h1>
+    
+    <div class="phase2-box">
+        <h2>⚡ Engine Sound Elimination Test</h2>
+        
+        <p>Since clicking persists after disabling clickSound, I've now <strong class="highlight">disabled the engine sound</strong> to test if it's the source of the clicking.</p>
+        
+        <div class="test-result">
+            <h3>🔍 Phase 1 Result: ClickSound NOT the cause</h3>
+            <p class="warning">✗ Clicking sound persisted even with click.wav completely disabled</p>
+            <p>This confirms the clicking is coming from a different audio source.</p>
+        </div>
+        
+        <div class="test-result">
+            <h3>🎯 Phase 2 Hypothesis: Engine Sound Loop Artifacts</h3>
+            
+            <div class="hypothesis">
+                <h4>Why Engine Sound is Suspect:</h4>
+                <ul>
+                    <li><strong>Loop Configuration:</strong> Engine sound uses `{ loop: true }` which can cause clicking at loop boundaries</li>
+                    <li><strong>Speed Correlation:</strong> Clicking speeds up between levels - engine behavior may change with game progression</li>
+                    <li><strong>Audio Artifacts:</strong> The engine.wav file may have imperfect loop points causing audible clicks</li>
+                    <li><strong>Buffer Issues:</strong> Multiple engine sound instances may be overlapping</li>
+                </ul>
+            </div>
+            
+            <h4 class="warning">🧪 Current Test: Engine Sound DISABLED</h4>
+            <p>The engine sound is now completely disabled. Test the game and check if clicking disappears.</p>
+        </div>
+        
+        <div class="test-result">
+            <h3>📊 Expected Results:</h3>
+            
+            <div class="next-step">
+                <h4 class="success">Scenario A: Clicking STOPS</h4>
+                <p><strong>Result:</strong> Engine sound was causing the clicking!</p>
+                <p><strong>Solution:</strong> Replace engine.wav with a better looping audio file, or remove engine sound entirely</p>
+                <p><strong>Cause:</strong> Poor loop points in engine.wav or audio buffer conflicts</p>
+            </div>
+            
+            <div class="next-step">
+                <h4 class="warning">Scenario B: Clicking CONTINUES</h4>
+                <p><strong>Result:</strong> Source is still elsewhere</p>
+                <p><strong>Next Phase:</strong> Investigate background music, mobile button events, or other audio conflicts</p>
+                <p><strong>Action:</strong> Check console for debug output patterns</p>
+            </div>
+        </div>
+        
+        <h3>🎮 Testing Instructions:</h3>
+        <div class="test-result">
+            <ol>
+                <li><strong>Refresh the game page</strong> to load the engine sound fix</li>
+                <li><strong>Play through multiple levels</strong> (the game should feel the same but without engine audio)</li>
+                <li><strong>Listen carefully</strong> for the clicking sound</li>
+                <li><strong>Check if clicking still speeds up</strong> between levels</li>
+                <li><strong>Note any changes</strong> in clicking behavior or frequency</li>
+            </ol>
+            
+            <p class="info"><strong>Note:</strong> The game will play normally but without engine/movement sounds. All other audio (jump, attack, victory, background music) should still work.</p>
+        </div>
+        
+        <h3>🔊 Current Audio Status:</h3>
+        <div class="test-result">
+            <ul>
+                <li class="success">✅ Background Music: Active</li>
+                <li class="success">✅ Jump Sound: Active</li>
+                <li class="warning">❌ Engine Sound: DISABLED (testing)</li>
+                <li class="success">✅ Crash Sound: Active</li>
+                <li class="success">✅ Attack Sound: Active</li>
+                <li class="success">✅ Victory Sound: Active</li>
+                <li class="warning">❌ Click Sound: DISABLED (confirmed not the cause)</li>
+            </ul>
+        </div>
+        
+        <h3>🔍 Additional Debugging:</h3>
+        <div class="test-result">
+            <p>If you're checking the console (F12), you should see:</p>
+            <ul>
+                <li><code>🔍 ENGINE SOUND DISABLED for clicking diagnosis</code></li>
+                <li><code>🔍 AUDIO EVENT</code> messages for other sounds that play</li>
+                <li>Any other debug patterns that might correlate with clicking</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="game-container"></div>
+    
+    <div style="margin-top: 20px; padding: 20px; border: 1px solid #666;">
+        <h3>⚠️ Critical Test - Report Results:</h3>
+        <div style="background: #333; padding: 15px; margin-top: 15px; border-radius: 5px;">
+            <h4 class="highlight">🎯 What to Report:</h4>
+            <ul>
+                <li><strong class="success">"Clicking is GONE!"</strong> → Engine sound was the culprit</li>
+                <li><strong class="warning">"Clicking still happens"</strong> → Need to investigate other sources</li>
+                <li><strong class="info">"Clicking changed but didn't stop"</strong> → Engine sound was part of the problem</li>
+            </ul>
+        </div>
+        
+        <p><strong>Controls:</strong> ← → Move | SPACE Jump | A Attack | W Weapon | P Pause</p>
+        
+        <div style="background: #4a1a1a; padding: 15px; margin-top: 15px; border-radius: 5px; border: 1px solid #ff6600;">
+            <h4 style="color: #ff6600;">🔧 Next Steps Based on Results</h4>
+            <p style="margin: 5px 0;"><strong>If clicking stops:</strong> We'll fix or replace the engine.wav file</p>
+            <p style="margin: 5px 0;"><strong>If clicking persists:</strong> We'll investigate background music rotation or mobile button phantom events</p>
+            <p style="margin: 5px 0;"><strong>Goal:</strong> Systematically eliminate each audio source until clicking disappears</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script type="module" src="js/Game.js"></script>
+</body>
+</html>

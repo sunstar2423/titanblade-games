@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doom Riders - Complete Clicking Sound Diagnosis 🔧</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            background: #000; 
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #game-container { 
+            border: 2px solid #00ff00;
+            width: 1024px;
+            height: 768px;
+            margin: 20px auto;
+            background: #111;
+        }
+        .diagnosis-box {
+            background: linear-gradient(135deg, #4a1a1a, #1a1a4a);
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px solid #FFD700;
+            border-radius: 8px;
+        }
+        .phase {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #FFD700;
+            border-radius: 4px;
+        }
+        .debug-output {
+            background: #001100;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #00ff00;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .highlight { color: #FFD700; }
+        .success { color: #00ff00; }
+        .warning { color: #ff6600; }
+        .error { color: #ff0000; }
+        .test-step {
+            background: #1a3a1a;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 3px solid #00ff00;
+        }
+        .scenario {
+            background: #3a1a3a;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #ff00ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Doom Riders - Complete Clicking Sound Diagnosis 🔧</h1>
+    
+    <div class="diagnosis-box">
+        <h2>🩺 Full Diagnostic System Active</h2>
+        
+        <p>Comprehensive clicking sound diagnosis with <strong class="highlight">Phase 1 (clickSound removal)</strong> and <strong class="highlight">Phase 2 (debugging system)</strong> ready for testing.</p>
+        
+        <div class="phase">
+            <h3>📋 Phase 1: ClickSound Removal Test</h3>
+            
+            <h4 class="success">✅ Changes Applied:</h4>
+            <ul>
+                <li><strong>PreloadScene:</strong> clickSound loading disabled</li>
+                <li><strong>GameScene:</strong> clickSound initialization disabled</li>
+                <li><strong>Expected:</strong> Clicking sound should disappear completely</li>
+            </ul>
+            
+            <div class="test-step">
+                <strong>Test Instructions:</strong> Play through 2-3 levels, listen carefully for any clicking sounds
+            </div>
+        </div>
+        
+        <div class="phase">
+            <h3>🔍 Phase 2: Advanced Debugging (If Clicking Persists)</h3>
+            
+            <h4 class="warning">⚠️ Debug Systems Added:</h4>
+            <ul>
+                <li><strong>Touch Event Tracking:</strong> All mobile button interactions logged</li>
+                <li><strong>Engine Sound Monitoring:</strong> Engine loop state changes tracked</li>
+                <li><strong>Audio Event Interceptor:</strong> All sound playback events captured</li>
+                <li><strong>Timing Analysis:</strong> Event frequency and timing logged</li>
+            </ul>
+        </div>
+        
+        <h3>🎯 Testing Scenarios:</h3>
+        
+        <div class="scenario">
+            <h4>Scenario A: Clicking Sound DISAPPEARS</h4>
+            <p class="success">✅ <strong>Result:</strong> ClickSound was the culprit!</p>
+            <p><strong>Action:</strong> Permanently remove clickSound (it's not essential for gameplay)</p>
+            <p><strong>Cause:</strong> click.wav was being triggered repeatedly by phantom UI events or mobile button interactions</p>
+        </div>
+        
+        <div class="scenario">
+            <h4>Scenario B: Clicking Sound PERSISTS</h4>
+            <p class="warning">🔍 <strong>Result:</strong> Source is elsewhere - check console for debug data!</p>
+            
+            <h5>Debug Console Output to Look For:</h5>
+            <div class="debug-output">
+                🔍 TOUCH START EVENT: { x: 512, y: 400, time: 5432, buttons: [...] }
+                🔍 MOBILE BUTTON PRESSED: jump at 5433
+                🔍 ENGINE SOUND STARTED at 5434
+                🔍 ENGINE SOUND STATE: { isPlaying: true, loop: true, volume: 0.1, rate: 1.0 }
+                🔍 AUDIO EVENT 1: Playing "engineSound" at 5434 (234ms since last)
+                🔍 AUDIO EVENT 2: Playing "jumpSound" at 5678 (244ms since last)
+                🔍 ENGINE SOUND STOPPING at 5890
+                🔍 ENGINE SOUND STOPPED
+            </div>
+            
+            <h5>What Debug Data Reveals:</h5>
+            <ul>
+                <li><strong>Frequent Touch Events:</strong> May indicate phantom mobile button triggers</li>
+                <li><strong>Rapid Audio Events:</strong> Excessive sound playback frequency</li>
+                <li><strong>Engine Sound Issues:</strong> Loop problems or start/stop conflicts</li>
+                <li><strong>Event Timing:</strong> Clicking frequency patterns match debug event timing</li>
+            </ul>
+        </div>
+        
+        <h3>📊 Debug Analysis Guide:</h3>
+        
+        <div class="phase">
+            <h4>Console Messages to Monitor:</h4>
+            
+            <div class="test-step">
+                <strong>🔍 TOUCH START EVENT:</strong> Check for excessive touch events even when not touching screen
+            </div>
+            
+            <div class="test-step">
+                <strong>🔍 MOBILE BUTTON PRESSED:</strong> Look for button triggers without user interaction
+            </div>
+            
+            <div class="test-step">
+                <strong>🔍 ENGINE SOUND STARTED/STOPPED:</strong> Check for rapid start/stop cycles
+            </div>
+            
+            <div class="test-step">
+                <strong>🔍 AUDIO EVENT:</strong> Monitor for unknown sound keys or excessive frequency
+            </div>
+        </div>
+        
+        <h3>🎮 Comprehensive Testing Protocol:</h3>
+        
+        <div class="phase">
+            <h4>Step-by-Step Testing:</h4>
+            
+            <ol>
+                <li><strong>Open Browser Console:</strong> Press F12 and go to Console tab</li>
+                <li><strong>Start Game:</strong> Navigate to racing scene</li>
+                <li><strong>Listen & Watch:</strong> Listen for clicking while monitoring console</li>
+                <li><strong>Test Movement:</strong> Move left/right to trigger engine sound changes</li>
+                <li><strong>Test Jumping:</strong> Jump multiple times</li>
+                <li><strong>Complete Level:</strong> Advance to next level and check if clicking speeds up</li>
+                <li><strong>Check Mobile Buttons:</strong> If on touch device, test all controls</li>
+                <li><strong>Take Screenshots:</strong> Capture console output if clicking persists</li>
+            </ol>
+        </div>
+        
+        <h3>🔧 Next Steps Based on Results:</h3>
+        
+        <div class="phase">
+            <h4>If Phase 1 Succeeds (No More Clicking):</h4>
+            <ul>
+                <li>Remove clickSound permanently from codebase</li>
+                <li>Remove debug code added for Phase 2</li>
+                <li>Document the fix</li>
+            </ul>
+            
+            <h4>If Phase 2 Needed (Clicking Persists):</h4>
+            <ul>
+                <li>Analyze console debug output patterns</li>
+                <li>Identify specific trigger source (mobile buttons, engine sound, etc.)</li>
+                <li>Apply targeted fix to problematic component</li>
+                <li>Test iteratively until clicking eliminated</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="game-container"></div>
+    
+    <div style="margin-top: 20px; padding: 20px; border: 1px solid #666;">
+        <h3>🚨 Critical Testing Notes:</h3>
+        <ul>
+            <li><strong>Keep Console Open:</strong> Debug data only appears in browser console</li>
+            <li><strong>Test Multiple Levels:</strong> Clicking may change behavior between levels</li>
+            <li><strong>Listen Carefully:</strong> Note if clicking frequency matches any debug events</li>
+            <li><strong>Document Findings:</strong> Report whether clicking stops or continues</li>
+        </ul>
+        
+        <p><strong>Controls:</strong> ← → Move | SPACE Jump | A Attack | W Weapon | P Pause</p>
+        
+        <div style="background: #333; padding: 15px; margin-top: 15px; border-radius: 5px;">
+            <h4 class="highlight">🎯 Expected Debug Output:</h4>
+            <ul style="font-family: monospace; font-size: 12px;">
+                <li>Normal: Occasional engine sound events, jump sounds when jumping</li>
+                <li>Problem: Rapid repeated events, unknown sound keys, excessive frequency</li>
+                <li>Success: Minimal audio events, no phantom triggers, silence between actions</li>
+            </ul>
+        </div>
+        
+        <div style="background: #4a1a1a; padding: 15px; margin-top: 15px; border-radius: 5px; border: 1px solid #FFD700;">
+            <h4 style="color: #FFD700;">⚠️ Report Your Results!</h4>
+            <p style="margin: 5px 0;"><strong>Scenario A:</strong> "Clicking sound is GONE! No more audio issues."</p>
+            <p style="margin: 5px 0;"><strong>Scenario B:</strong> "Clicking persists, here's the console output: [paste debug data]"</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script type="module" src="js/Game.js"></script>
+</body>
+</html>

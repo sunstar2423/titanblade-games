@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doom Riders - Debug Test</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background: #000; 
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #game-container { 
+            margin: 0 auto; 
+            display: block; 
+        }
+        .instructions {
+            text-align: center;
+            padding: 20px;
+            background: #222;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h1>Doom Riders - Debug Mode</h1>
+        <p>Look for red debug text in top-left corner. Use arrow keys to move, space to jump.</p>
+        <p>Watch the debug values to see if player position/velocity changes when you press keys.</p>
+    </div>
+    
+    <div id="game-container"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script type="module" src="js/Game.js"></script>
+</body>
+</html>

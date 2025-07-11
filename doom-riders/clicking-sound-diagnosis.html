@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doom Riders - Clicking Sound Diagnosis 🔧</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            background: #000; 
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #game-container { 
+            border: 2px solid #00ff00;
+            width: 1024px;
+            height: 768px;
+            margin: 20px auto;
+            background: #111;
+        }
+        .diagnosis-box {
+            background: linear-gradient(135deg, #4a1a1a, #1a1a4a);
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px solid #FFD700;
+            border-radius: 8px;
+        }
+        .test-phase {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #FFD700;
+            border-radius: 4px;
+        }
+        .before-after {
+            display: flex;
+            gap: 20px;
+            margin: 15px 0;
+        }
+        .before, .after {
+            flex: 1;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .before {
+            background: #4a1a1a;
+            border-left: 4px solid #ff4444;
+        }
+        .after {
+            background: #1a4a1a;
+            border-left: 4px solid #44ff44;
+        }
+        .highlight { color: #FFD700; }
+        .code {
+            background: #222;
+            padding: 10px;
+            font-family: monospace;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        .test-step {
+            background: #1a3a1a;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Doom Riders - Clicking Sound Diagnosis Phase 1 🔧</h1>
+    
+    <div class="diagnosis-box">
+        <h2>🩺 Phase 1: ClickSound Removal Test</h2>
+        
+        <p>I've temporarily <strong class="highlight">disabled the clickSound</strong> loading and initialization to test if this eliminates the repeating clicking sound bug.</p>
+        
+        <h3>🔍 Changes Made:</h3>
+        
+        <div class="before-after">
+            <div class="before">
+                <h4>❌ BEFORE - ClickSound Enabled</h4>
+                
+                <div class="code">
+                    // PreloadScene.js
+                    { key: 'clickSound', path: 'assets/sounds/click.wav' },
+                    
+                    // GameScene.js  
+                    this.clickSound = this.sound.add('clickSound', { volume: 0.2 });
+                </div>
+                
+                <p><strong>Result:</strong> Constant clicking sound that speeds up between levels</p>
+            </div>
+            
+            <div class="after">
+                <h4>✅ AFTER - ClickSound Disabled</h4>
+                
+                <div class="code">
+                    // PreloadScene.js
+                    // { key: 'clickSound', path: 'assets/sounds/click.wav' }, // DISABLED
+                    
+                    // GameScene.js
+                    // this.clickSound = this.sound.add('clickSound', { volume: 0.2 }); // DISABLED
+                </div>
+                
+                <p><strong>Expected Result:</strong> No more clicking sound during gameplay</p>
+            </div>
+        </div>
+        
+        <h3 class="highlight">🧪 Test Procedures:</h3>
+        
+        <div class="test-phase">
+            <h4>Phase 1 Testing</h4>
+            <div class="test-step">
+                <strong>1. Launch Game:</strong> Start Doom Riders and navigate to any racing level
+            </div>
+            <div class="test-step">
+                <strong>2. Listen for Clicking:</strong> Pay attention during gameplay - the clicking sound should be gone
+            </div>
+            <div class="test-step">
+                <strong>3. Test Level Progression:</strong> Complete a level and advance to the next - no clicking should occur
+            </div>
+            <div class="test-step">
+                <strong>4. Check Mobile Buttons:</strong> Test touch controls (if using mobile/touch) - no clicking sounds
+            </div>
+            <div class="test-step">
+                <strong>5. Verify Other Sounds:</strong> Confirm jump, engine, attack, and victory sounds still work properly
+            </div>
+        </div>
+        
+        <h3>📊 Diagnostic Results:</h3>
+        
+        <div class="test-phase">
+            <h4>If Clicking Sound DISAPPEARS:</h4>
+            <p>✅ <strong>ClickSound was the culprit!</strong> The issue was the click.wav file being triggered repeatedly by some unknown mechanism (likely mobile button interactions or phantom UI events).</p>
+            
+            <p><strong>Next Steps:</strong> Remove clickSound permanently since it's not essential for gameplay, or investigate what was triggering it repeatedly.</p>
+        </div>
+        
+        <div class="test-phase">
+            <h4>If Clicking Sound PERSISTS:</h4>
+            <p>🔍 <strong>Source is elsewhere!</strong> The clicking is likely coming from:</p>
+            <ul>
+                <li>Mobile button interaction artifacts</li>
+                <li>Engine sound loop issues</li>
+                <li>Other audio conflicts</li>
+                <li>Phantom pointer events</li>
+            </ul>
+            
+            <p><strong>Next Phase:</strong> Investigate mobile button interactions and audio system conflicts</p>
+        </div>
+        
+        <h3>🎯 Files Modified:</h3>
+        <ul>
+            <li><strong>PreloadScene.js:</strong> Line 80 - Commented out clickSound loading</li>
+            <li><strong>GameScene.js:</strong> Lines 703-708 - Commented out clickSound initialization</li>
+        </ul>
+        
+        <h3>🔊 Audio Status After Changes:</h3>
+        <div class="code">
+            ✅ Background Music: Active (4 rotating tracks)
+            ✅ Jump Sound: Active
+            ✅ Engine Sound: Active  
+            ✅ Crash Sound: Active
+            ✅ Attack Sound: Active
+            ✅ Victory Sound: Active
+            ❌ Click Sound: DISABLED (testing)
+        </div>
+    </div>
+
+    <div id="game-container"></div>
+    
+    <div style="margin-top: 20px; padding: 20px; border: 1px solid #666;">
+        <h3>🎮 Critical Test Instructions:</h3>
+        <ol>
+            <li><strong>Race Multiple Levels:</strong> Play through at least 2-3 levels to test progression</li>
+            <li><strong>Listen Carefully:</strong> Focus on whether the clicking sound is completely gone</li>
+            <li><strong>Test Mobile Buttons:</strong> If on touch device, test all mobile controls</li>
+            <li><strong>Check Menu Navigation:</strong> Ensure menu interactions don't cause clicking</li>
+            <li><strong>Report Results:</strong> Let me know if clicking persists or disappears</li>
+        </ol>
+        
+        <p><strong>Controls:</strong> ← → Move | SPACE Jump | A Attack | W Weapon | P Pause</p>
+        
+        <div style="background: #333; padding: 15px; margin-top: 15px; border-radius: 5px;">
+            <h4 class="highlight">🎯 Expected Outcomes:</h4>
+            <ul style="font-family: monospace; font-size: 12px;">
+                <li>🔇 No more constant clicking sound during gameplay</li>
+                <li>🔇 No clicking sound acceleration between levels</li>
+                <li>🔊 All other game sounds should work normally</li>
+                <li>🎮 Game functionality should be completely unaffected</li>
+            </ul>
+        </div>
+        
+        <div style="background: #4a1a1a; padding: 15px; margin-top: 15px; border-radius: 5px; border: 1px solid #FFD700;">
+            <h4 style="color: #FFD700;">⚠️ Important: Report Your Results</h4>
+            <p style="margin: 5px 0;"><strong>If clicking STOPS:</strong> ClickSound was the problem - we can remove it permanently</p>
+            <p style="margin: 5px 0;"><strong>If clicking CONTINUES:</strong> We need Phase 2 investigation (mobile buttons/audio conflicts)</p>
+            <p style="margin: 5px 0;"><strong>Test thoroughly:</strong> Play multiple levels and check all game functions</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script type="module" src="js/Game.js"></script>
+</body>
+</html>

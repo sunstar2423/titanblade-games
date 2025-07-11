@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doom Riders - Simple Debug</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            background: #000; 
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #game-container { 
+            border: 2px solid red;
+            width: 800px;
+            height: 600px;
+            margin: 20px auto;
+            background: #111;
+        }
+        #console {
+            background: #222;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            border: 1px solid #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Doom Riders - Simple Debug Test</h1>
+    <div style="color: #66ff66; padding: 10px; margin: 10px 0; border: 1px solid #666;">
+        <strong>Expected Assets:</strong> BMX bike, Rock, Log, Barrier, Ramp, Ramp2, Enemy Rider<br>
+        <strong>Expected Sounds:</strong> Jump, Crash, Engine, Background Music<br>
+        <strong>Debug Features:</strong> Green ground line, Red player outline, Cyan obstacle outlines<br>
+        <strong>Controls:</strong> Arrow keys = Move | Space = Jump | A = Attack | W = Weapon
+    </div>
+    
+    <div id="console">
+        <div>Loading game...</div>
+    </div>
+    
+    <div id="game-container"></div>
+    
+    <script>
+        // Capture console logs
+        const consoleDiv = document.getElementById('console');
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function addToConsole(type, message) {
+            const div = document.createElement('div');
+            div.style.color = type === 'error' ? '#ff6666' : '#66ff66';
+            div.textContent = `[${type}] ${message}`;
+            consoleDiv.appendChild(div);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole('log', args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole('error', args.join(' '));
+        };
+        
+        // Capture any JavaScript errors
+        window.addEventListener('error', (e) => {
+            addToConsole('error', `JS Error: ${e.message} at ${e.filename}:${e.lineno}`);
+        });
+        
+        console.log('Debug page loaded, about to load Phaser...');
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script>
+        console.log('Phaser loaded, about to load Game.js...');
+    </script>
+    <script type="module" src="js/Game.js"></script>
+    <script>
+        console.log('Game.js script tag added');
+    </script>
+</body>
+</html>

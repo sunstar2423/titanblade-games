@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doom Riders - New Background Images! 🖼️</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            background: #000; 
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #game-container { 
+            border: 2px solid #00ff00;
+            width: 1024px;
+            height: 768px;
+            margin: 20px auto;
+            background: #111;
+        }
+        .bg-box {
+            background: linear-gradient(135deg, #2d1b69, #11998e);
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+        }
+        .image-info {
+            background: #222;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #00ff00;
+            border-radius: 4px;
+        }
+        .image-name { color: #FFD700; font-weight: bold; font-size: 16px; }
+        .image-location { color: #FFFFFF; margin: 5px 0; }
+        .image-usage { color: #CCCCCC; font-style: italic; }
+        .highlight { color: #00ff00; }
+        .feature { 
+            background: #1a4d1a; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-left: 4px solid #00ff00; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🖼️ Doom Riders - New Background Images Added! 🖼️</h1>
+    
+    <div class="bg-box">
+        <h2>✅ Background Images Successfully Implemented!</h2>
+        
+        <p>Doom Riders now features <strong class="highlight">custom background images</strong> for enhanced visual appeal!</p>
+        
+        <h3>🎨 New Background Images:</h3>
+        
+        <div class="image-info">
+            <div class="image-name">📁 menubackground1.png</div>
+            <div class="image-location"><strong>Location:</strong> /assets/images/menubackground1.png</div>
+            <div class="image-usage"><strong>Used in:</strong> Main Menu Scene - Full screen background</div>
+        </div>
+        
+        <div class="image-info">
+            <div class="image-name">🏪 bikestore.png</div>
+            <div class="image-location"><strong>Location:</strong> /assets/images/bikestore.png</div>
+            <div class="image-usage"><strong>Used in:</strong> Store Scene - Bike and weapon store background</div>
+        </div>
+        
+        <h3 class="highlight">🔧 Technical Implementation:</h3>
+        <div class="feature">
+            <h4>Asset Loading</h4>
+            <p>Both images added to PreloadScene.js with proper asset keys: 'menuBackground' and 'bikeStoreBackground'</p>
+        </div>
+        
+        <div class="feature">
+            <h4>Responsive Scaling</h4>
+            <p>Images automatically scale to fit the screen dimensions (1024x768) while maintaining aspect ratio</p>
+        </div>
+        
+        <div class="feature">
+            <h4>Background Replacement</h4>
+            <p>Replaced simple colored rectangles with full-resolution background images for professional appearance</p>
+        </div>
+        
+        <div class="feature">
+            <h4>Proper Positioning</h4>
+            <p>Images centered on screen with proper depth layering behind all UI elements</p>
+        </div>
+        
+        <h3>🎯 Changes Made:</h3>
+        <ul>
+            <li>✅ <strong>PreloadScene.js:</strong> Added menuBackground and bikeStoreBackground assets</li>
+            <li>✅ <strong>MainMenuScene.js:</strong> Replaced colored background with menubackground1.png</li>
+            <li>✅ <strong>StoreScene.js:</strong> Replaced gray background with bikestore.png</li>
+            <li>✅ <strong>Responsive scaling:</strong> Images adapt to screen size automatically</li>
+            <li>✅ <strong>Performance optimized:</strong> Images loaded once during preload phase</li>
+        </ul>
+        
+        <h3>📍 How to Test:</h3>
+        <ol>
+            <li><strong>Main Menu:</strong> You'll see the new background image instead of blue sky</li>
+            <li><strong>Store Screen:</strong> Click "STORE" to see the bike store background image</li>
+            <li><strong>Check Console:</strong> Look for successful image loading messages</li>
+        </ol>
+    </div>
+
+    <div id="game-container"></div>
+    
+    <div style="margin-top: 20px; padding: 20px; border: 1px solid #666;">
+        <h3>🎮 Navigation Guide:</h3>
+        <ul>
+            <li><strong>Main Menu:</strong> New background image displayed on game start</li>
+            <li><strong>Store:</strong> Click "STORE" button to see bike store background</li>
+            <li><strong>Game Play:</strong> All other scenes maintain their existing backgrounds</li>
+        </ul>
+        
+        <p><strong>Controls:</strong> Mouse/Touch for menu navigation</p>
+        
+        <div style="background: #333; padding: 15px; margin-top: 15px; border-radius: 5px;">
+            <h4 class="highlight">🖼️ Console Log Messages to Look For:</h4>
+            <ul style="font-family: monospace; font-size: 12px;">
+                <li>✅ Successfully loaded: menuBackground (image)</li>
+                <li>✅ Successfully loaded: bikeStoreBackground (image)</li>
+                <li>🖼️ Background image scaled and positioned</li>
+            </ul>
+        </div>
+        
+        <div style="background: #2d1b69; padding: 15px; margin-top: 15px; border-radius: 5px; border: 1px solid #00ff00;">
+            <h4 style="color: #00ff00;">🎨 Visual Improvements</h4>
+            <p style="margin: 5px 0;"><strong>Main Menu:</strong> Professional background replaces simple colored rectangles</p>
+            <p style="margin: 5px 0;"><strong>Bike Store:</strong> Themed background creates immersive shopping experience</p>
+            <p style="margin: 5px 0;"><strong>Scaling:</strong> Images automatically adapt to different screen sizes</p>
+            <p style="margin: 5px 0;"><strong>Performance:</strong> Images loaded once during preload, no runtime loading delays</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script type="module" src="js/Game.js"></script>
+</body>
+</html>

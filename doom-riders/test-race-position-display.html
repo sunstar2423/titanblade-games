@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doom Riders - Race Position Display Test</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            background: #000; 
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #game-container { 
+            border: 2px solid #00ff00;
+            width: 1024px;
+            height: 768px;
+            margin: 20px auto;
+            background: #111;
+        }
+        .feature-highlight {
+            background: #222;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #666;
+            border-radius: 8px;
+        }
+        .success { color: #00ff00; }
+        .highlight { color: #ffdd00; }
+        .position-1st { color: #FFD700; }
+        .position-2nd { color: #C0C0C0; }
+        .position-3rd { color: #CD7F32; }
+    </style>
+</head>
+<body>
+    <h1>🏁 Doom Riders - Race Position Display Added! 🏁</h1>
+    
+    <div class="feature-highlight">
+        <h2 class="success">✅ Game Over Screen Now Shows Race Position!</h2>
+        
+        <h3>What You'll See After Racing:</h3>
+        <ul>
+            <li><strong>Final Score:</strong> Your total points earned</li>
+            <li><strong>Money Earned:</strong> Session money from the race</li>
+            <li class="highlight"><strong>NEW: Race Position:</strong> Your finishing place in the race!</li>
+            <li><strong>High Score:</strong> Best score achieved</li>
+        </ul>
+        
+        <h3>Position Display Colors:</h3>
+        <ul>
+            <li class="position-1st"><strong>🥇 1st Place:</strong> Gold text</li>
+            <li class="position-2nd"><strong>🥈 2nd Place:</strong> Silver text</li>
+            <li class="position-3rd"><strong>🥉 3rd Place:</strong> Bronze text</li>
+            <li style="color: #FFFFFF;"><strong>🏃 4th+ Place:</strong> White text</li>
+        </ul>
+        
+        <h3 class="highlight">How It Works:</h3>
+        <p>When you finish a race (or crash out), your final position among all racers is recorded and displayed 
+        prominently on the Game Over screen. The position is <strong>locked</strong> when you finish - 
+        other racers finishing after you won't change your recorded position!</p>
+    </div>
+    
+    <div class="feature-highlight">
+        <h2 class="success">✅ All Previous Fixes Still Active:</h2>
+        <ul>
+            <li class="success">✓ Balanced scoring (no more 100k points!)</li>
+            <li class="success">✓ Reasonable money rewards</li>
+            <li class="success">✓ Position locking during race</li>
+            <li class="success">✓ Clear position display in victory screen</li>
+            <li class="success">✓ <strong>NEW:</strong> Position shown in Game Over screen</li>
+        </ul>
+    </div>
+
+    <div id="game-container"></div>
+    
+    <div style="margin-top: 20px; padding: 20px; border: 1px solid #666;">
+        <h3>🎮 Test the Race Position Display:</h3>
+        <ol>
+            <li><strong>Play a race:</strong> Try to get 1st, 2nd, or 3rd place</li>
+            <li><strong>Finish or crash:</strong> Either complete the level or crash out</li>
+            <li><strong>Check Game Over screen:</strong> You'll see your race position displayed!</li>
+            <li><strong>Try different positions:</strong> See how the colors change for different places</li>
+        </ol>
+        
+        <p><strong>Controls:</strong> ← → Move | SPACE Jump | A Attack | W Weapon | P Pause</p>
+        
+        <div style="background: #333; padding: 15px; margin-top: 15px; border-radius: 5px;">
+            <h4 class="highlight">Expected Game Over Display:</h4>
+            <p style="margin: 5px 0;"><strong>Final Score:</strong> 347</p>
+            <p style="margin: 5px 0; color: #00FF00;"><strong>Money Earned:</strong> $47</p>
+            <p style="margin: 5px 0;" class="position-1st"><strong>Race Position: 1st place</strong> ← NEW!</p>
+            <p style="margin: 5px 0; color: #CCCCCC;"><strong>High Score:</strong> 2156</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script type="module" src="js/Game.js"></script>
+</body>
+</html>
