@@ -6,6 +6,29 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Isle of Adventure</title>
+    
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ELX1WWLJN8"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-ELX1WWLJN8', {
+            page_title: 'Isle of Adventure',
+            custom_map: {'custom_parameter': 'game_events'}
+        });
+        
+        // Game-specific event tracking
+        function trackGameEvent(action, category = 'Game') {
+            gtag('event', action, {
+                event_category: category,
+                event_label: 'Isle of Adventure'
+            });
+        }
+        
+        // Make tracking function available globally
+        window.trackGameEvent = trackGameEvent;
+    </script>
     <style>
         body {
             margin: 0;
@@ -107,6 +130,59 @@
             Music: "Serene Journey" & "Run to the Dream" by Lite Saturation (Free Music Archive, CC BY-ND)
         </div>
     </div>
+
+    <!-- Sentry SDK -->
+    <script src="https://browser.sentry-cdn.com/8.42.0/bundle.min.js" integrity="sha384-ojBBhiQvhkfZfAhojXYPuIYW8dxzV1I8R7YJlq9Tz7T4YOZQcTuUoCgGbCz5lWAE" crossorigin="anonymous"></script>
+    <script>
+        Sentry.init({
+            dsn: "https://5752f76100bc0ed5d17444652339d50f@o4509524111523840.ingest.us.sentry.io/4509524122075136",
+            integrations: [
+                Sentry.browserTracingIntegration(),
+                Sentry.replayIntegration({
+                    maskAllText: false,
+                    blockAllMedia: false,
+                }),
+            ],
+            environment: "production",
+            release: "isle-of-adventure@1.0.0",
+            tracesSampleRate: 1.0,
+            replaysSessionSampleRate: 0.1,
+            replaysOnErrorSampleRate: 1.0,
+        });
+        
+        // Custom Sentry context for game
+        Sentry.setTag("game", "isle-of-adventure");
+        Sentry.setContext("game_info", {
+            version: "web-1.0.0",
+            platform: "browser",
+            engine: "phaser3",
+            genre: "point-and-click-adventure"
+        });
+        
+        // Game event tracking utilities
+        window.trackGameEvent = function(eventName, data = {}) {
+            console.log(`🎮 Game Event: ${eventName}`, data);
+            
+            // Send to Google Analytics if available
+            if (typeof gtag !== 'undefined') {
+                gtag('event', eventName, {
+                    event_category: 'Game',
+                    event_label: 'Isle of Adventure',
+                    ...data
+                });
+            }
+            
+            // Send to Sentry as breadcrumb
+            if (typeof Sentry !== 'undefined') {
+                Sentry.addBreadcrumb({
+                    message: eventName,
+                    category: 'game_event',
+                    data: data,
+                    level: 'info'
+                });
+            }
+        };
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
     

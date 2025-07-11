@@ -43,6 +43,18 @@ class BattleScene extends Phaser.Scene {
         this.location = this.registry.get('selectedLocation');
         
         if (!this.player || !this.location) {
+            // Track battle initialization failure
+            if (typeof Sentry !== 'undefined') {
+                Sentry.addBreadcrumb({
+                    message: 'Battle initialization failed - missing player or location data',
+                    category: 'battle',
+                    level: 'error',
+                    data: {
+                        hasPlayer: !!this.player,
+                        hasLocation: !!this.location
+                    }
+                });
+            }
             this.scene.start('MainMenu');
             return;
         }
@@ -51,10 +63,39 @@ class BattleScene extends Phaser.Scene {
         const randomEnemyType = this.location.enemies[Math.floor(Math.random() * this.location.enemies.length)];
         this.enemy = createEnemy(randomEnemyType, this.player.victories, this.location.name);
         
+        // Track battle started
+        const battleStartData = {
+            playerClass: this.player.charType,
+            playerLevel: this.player.level,
+            playerVictories: this.player.victories,
+            locationName: this.location.name,
+            enemyType: randomEnemyType,
+            enemyName: this.enemy.name,
+            enemyLevel: this.enemy.level,
+            playerHealth: this.player.health,
+            playerMaxHealth: this.player.maxHealth,
+            playerMana: this.player.mana || 0,
+            playerGold: this.player.gold
+        };
+        
+        if (typeof trackGameEvent !== 'undefined') {
+            trackGameEvent('battle_started', battleStartData);
+        }
+        
+        if (typeof Sentry !== 'undefined') {
+            Sentry.addBreadcrumb({
+                message: 'Battle started',
+                category: 'battle',
+                level: 'info',
+                data: battleStartData
+            });
+        }
+        
         // Initialize battle state
         this.battleOver = false;
         this.playerTurn = true;
         this.turnTimer = 0;
+        this.battleStartTime = Date.now();
         
         // Background
         BackgroundRenderer.drawBattleBackground(this, this.location);
@@ -85,6 +126,20 @@ class BattleScene extends Phaser.Scene {
     }
     
     shutdown() {
+        // Track battle scene shutdown
+        if (typeof Sentry !== 'undefined') {
+            Sentry.addBreadcrumb({
+                message: 'Battle scene shutdown',
+                category: 'scene_lifecycle',
+                level: 'info',
+                data: {
+                    battleOver: this.battleOver,
+                    playerTurn: this.playerTurn,
+                    battleDuration: this.battleStartTime ? Date.now() - this.battleStartTime : 0
+                }
+            });
+        }
+        
         // Clean up keyboard events
         if (this.keyboardEvents) {
             this.keyboardEvents.forEach(event => {
@@ -391,6 +446,29 @@ class BattleScene extends Phaser.Scene {
         this.effectManager.addDamageNumber(this.scale.width - 300, 350, damage);
         this.effectManager.addAttackEffect(this.scale.width - 300, 350, 'slash');
         
+        // Track player attack
+        const attackData = {
+            actionType: 'attack',
+            damage: damage,
+            playerClass: this.player.charType,
+            enemyType: this.enemy.enemyType || this.enemy.name,
+            enemyHealthRemaining: this.enemy.health,
+            isCritical: damage > this.player.attack * 1.5 // Estimate critical hit
+        };
+        
+        if (typeof trackGameEvent !== 'undefined') {
+            trackGameEvent('player_attack', attackData);
+        }
+        
+        if (typeof Sentry !== 'undefined') {
+            Sentry.addBreadcrumb({
+                message: `Player attacked for ${damage} damage`,
+                category: 'battle_action',
+                level: 'info',
+                data: attackData
+            });
+        }
+        
         this.playerTurn = false;
         this.turnTimer = 60;
         this.player.regenerateMana(8); // Increased from 5 to 8 for better mana economy
@@ -411,6 +489,29 @@ class BattleScene extends Phaser.Scene {
         const effectType = `special_${this.player.charType.toLowerCase()}`;
         this.effectManager.addAttackEffect(this.scale.width - 300, 350, effectType);
         
+        // Track special attack
+        const specialAttackData = {
+            actionType: 'special_attack',
+            damage: damage,
+            playerClass: this.player.charType,
+            enemyType: this.enemy.enemyType || this.enemy.name,
+            enemyHealthRemaining: this.enemy.health,
+            specialType: effectType
+        };
+        
+        if (typeof trackGameEvent !== 'undefined') {
+            trackGameEvent('player_special_attack', specialAttackData);
+        }
+        
+        if (typeof Sentry !== 'undefined') {
+            Sentry.addBreadcrumb({
+                message: `Player used special attack for ${damage} damage`,
+                category: 'battle_action',
+                level: 'info',
+                data: specialAttackData
+            });
+        }
+        
         this.playerTurn = false;
         this.turnTimer = 60;
         
@@ -427,6 +528,28 @@ class BattleScene extends Phaser.Scene {
         const healAmount = this.player.heal();
         this.effectManager.addDamageNumber(300, 350, healAmount, false, true);
         
+        // Track player heal
+        const healData = {
+            actionType: 'heal',
+            healAmount: healAmount,
+            playerClass: this.player.charType,
+            playerHealthAfter: this.player.health,
+            playerMaxHealth: this.player.maxHealth
+        };
+        
+        if (typeof trackGameEvent !== 'undefined') {
+            trackGameEvent('player_heal', healData);
+        }
+        
+        if (typeof Sentry !== 'undefined') {
+            Sentry.addBreadcrumb({
+                message: `Player healed for ${healAmount} HP`,
+                category: 'battle_action',
+                level: 'info',
+                data: healData
+            });
+        }
+        
         this.playerTurn = false;
         this.turnTimer = 60;
         
@@ -437,10 +560,50 @@ class BattleScene extends Phaser.Scene {
         if (!this.playerTurn || this.turnTimer > 0 || this.battleOver) return;
         if (!this.player.canCastSpell(spellKey)) {
             this.showStatusMessage("Not enough mana!", 60);
+            
+            // Track failed spell cast
+            if (typeof Sentry !== 'undefined') {
+                Sentry.addBreadcrumb({
+                    message: `Spell cast failed - insufficient mana`,
+                    category: 'battle_action',
+                    level: 'warning',
+                    data: {
+                        spellKey: spellKey,
+                        playerMana: this.player.mana,
+                        requiredMana: WIZARD_SPELLS[spellKey]?.manaCost || 'unknown'
+                    }
+                });
+            }
+            
             return;
         }
         
         const result = this.player.castSpell(spellKey, this.enemy);
+        
+        // Track spell cast
+        const spellData = {
+            actionType: 'spell_cast',
+            spellKey: spellKey,
+            spellEffect: result.effect,
+            damage: result.damage,
+            playerClass: this.player.charType,
+            playerManaAfter: this.player.mana,
+            enemyType: this.enemy.enemyType || this.enemy.name,
+            enemyHealthRemaining: this.enemy.health
+        };
+        
+        if (typeof trackGameEvent !== 'undefined') {
+            trackGameEvent('spell_cast', spellData);
+        }
+        
+        if (typeof Sentry !== 'undefined') {
+            Sentry.addBreadcrumb({
+                message: `Spell cast: ${spellKey} (${result.effect})`,
+                category: 'battle_action',
+                level: 'info',
+                data: spellData
+            });
+        }
         
         if (result.effect === "heal") {
             // Play heal sound for healing spells
@@ -477,6 +640,20 @@ class BattleScene extends Phaser.Scene {
         if (this.enemy.frozenTurns > 0) {
             this.enemy.frozenTurns--;
             this.showStatusMessage(`Enemy frozen! ${this.enemy.frozenTurns} turns remaining`, 120);
+            
+            // Track enemy frozen turn
+            if (typeof Sentry !== 'undefined') {
+                Sentry.addBreadcrumb({
+                    message: 'Enemy turn skipped - frozen',
+                    category: 'battle_action',
+                    level: 'info',
+                    data: {
+                        enemyType: this.enemy.enemyType || this.enemy.name,
+                        frozenTurnsRemaining: this.enemy.frozenTurns
+                    }
+                });
+            }
+            
             this.playerTurn = true;
             this.turnTimer = 60;
             return;
@@ -484,20 +661,47 @@ class BattleScene extends Phaser.Scene {
         
         // Simple AI
         const action = Math.random();
+        let actionType, damage;
+        
         if (action < 0.6) {
             // Attack
-            const damage = this.enemy.attackEnemy(this.player);
+            actionType = 'attack';
+            damage = this.enemy.attackEnemy(this.player);
             this.effectManager.addDamageNumber(300, 350, damage);
             this.effectManager.addAttackEffect(300, 350, 'slash');
         } else if (action < 0.8) {
             // Special attack
-            const damage = this.enemy.specialAttack(this.player);
+            actionType = 'special_attack';
+            damage = this.enemy.specialAttack(this.player);
             this.effectManager.addDamageNumber(300, 350, damage, true);
             this.effectManager.addAttackEffect(300, 350, `special_${this.enemy.enemyType}`);
         } else {
             // Heal
-            const healAmount = this.enemy.heal();
-            this.effectManager.addDamageNumber(this.scale.width - 300, 350, healAmount, false, true);
+            actionType = 'heal';
+            damage = this.enemy.heal();
+            this.effectManager.addDamageNumber(this.scale.width - 300, 350, damage, false, true);
+        }
+        
+        // Track enemy action
+        const enemyActionData = {
+            actionType: actionType,
+            damage: damage,
+            enemyType: this.enemy.enemyType || this.enemy.name,
+            enemyHealthAfter: this.enemy.health,
+            playerHealthRemaining: this.player.health
+        };
+        
+        if (typeof trackGameEvent !== 'undefined') {
+            trackGameEvent('enemy_action', enemyActionData);
+        }
+        
+        if (typeof Sentry !== 'undefined') {
+            Sentry.addBreadcrumb({
+                message: `Enemy ${actionType}: ${damage} ${actionType === 'heal' ? 'HP' : 'damage'}`,
+                category: 'battle_action',
+                level: 'info',
+                data: enemyActionData
+            });
         }
         
         this.playerTurn = true;
@@ -558,9 +762,61 @@ class BattleScene extends Phaser.Scene {
     checkBattleEnd() {
         if (this.player.health <= 0) {
             this.battleOver = true;
+            
+            // Track battle defeat
+            const defeatData = {
+                battleResult: 'defeat',
+                playerClass: this.player.charType,
+                playerLevel: this.player.level,
+                locationName: this.location.name,
+                enemyType: this.enemy.enemyType || this.enemy.name,
+                enemyHealthRemaining: this.enemy.health,
+                playerVictories: this.player.victories,
+                battleDuration: Date.now() - (this.battleStartTime || Date.now())
+            };
+            
+            if (typeof trackGameEvent !== 'undefined') {
+                trackGameEvent('battle_defeat', defeatData);
+            }
+            
+            if (typeof Sentry !== 'undefined') {
+                Sentry.addBreadcrumb({
+                    message: 'Battle ended in defeat',
+                    category: 'battle_result',
+                    level: 'info',
+                    data: defeatData
+                });
+            }
+            
             this.showDefeat();
         } else if (this.enemy.health <= 0) {
             this.battleOver = true;
+            
+            // Track battle victory
+            const victoryData = {
+                battleResult: 'victory',
+                playerClass: this.player.charType,
+                playerLevel: this.player.level,
+                locationName: this.location.name,
+                enemyType: this.enemy.enemyType || this.enemy.name,
+                playerHealthRemaining: this.player.health,
+                playerVictories: this.player.victories + 1,
+                battleDuration: Date.now() - (this.battleStartTime || Date.now())
+            };
+            
+            if (typeof trackGameEvent !== 'undefined') {
+                trackGameEvent('battle_victory', victoryData);
+            }
+            
+            if (typeof Sentry !== 'undefined') {
+                Sentry.addBreadcrumb({
+                    message: 'Battle ended in victory',
+                    category: 'battle_result',
+                    level: 'info',
+                    data: victoryData
+                });
+            }
+            
             this.showVictory();
         }
     }
@@ -575,11 +831,18 @@ class BattleScene extends Phaser.Scene {
         const goldReward = Math.floor(Math.random() * 31) + 30 + this.location.minVictoriesRequired * 15; // Increased base and multiplier
         const shardReward = Math.floor(Math.random() * 3) + 1;
         
+        // Check for level up
+        const oldLevel = this.player.level;
+        
         // Update player
         this.player.victories++;
         this.player.gold += goldReward;
         this.player.dragonShards += shardReward;
         this.player.locationVictories[this.location.name] = (this.player.locationVictories[this.location.name] || 0) + 1;
+        
+        // Check for level up after victory
+        const newLevel = this.player.level;
+        const leveledUp = newLevel > oldLevel;
         
         // Check for final victory at Battle of Druids Castle
         const isFinaleVictory = this.location.name === "Battle of Druids Castle" && 
@@ -587,6 +850,80 @@ class BattleScene extends Phaser.Scene {
         
         console.log(`🏰 Victory check: Location=${this.location.name}, Victories=${this.player.locationVictories[this.location.name]}, IsFinale=${isFinaleVictory}`);
         
+        // Track victory rewards and level up
+        const rewardsData = {
+            goldReward: goldReward,
+            shardReward: shardReward,
+            totalVictories: this.player.victories,
+            locationVictories: this.player.locationVictories[this.location.name],
+            playerLevel: newLevel,
+            leveledUp: leveledUp,
+            isFinaleVictory: isFinaleVictory,
+            totalGold: this.player.gold,
+            totalShards: this.player.dragonShards
+        };
+        
+        if (typeof trackGameEvent !== 'undefined') {
+            trackGameEvent('victory_rewards', rewardsData);
+        }
+        
+        if (typeof Sentry !== 'undefined') {
+            Sentry.addBreadcrumb({
+                message: `Victory rewards: ${goldReward} gold, ${shardReward} shards${leveledUp ? ', LEVEL UP!' : ''}`,
+                category: 'battle_result',
+                level: 'info',
+                data: rewardsData
+            });
+        }
+        
+        // Track level up if it occurred
+        if (leveledUp) {
+            const levelUpData = {
+                oldLevel: oldLevel,
+                newLevel: newLevel,
+                playerClass: this.player.charType,
+                totalVictories: this.player.victories,
+                locationName: this.location.name
+            };
+            
+            if (typeof trackGameEvent !== 'undefined') {
+                trackGameEvent('level_up', levelUpData);
+            }
+            
+            if (typeof Sentry !== 'undefined') {
+                Sentry.addBreadcrumb({
+                    message: `Level up! ${oldLevel} -> ${newLevel}`,
+                    category: 'progression',
+                    level: 'info',
+                    data: levelUpData
+                });
+            }
+        }
+        
+        // Track finale victory
+        if (isFinaleVictory) {
+            if (typeof trackGameEvent !== 'undefined') {
+                trackGameEvent('finale_victory', {
+                    playerClass: this.player.charType,
+                    playerLevel: this.player.level,
+                    totalVictories: this.player.victories,
+                    completionTime: Date.now() - (this.battleStartTime || Date.now())
+                });
+            }
+            
+            if (typeof Sentry !== 'undefined') {
+                Sentry.addBreadcrumb({
+                    message: 'FINALE VICTORY - Game completed!',
+                    category: 'game_completion',
+                    level: 'info',
+                    data: {
+                        playerClass: this.player.charType,
+                        playerLevel: this.player.level,
+                        totalVictories: this.player.victories
+                    }
+                });
+            }
+        }
         
         // Show special finale victory or regular victory
         if (isFinaleVictory) {
@@ -800,6 +1137,31 @@ class BattleScene extends Phaser.Scene {
     }
     
     forfeitBattle() {
+        // Track battle forfeit
+        const forfeitData = {
+            battleResult: 'forfeit',
+            playerClass: this.player.charType,
+            playerLevel: this.player.level,
+            locationName: this.location.name,
+            enemyType: this.enemy.enemyType || this.enemy.name,
+            playerHealthRemaining: this.player.health,
+            enemyHealthRemaining: this.enemy.health,
+            battleDuration: Date.now() - (this.battleStartTime || Date.now())
+        };
+        
+        if (typeof trackGameEvent !== 'undefined') {
+            trackGameEvent('battle_forfeit', forfeitData);
+        }
+        
+        if (typeof Sentry !== 'undefined') {
+            Sentry.addBreadcrumb({
+                message: 'Battle forfeited by player',
+                category: 'battle_result',
+                level: 'info',
+                data: forfeitData
+            });
+        }
+        
         // Show confirmation dialog
         const { width, height } = this.scale;
         

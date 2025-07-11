@@ -1,6 +1,13 @@
 name: Deploy to AWS S3 (Legacy/Backup)
 
 on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'battle-of-the-druids/**'
+      - 'isle-of-adventure/**'
+      - 'doom-riders/**'
+      - 'index.html'
   workflow_dispatch:
   schedule:
     - cron: '0 6 * * 0'  # Weekly backup on Sunday at 6 AM UTC
@@ -46,14 +53,13 @@ jobs:
         echo "Testing S3 access..."
         aws s3 ls s3://${{ env.S3_BUCKET }}
         
-    - name: Sync Battle of the Druids to S3
+    - name: Sync All Games to S3
       run: |
-        aws s3 sync battle-of-the-druids/ s3://${{ env.S3_BUCKET }}/ \
-          --delete \
-          --cache-control "public, max-age=31536000" \
-          --exclude "*.md" \
-          --exclude ".git/*" \
-          --exclude ".github/*"
+        # Sync game directories individually to reduce API calls
+        aws s3 sync battle-of-the-druids/ s3://${{ env.S3_BUCKET }}/battle-of-the-druids/ --size-only
+        aws s3 sync isle-of-adventure/ s3://${{ env.S3_BUCKET }}/isle-of-adventure/ --size-only
+        aws s3 sync doom-riders/ s3://${{ env.S3_BUCKET }}/doom-riders/ --size-only
+        aws s3 cp index.html s3://${{ env.S3_BUCKET }}/
           
     - name: Set specific cache headers for HTML files
       run: |

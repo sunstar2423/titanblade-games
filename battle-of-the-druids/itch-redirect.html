@@ -172,15 +172,27 @@
             </ul>
         </div>
         
-        <a href="https://titanbladegames.com/battle-of-the-druids/" 
-           class="play-button" 
-           target="_blank">
-            🚀 PLAY NOW - FREE!
-        </a>
+        <div style="display: flex; flex-direction: column; gap: 15px; align-items: center; margin: 20px 0;">
+            <a href="https://titanbladegames.com/battle-of-the-druids/" 
+               class="play-button" 
+               style="background: linear-gradient(45deg, #28a745, #20c997); margin: 5px;">
+                🎮 Play Embedded (Quick Start)
+            </a>
+            <a href="https://titanbladegames.com/battle-of-the-druids/" 
+               class="play-button" 
+               target="_blank"
+               style="background: linear-gradient(45deg, #FFD700, #FFA500); color: #1e3c72; margin: 5px;">
+                🚀 Play Fullscreen (New Tab)
+            </a>
+        </div>
+        <p style="font-size: 0.9em; color: #95a5a6; margin: 15px 0; text-align: center;">
+            <strong>Embedded:</strong> Instant play, mobile-friendly<br>
+            <strong>Fullscreen:</strong> Best experience, supports our development
+        </p>
         
         <div class="auto-redirect">
             <div class="spinner"></div>
-            <p>🎯 <strong>Auto-redirecting in <span id="countdown">10:00</span>...</strong></p>
+            <p>🎯 <strong>Auto-redirecting in <span id="countdown">10</span> seconds...</strong></p>
             <p>Or click the button above to play immediately!</p>
         </div>
         
@@ -197,8 +209,8 @@
     </div>
 
     <script>
-        // Auto-redirect after 10 minutes
-        let countdown = 600;
+        // Auto-redirect after 10 seconds
+        let countdown = 10;
         const countdownElement = document.getElementById('countdown');
         const gameUrl = 'https://titanbladegames.com/battle-of-the-druids/';
         
@@ -219,22 +231,15 @@
             }
         }
         
-        // Function to format time as MM:SS
-        function formatTime(seconds) {
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-        }
-        
         // Update initial display
         if (countdownElement) {
-            countdownElement.textContent = formatTime(countdown);
+            countdownElement.textContent = countdown;
         }
         
         const timer = setInterval(() => {
             countdown--;
             if (countdownElement) {
-                countdownElement.textContent = formatTime(countdown);
+                countdownElement.textContent = countdown;
             }
             
             if (countdown <= 0) {
@@ -245,19 +250,31 @@
         
         // Manual button click handler
         document.addEventListener('DOMContentLoaded', function() {
-            const playButton = document.querySelector('.play-button');
-            if (playButton) {
-                playButton.addEventListener('click', function(e) {
+            const playButtons = document.querySelectorAll('.play-button');
+            playButtons.forEach((button, index) => {
+                button.addEventListener('click', function(e) {
                     e.preventDefault();
+                    
+                    const playType = index === 0 ? 'embedded' : 'fullscreen';
                     
                     // Analytics tracking (if available)
                     if (typeof gtag !== 'undefined') {
-                        gtag('event', 'play_game', { event_category: 'itch_io_redirect' });
+                        gtag('event', 'play_choice', {
+                            'event_category': 'Battle of Druids',
+                            'event_label': playType,
+                            'value': 1
+                        });
                     }
                     
-                    redirectToGame();
+                    if (index === 0) {
+                        // Embedded play - same window
+                        window.location.href = 'https://titanbladegames.com/battle-of-the-druids/';
+                    } else {
+                        // Fullscreen play - new tab
+                        redirectToGame();
+                    }
                 });
-            }
+            });
             
             // Title click handler
             const title = document.querySelector('h1');

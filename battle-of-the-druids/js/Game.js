@@ -67,6 +67,15 @@ const gameConfig = {
 window.addEventListener('load', () => {
     console.log('🎮 Starting Battle of the Druids Web Edition...');
     
+    // Set up Sentry context for game initialization
+    if (typeof Sentry !== 'undefined') {
+        Sentry.addBreadcrumb({
+            message: 'Game initialization started',
+            category: 'game',
+            level: 'info'
+        });
+    }
+    
     try {
         // Remove loading message
         const loadingDiv = document.querySelector('.loading');
@@ -85,8 +94,21 @@ window.addEventListener('load', () => {
             if (game.sound && game.sound.context && game.sound.context.state === 'suspended') {
                 game.sound.context.resume().then(() => {
                     console.log('🔊 Audio context resumed');
+                    if (typeof Sentry !== 'undefined') {
+                        Sentry.addBreadcrumb({
+                            message: 'Audio context resumed',
+                            category: 'audio',
+                            level: 'info'
+                        });
+                    }
                 }).catch(err => {
                     console.warn('Audio context resume failed:', err);
+                    if (typeof Sentry !== 'undefined') {
+                        Sentry.captureException(err, {
+                            tags: { section: 'audio' },
+                            level: 'warning'
+                        });
+                    }
                 });
             }
         };
@@ -99,9 +121,29 @@ window.addEventListener('load', () => {
         console.log('✅ Game initialized successfully!');
         console.log('📝 Debug: Access game object via window.game');
         
+        // Send success event to Sentry
+        if (typeof Sentry !== 'undefined') {
+            Sentry.addBreadcrumb({
+                message: 'Game initialized successfully',
+                category: 'game',
+                level: 'info'
+            });
+        }
+        
     } catch (error) {
         console.error('❌ Failed to initialize game:', error);
         console.error('Stack trace:', error.stack);
+        
+        // Send error to Sentry
+        if (typeof Sentry !== 'undefined') {
+            Sentry.captureException(error, {
+                tags: { 
+                    section: 'initialization',
+                    game: 'battle-of-the-druids'
+                },
+                level: 'fatal'
+            });
+        }
         
         const gameContainer = document.getElementById('game-container');
         if (gameContainer) {
@@ -136,6 +178,26 @@ window.addEventListener('error', (event) => {
     console.error('Error details:', event.filename, event.lineno, event.colno);
     console.error('Stack trace:', event.error?.stack);
     
+    // Send error to Sentry
+    if (typeof Sentry !== 'undefined') {
+        Sentry.captureException(event.error, {
+            tags: { 
+                section: 'runtime_error',
+                game: 'battle-of-the-druids',
+                filename: event.filename,
+                line: event.lineno,
+                column: event.colno
+            },
+            level: 'error',
+            extra: {
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+                message: event.message
+            }
+        });
+    }
+    
     // Show user-friendly error message
     const gameContainer = document.getElementById('game-container');
     if (gameContainer) {
@@ -150,6 +212,46 @@ window.addEventListener('error', (event) => {
         `;
     }
 });
+
+// Handle unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled Promise Rejection:', event.reason);
+    
+    // Send to Sentry
+    if (typeof Sentry !== 'undefined') {
+        Sentry.captureException(event.reason, {
+            tags: { 
+                section: 'unhandled_promise',
+                game: 'battle-of-the-druids'
+            },
+            level: 'error'
+        });
+    }
+});
+
+// Game event tracking utilities
+window.trackGameEvent = function(eventName, data = {}) {
+    console.log(`🎮 Game Event: ${eventName}`, data);
+    
+    // Send to Google Analytics if available
+    if (typeof gtag !== 'undefined') {
+        gtag('event', eventName, {
+            event_category: 'Game',
+            event_label: 'Battle of the Druids',
+            ...data
+        });
+    }
+    
+    // Send to Sentry as breadcrumb
+    if (typeof Sentry !== 'undefined') {
+        Sentry.addBreadcrumb({
+            message: eventName,
+            category: 'game_event',
+            data: data,
+            level: 'info'
+        });
+    }
+};
 
 // Export for debugging
 window.CHARACTER_PRESETS = CHARACTER_PRESETS;
