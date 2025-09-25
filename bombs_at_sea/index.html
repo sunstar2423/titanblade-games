@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bombs At Sea</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <header>
+            <img src="banner.png" alt="Bombs At Sea" style="max-width: 100%; height: auto;">
+            <div id="resources">
+                <span>🌾 Food: <span id="food">0</span></span>
+                <span>🔧 Materials: <span id="materials">0</span></span>
+                <span>💰 Gold: <span id="gold">100</span></span>
+            </div>
+        </header>
+        
+        <main id="game-board">
+            <div id="buildings-panel">
+                <h3>Build Production:</h3>
+                <button onclick="buildFarm()">🚜 Farm (Cost: 20 gold)</button>
+                <button onclick="buildOrchard()">🍎 Orchard (Cost: 30 gold)</button>
+                <button onclick="buildGarden()"><img src="garden.png" width="20" height="20"> Garden (Cost: 15 gold)</button>
+                <button onclick="buildMill()">🏭 Mill (Cost: 40 gold)</button>
+                <button onclick="buildGoldmine()">⛏️ Gold Mine (Cost: 60 gold)</button>
+                
+                <h3>Build Factories:</h3>
+                <button onclick="buildGunboatFactory()">⚓ Gunboat Factory (Cost: 100 gold)</button>
+                <button onclick="buildDestroyerFactory()">🚢 Destroyer Factory (Cost: 200 gold)</button>
+                <button onclick="buildBattleshipFactory()">🛳️ Battleship Factory (Cost: 500 gold)</button>
+                <button onclick="buildCarrierFactory()">🛫 Carrier Factory (Cost: 800 gold)</button>
+                <button onclick="buildTankFactory()">🏭 Tank Factory (Cost: 150 gold)</button>
+            </div>
+            
+            <div id="game-area">
+                <div id="land-area">
+                    <h3>Your Dock 🏝️</h3>
+                    <div id="buildings-grid"></div>
+                </div>
+                
+                <div id="sea-area">
+                    <h3>Your Navy 🌊</h3>
+                    <div id="ships-grid"></div>
+                </div>
+                
+                <div id="land-defense">
+                    <h3>Your Army 🚗</h3>
+                    <div id="tanks-grid"></div>
+                </div>
+                
+                <div id="air-force">
+                    <h3>Your Air Force ✈️</h3>
+                    <div id="planes-grid"></div>
+                </div>
+                
+                <div id="enemy-area">
+                    <h3>Enemy Waters ☠️</h3>
+                    <div id="enemy-grid"></div>
+                    <button id="attack-button" onclick="attackEnemies()" disabled>⚔️ Attack Enemies!</button>
+                </div>
+                
+                <div id="enemy-dock-area">
+                    <h3>Enemy Dock 🏴‍☠️</h3>
+                    <div id="enemy-dock">
+                        <div id="dock-health">Health: <span id="dock-health-value">100/100</span></div>
+                        <div id="dock-defenses">Defenses: <span id="dock-defenses-value">10</span></div>
+                        <div id="dock-reward">Reward: <span id="dock-reward-value">200</span> gold</div>
+                    </div>
+                    <button id="attack-dock-button" onclick="attackEnemyDock()" disabled>🚢 Attack Dock!</button>
+                </div>
+            </div>
+        </main>
+        
+        <div id="status">
+            <p>Welcome to Bombs At Sea! Build farms and factories to create your naval empire!</p>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
