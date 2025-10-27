@@ -266,6 +266,114 @@
             margin-bottom: 1.5rem;
         }
 
+        /* Game Grid Styles */
+        .games-section {
+            background: rgba(255, 255, 255, 0.95);
+            margin: 2rem auto;
+            max-width: 1200px;
+            padding: 3rem 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .games-section h2 {
+            color: #2c3e50;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            text-align: center;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .game-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .game-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+            border-color: #FFD700;
+        }
+
+        .game-card-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 3px solid #eee;
+        }
+
+        .game-card-content {
+            padding: 1.5rem;
+        }
+
+        .game-card-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .game-card-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .game-card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .game-tag {
+            background: #f0f0f0;
+            color: #555;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .game-card-button {
+            display: block;
+            width: 100%;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            text-decoration: none;
+            padding: 0.75rem;
+            text-align: center;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .game-card-button:hover {
+            background: linear-gradient(135deg, #229954, #27ae60);
+            transform: translateY(-1px);
+        }
+
+        .game-card.featured {
+            border-color: #FFD700;
+            background: linear-gradient(135deg, #fff9e6, #ffffff);
+        }
+
+        .game-card.featured .game-card-title:before {
+            content: "⭐ ";
+            color: #FFD700;
+        }
+
         .coming-soon {
             background: rgba(255, 255, 255, 0.95);
             margin: 2rem auto;
@@ -337,6 +445,20 @@
             .logo img {
                 height: 40px;
             }
+
+            .games-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .games-section {
+                margin: 1rem;
+                padding: 2rem 1rem;
+            }
+
+            .games-section h2 {
+                font-size: 2rem;
+            }
         }
     </style>
 </head>
@@ -361,7 +483,83 @@
                 <source src="titanvideo.mp4" type="video/mp4">
             </video>
             <h1>Epic Open Source Adventures</h1>
-            <p>Welcome to TitanBlade Games - where we craft immersive, open source games and unforgettable gaming experiences. Play, modify, and contribute to our MIT-licensed games: "Doom Riders", "Bombs at Sea", "Battle of the Druids", and "Isle of Adventure"!</p>
+            <p>Welcome to TitanBlade Games - where we craft immersive, open source games and unforgettable gaming experiences. Choose your adventure below!</p>
+        </section>
+
+        <!-- GAME SELECTION GRID -->
+        <section class="games-section" id="games">
+            <h2>🎮 Choose Your Game</h2>
+            <div class="games-grid">
+                <!-- Doom Riders -->
+                <div class="game-card featured" onclick="window.location.href='doom-riders/'">
+                    <img src="doom-riders/assets/images/dirtbike.png" alt="Doom Riders" class="game-card-image">
+                    <div class="game-card-content">
+                        <div class="game-card-title">Doom Riders</div>
+                        <div class="game-card-description">High-speed motorcycle racing with realistic physics and multiple bike types.</div>
+                        <div class="game-card-tags">
+                            <span class="game-tag">Racing</span>
+                            <span class="game-tag">Action</span>
+                            <span class="game-tag">Mobile</span>
+                            <span class="game-tag">NEW!</span>
+                        </div>
+                        <a href="doom-riders/" class="game-card-button">🏍️ Race Now</a>
+                    </div>
+                </div>
+
+                <!-- Bombs at Sea -->
+                <div class="game-card featured" onclick="window.location.href='bombs_at_sea/'">
+                    <img src="bombs_at_sea/battleship.png" alt="Bombs at Sea" class="game-card-image">
+                    <div class="game-card-content">
+                        <div class="game-card-title">Bombs at Sea</div>
+                        <div class="game-card-description">Strategic naval warfare and base building with epic fleet battles.</div>
+                        <div class="game-card-tags">
+                            <span class="game-tag">Strategy</span>
+                            <span class="game-tag">Naval</span>
+                            <span class="game-tag">Base Building</span>
+                            <span class="game-tag">NEW!</span>
+                        </div>
+                        <a href="bombs_at_sea/" class="game-card-button">⚓ Command Fleet</a>
+                    </div>
+                </div>
+
+                <!-- Isle of Adventure -->
+                <div class="game-card featured" onclick="window.location.href='isle-of-adventure/'">
+                    <img src="isle-of-adventure/images/villagess.png" alt="Isle of Adventure" class="game-card-image">
+                    <div class="game-card-content">
+                        <div class="game-card-title">Isle of Adventure</div>
+                        <div class="game-card-description">Point-and-click adventure with rich storytelling and beautiful scenes.</div>
+                        <div class="game-card-tags">
+                            <span class="game-tag">Adventure</span>
+                            <span class="game-tag">Story</span>
+                            <span class="game-tag">Point & Click</span>
+                            <span class="game-tag">NEW!</span>
+                        </div>
+                        <a href="isle-of-adventure/" class="game-card-button">🌟 Start Adventure</a>
+                    </div>
+                </div>
+
+                <!-- Battle of the Druids -->
+                <div class="game-card" onclick="window.location.href='battle-of-the-druids/'">
+                    <img src="bodworldmap.png" alt="Battle of the Druids" class="game-card-image">
+                    <div class="game-card-content">
+                        <div class="game-card-title">Battle of the Druids</div>
+                        <div class="game-card-description">Turn-based RPG with 4 character classes and tactical combat system.</div>
+                        <div class="game-card-tags">
+                            <span class="game-tag">RPG</span>
+                            <span class="game-tag">Turn-Based</span>
+                            <span class="game-tag">Fantasy</span>
+                            <span class="game-tag">Classic</span>
+                        </div>
+                        <a href="battle-of-the-druids/" class="game-card-button">⚔️ Enter Battle</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DETAILED GAME INFORMATION & BLOG -->
+        <section class="coming-soon">
+            <h2>📖 Latest Game Updates & Features</h2>
+            <p>Dive deeper into our games with detailed feature breakdowns, development insights, and the latest updates. Each game offers unique mechanics and hours of entertainment!</p>
         </section>
 
         <!-- DOOM RIDERS ANNOUNCEMENT -->
