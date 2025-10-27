@@ -125,6 +125,21 @@ export default class GameScene extends Phaser.Scene {
         
         // Weapon system
         this.weaponCooldown = 0;
+
+        // 🔥 COMBO SYSTEM 🔥
+        this.comboCount = 0;
+        this.comboTimer = 0;
+        this.comboTimeLimit = 3000; // 3 seconds to maintain combo
+        this.comboMultiplier = 1;
+        this.maxComboMultiplier = 10; // Cap at 10x
+        this.lastComboAction = '';
+
+        // 🚀 NITRO BOOST SYSTEM 🚀
+        this.nitroMeter = 0;
+        this.maxNitroMeter = 100;
+        this.nitroActive = false;
+        this.nitroRechargeRate = 1; // Points per frame when not boosting
+        this.nitroConsumptionRate = 3; // Points per frame when boosting
         
         // Physics constants
         console.log('PHYSICS object:', PHYSICS);
@@ -345,6 +360,10 @@ export default class GameScene extends Phaser.Scene {
         this.player.maxSpeed = 250;
         this.player.jumpPower = 300;
         this.player.body.setMaxVelocityX(this.player.maxSpeed);
+
+        // Initialize jump abilities
+        this.player.canDoubleJump = false;
+        this.player.canTripleJump = false;
         
         console.log('Player setup completed with size and physics');
         
@@ -392,6 +411,22 @@ export default class GameScene extends Phaser.Scene {
         ground.setVisible(false);
         console.log(`Ground collision body created: width=${levelWidth}, center at=${levelWidth/2}`);
         // Static group objects are automatically immovable, so we don't need to set it
+
+        // ✨ PARTICLE TRAIL SYSTEM ✨
+        this.trailParticles = [];
+        this.trailTimer = 0;
+        this.trailInterval = 50; // Create trail particle every 50ms
+
+        // 🌦️ DYNAMIC WEATHER SYSTEM 🌦️
+        this.weatherType = 'clear'; // clear, rain, storm, wind
+        this.weatherParticles = [];
+        this.weatherTimer = 0;
+        this.weatherChangeInterval = 30000; // Change weather every 30 seconds
+        this.windDirection = 1; // 1 for right, -1 for left
+        this.windStrength = 0;
+
+        // ⚔️ PLAYER ATTACK TRACKING ⚔️
+        this.lastPlayerAttackTime = 0;
     }
     
     setupControls() {
@@ -401,6 +436,9 @@ export default class GameScene extends Phaser.Scene {
         this.attackKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
         this.pauseKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P);
         this.weaponKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+
+        // 🚀 NITRO BOOST CONTROLS 🚀
+        this.nitroKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
         
         // WASD alternative controls
         this.wasd = this.input.keyboard.addKeys('W,S,A,D');
@@ -587,8 +625,21 @@ export default class GameScene extends Phaser.Scene {
             }
             this.player.body.setVelocityY(-jumpPower);
             this.player.canDoubleJump = false;
-            
+
             this.playJumpSound(1.2);
+        } else if (this.player.canTripleJump) {
+            // EPIC TRIPLE JUMP (only available after ramp boost)
+            let jumpPower = this.player.jumpPower * 0.6;
+            if (this.jumpBoostActive) {
+                jumpPower *= POWERUPS.JUMP_BOOST.effect;
+            }
+            this.player.body.setVelocityY(-jumpPower);
+            this.player.canTripleJump = false;
+
+            // Visual effect for epic triple jump
+            this.createTripleJumpEffect(this.player.x, this.player.y);
+            this.playJumpSound(1.5); // Even higher pitch
+            console.log('🚀🚀🚀 EPIC TRIPLE JUMP ACTIVATED! 🚀🚀🚀');
         }
     }
     
@@ -940,6 +991,7 @@ export default class GameScene extends Phaser.Scene {
             if (!this.player.isOnGround) {
                 this.player.isOnGround = true;
                 this.player.canDoubleJump = true;
+                this.player.canTripleJump = false; // Reset triple jump on landing
             }
         });
         
@@ -957,7 +1009,10 @@ export default class GameScene extends Phaser.Scene {
         
         // Projectiles vs enemies
         this.physics.add.overlap(this.projectiles, this.enemies, this.projectileHitEnemy, null, this);
-        
+
+        // ⚔️ ENEMY PROJECTILES VS PLAYER ⚔️
+        this.physics.add.overlap(this.player, this.projectiles, this.enemyProjectileHitPlayer, null, this);
+
         // Enemies vs ground
         this.physics.add.collider(this.enemies, this.groundBody);
         
@@ -988,6 +1043,34 @@ export default class GameScene extends Phaser.Scene {
         this.speedBoostIndicator = this.add.text(10, 100, '', {
             fontSize: '16px',
             fill: '#00FF00',
+            fontFamily: 'Arial'
+        });
+
+        // 🔥 COMBO SYSTEM UI 🔥
+        this.comboIndicator = this.add.text(10, 120, '', {
+            fontSize: '18px',
+            fill: '#FF4500',
+            fontFamily: 'Arial',
+            fontWeight: 'bold'
+        });
+
+        // 🚀 NITRO BOOST UI 🚀
+        this.nitroBarBg = this.add.rectangle(10, 150, 200, 20, 0x333333);
+        this.nitroBarBg.setOrigin(0, 0.5);
+
+        this.nitroBar = this.add.rectangle(10, 150, 200, 20, 0xFF4500);
+        this.nitroBar.setOrigin(0, 0.5);
+
+        this.nitroText = this.add.text(10, 170, 'NITRO: 0%', {
+            fontSize: '14px',
+            fill: '#FFFFFF',
+            fontFamily: 'Arial'
+        });
+
+        // 🌦️ WEATHER INDICATOR 🌦️
+        this.weatherText = this.add.text(10, 190, '🌤️ Clear', {
+            fontSize: '14px',
+            fill: '#FFFFFF',
             fontFamily: 'Arial'
         });
         
@@ -1049,6 +1132,13 @@ export default class GameScene extends Phaser.Scene {
             this.updateSpawning(time, delta);
             this.updatePowerups(delta);
             this.updateProjectiles(delta);
+
+            // 🔥 NEW SYSTEMS 🔥
+            this.updateComboSystem(delta);
+            this.updateNitroSystem(delta);
+            this.updateTrailSystem(delta);
+            this.updateWeatherSystem(delta);
+
             this.updateUI();
             this.updateGameState();
         } catch (error) {
@@ -1095,7 +1185,16 @@ export default class GameScene extends Phaser.Scene {
         
         // Base forward speed (automatic movement)
         let baseForwardSpeed = this.currentLevelConfig.worldSpeedMultiplier * 120; // Automatic forward movement
-        
+
+        // 🚀 NITRO BOOST INTEGRATION 🚀
+        const nitroMultiplier = this.getNitroSpeedMultiplier();
+        baseForwardSpeed *= nitroMultiplier;
+
+        if (nitroMultiplier > 1.0) {
+            // Create nitro trail effects when boosting
+            this.createNitroEffect();
+        }
+
         if (leftPressed) {
             // Slow down or move backwards
             this.player.body.setVelocityX(Math.max(0, baseForwardSpeed - 100));
@@ -1139,9 +1238,22 @@ export default class GameScene extends Phaser.Scene {
                 }
                 this.player.body.setVelocityY(-jumpPower);
                 this.player.canDoubleJump = false;
-                
+
                 // Play jump sound (higher pitch for double jump)
                 this.playJumpSound(1.2);
+            } else if (this.player.canTripleJump) {
+                // EPIC TRIPLE JUMP (only available after ramp boost)
+                let jumpPower = this.player.jumpPower * 0.6;
+                if (this.jumpBoostActive) {
+                    jumpPower *= POWERUPS.JUMP_BOOST.effect;
+                }
+                this.player.body.setVelocityY(-jumpPower);
+                this.player.canTripleJump = false;
+
+                // Visual effect for epic triple jump
+                this.createTripleJumpEffect(this.player.x, this.player.y);
+                this.playJumpSound(1.5); // Even higher pitch
+                console.log('🚀🚀🚀 EPIC TRIPLE JUMP ACTIVATED! 🚀🚀🚀');
             }
         }
         
@@ -1153,6 +1265,13 @@ export default class GameScene extends Phaser.Scene {
         // Weapon firing - handled by touch controls in handleTouchWeapon
         if (Phaser.Input.Keyboard.JustDown(this.weaponKey)) {
             this.fireWeapon();
+        }
+
+        // 🚀 NITRO BOOST CONTROLS 🚀
+        if (this.nitroKey.isDown || (this.touchInputs && this.touchInputs.boost)) {
+            this.activateNitro();
+        } else {
+            this.deactivateNitro();
         }
         
         // Update attack cooldown
@@ -1186,41 +1305,8 @@ export default class GameScene extends Phaser.Scene {
         // Enemy AI - now works with world coordinates and camera following
         this.enemies.children.entries.forEach(enemy => {
             if (enemy.body) {
-                const distanceToPlayer = this.player.x - enemy.x;
-                const verticalDistance = Math.abs(this.player.y - enemy.y);
-                
-                // Enemy AI behaviors in world coordinates
-                let targetVelocityX = 0;
-                
-                // Enemy AI with independent movement (not dependent on player velocity)
-                const baseSpeed = enemy.baseSpeed || 120;
-                
-                // If enemy is far behind player, speed up to catch up
-                if (distanceToPlayer > 150) {
-                    targetVelocityX = baseSpeed * 1.3; // 30% faster
-                }
-                // If enemy is far ahead of player, slow down to wait
-                else if (distanceToPlayer < -150) {
-                    targetVelocityX = baseSpeed * 0.7; // 30% slower
-                }
-                // If close to player, maintain base speed (allows player to pass)
-                else {
-                    targetVelocityX = baseSpeed * 0.9; // Slightly slower than base
-                    // Very rarely jump to attack
-                    if (Math.random() < 0.001 && enemy.body.touching.down && verticalDistance < 50) {
-                        enemy.body.setVelocityY(-200);
-                    }
-                }
-                
-                // Smart obstacle jumping for enemies
-                this.handleEnemyObstacleJumping(enemy, targetVelocityX);
-                
-                // Debug occasionally
-                if (Math.random() < 0.01) {
-                    console.log(`Enemy AI: distance=${Math.round(distanceToPlayer)}, targetSpeed=${Math.round(targetVelocityX)}, baseSpeed=${baseSpeed}`);
-                }
-                
-                enemy.body.setVelocityX(targetVelocityX);
+                // ⚔️ ENHANCED ENEMY AI WITH ATTACK PATTERNS ⚔️
+                this.updateEnemyAttackBehavior(enemy, delta);
             }
         });
         
@@ -1291,7 +1377,234 @@ export default class GameScene extends Phaser.Scene {
             });
         }
     }
-    
+
+    // ⚔️ ENHANCED ENEMY AI WITH ATTACK PATTERNS ⚔️
+    updateEnemyAttackBehavior(enemy, delta) {
+        const distanceToPlayer = this.player.x - enemy.x;
+        const verticalDistance = Math.abs(this.player.y - enemy.y);
+        const baseSpeed = enemy.baseSpeed || 120;
+
+        // Update timers
+        enemy.attackCooldown = Math.max(0, enemy.attackCooldown - delta);
+        enemy.dodgeTimer = Math.max(0, enemy.dodgeTimer - delta);
+        enemy.ramAttackCooldown = Math.max(0, enemy.ramAttackCooldown - delta);
+
+        // Detect player behavior
+        const playerSpeed = Math.abs(this.player.body.velocity.x);
+        const playerSpeedChange = playerSpeed - enemy.lastPlayerSpeed;
+        enemy.lastPlayerSpeed = playerSpeed;
+
+        let targetVelocityX = baseSpeed;
+        let performSpecialAction = false;
+
+        // Attack pattern-based behavior
+        switch (enemy.attackPattern) {
+            case 'aggressive':
+                // Always tries to get close and attack
+                if (distanceToPlayer > 0) {
+                    targetVelocityX = baseSpeed * (1.2 + enemy.aggroLevel * 0.3);
+                } else {
+                    targetVelocityX = baseSpeed * 0.8;
+                }
+
+                // Ram attack when close
+                if (Math.abs(distanceToPlayer) < enemy.attackRange &&
+                    enemy.ramAttackCooldown <= 0 &&
+                    verticalDistance < 60) {
+                    this.performRamAttack(enemy);
+                    performSpecialAction = true;
+                }
+                break;
+
+            case 'defensive':
+                // Maintains distance, attacks when player approaches
+                if (Math.abs(distanceToPlayer) < enemy.attackRange * 1.5) {
+                    if (distanceToPlayer > 0) {
+                        targetVelocityX = baseSpeed * 0.7; // Slow down to let player catch up
+                    } else {
+                        targetVelocityX = baseSpeed * 1.4; // Speed up to maintain distance
+                    }
+
+                    // Jump attack when player gets too close
+                    if (Math.abs(distanceToPlayer) < enemy.attackRange &&
+                        enemy.attackCooldown <= 0 &&
+                        enemy.body.touching.down) {
+                        this.performJumpAttack(enemy);
+                        performSpecialAction = true;
+                    }
+                } else {
+                    targetVelocityX = baseSpeed * 0.9;
+                }
+                break;
+
+            case 'tactical':
+                // Adapts to player behavior and uses projectiles
+                if (playerSpeed > 200) {
+                    // Player is boosting - try to intercept
+                    targetVelocityX = baseSpeed * 1.5;
+                } else if (playerSpeedChange < -50) {
+                    // Player is slowing down - be cautious
+                    targetVelocityX = baseSpeed * 0.8;
+                } else {
+                    // Normal following behavior
+                    targetVelocityX = distanceToPlayer > 0 ? baseSpeed * 1.1 : baseSpeed * 0.9;
+                }
+
+                // Shoot projectiles at range
+                if (Math.abs(distanceToPlayer) < 200 &&
+                    Math.abs(distanceToPlayer) > 100 &&
+                    enemy.attackCooldown <= 0) {
+                    this.performProjectileAttack(enemy);
+                    performSpecialAction = true;
+                }
+                break;
+
+            case 'berserker':
+                // High aggression when damaged, ignores self-preservation
+                const healthPercent = enemy.health / ENEMY_TYPES.RIDER.health;
+                const berserkerMultiplier = 1 + (1 - healthPercent) * 0.8; // Up to 80% faster when damaged
+
+                if (distanceToPlayer > 0) {
+                    targetVelocityX = baseSpeed * berserkerMultiplier * 1.3;
+                } else {
+                    targetVelocityX = baseSpeed * berserkerMultiplier * 0.8;
+                }
+
+                // Multiple attacks when close
+                if (Math.abs(distanceToPlayer) < enemy.attackRange && enemy.attackCooldown <= 0) {
+                    if (Math.random() < 0.6) {
+                        this.performRamAttack(enemy);
+                    } else {
+                        this.performJumpAttack(enemy);
+                    }
+                    performSpecialAction = true;
+                }
+                break;
+        }
+
+        // Dodge mechanics - all enemies can dodge
+        if (enemy.dodgeTimer <= 0 && this.shouldEnemyDodge(enemy)) {
+            this.performDodge(enemy);
+            enemy.dodgeTimer = 2000 + Math.random() * 1000; // 2-3 second cooldown
+        }
+
+        // Weather effects on enemy behavior
+        if (this.weatherType === 'wind' && this.windStrength > 0) {
+            targetVelocityX *= (1 + this.windDirection * this.windStrength * 0.2);
+        }
+
+        // Apply movement with smart obstacle jumping
+        if (!performSpecialAction) {
+            this.handleEnemyObstacleJumping(enemy, targetVelocityX);
+            enemy.body.setVelocityX(targetVelocityX);
+        }
+    }
+
+    performRamAttack(enemy) {
+        console.log(`⚔️ ${enemy.attackPattern} enemy performing ram attack!`);
+
+        // Boost forward for ram attack
+        const ramForce = 300 + enemy.aggroLevel * 100;
+        enemy.body.setVelocityX(enemy.x < this.player.x ? ramForce : -ramForce);
+
+        // Visual effect
+        enemy.setTint(0xFF0000);
+        this.time.delayedCall(500, () => enemy.clearTint());
+
+        // Create attack particles
+        for (let i = 0; i < 5; i++) {
+            const particle = this.add.circle(enemy.x, enemy.y, 3, 0xFF4500);
+            this.tweens.add({
+                targets: particle,
+                x: particle.x + (Math.random() - 0.5) * 60,
+                y: particle.y + (Math.random() - 0.5) * 40,
+                alpha: 0,
+                duration: 400,
+                onComplete: () => particle.destroy()
+            });
+        }
+
+        enemy.ramAttackCooldown = 3000 + Math.random() * 2000;
+        enemy.attackCooldown = 1500;
+    }
+
+    performJumpAttack(enemy) {
+        console.log(`🦘 ${enemy.attackPattern} enemy performing jump attack!`);
+
+        // Jump towards player
+        const jumpPower = 250 + enemy.aggroLevel * 50;
+        const horizontalBoost = enemy.x < this.player.x ? 150 : -150;
+
+        enemy.body.setVelocityY(-jumpPower);
+        enemy.body.setVelocityX(enemy.body.velocity.x + horizontalBoost);
+
+        // Visual effect
+        enemy.setTint(0xFFFF00);
+        this.time.delayedCall(800, () => enemy.clearTint());
+
+        enemy.attackCooldown = 2000 + Math.random() * 1000;
+    }
+
+    performProjectileAttack(enemy) {
+        console.log(`🎯 ${enemy.attackPattern} enemy firing projectile!`);
+
+        // Create enemy projectile
+        const projectile = this.projectiles.create(enemy.x, enemy.y - 10, 'projectile');
+        if (projectile) {
+            projectile.setScale(0.8);
+            projectile.setTint(0xFF0000); // Red enemy projectiles
+
+            // Aim at player with some inaccuracy
+            const accuracy = 0.7 + enemy.aggroLevel * 0.3;
+            const targetX = this.player.x + (Math.random() - 0.5) * 100 * (1 - accuracy);
+            const targetY = this.player.y + (Math.random() - 0.5) * 50 * (1 - accuracy);
+
+            const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, targetX, targetY);
+            const speed = 250;
+
+            projectile.body.setVelocity(
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed
+            );
+
+            projectile.isEnemyProjectile = true;
+            projectile.damage = 20;
+
+            // Auto-destroy after 3 seconds
+            this.time.delayedCall(3000, () => {
+                if (projectile.active) projectile.destroy();
+            });
+        }
+
+        enemy.attackCooldown = 1000 + Math.random() * 2000;
+    }
+
+    performDodge(enemy) {
+        console.log(`🚀 ${enemy.attackPattern} enemy dodging!`);
+
+        // Quick horizontal dodge
+        const dodgeDirection = Math.random() > 0.5 ? 1 : -1;
+        const dodgeForce = 200 + Math.random() * 100;
+
+        enemy.body.setVelocityY(-100); // Small jump
+        enemy.body.setVelocityX(enemy.body.velocity.x + dodgeDirection * dodgeForce);
+
+        // Fade effect during dodge
+        enemy.setAlpha(0.6);
+        this.time.delayedCall(400, () => enemy.setAlpha(1));
+    }
+
+    shouldEnemyDodge(enemy) {
+        // Check if player is attacking or if there are incoming projectiles
+        const recentAttack = this.time.now - this.lastPlayerAttackTime < 1000;
+        const nearbyProjectiles = this.projectiles.children.entries.some(proj => {
+            return !proj.isEnemyProjectile &&
+                   Phaser.Math.Distance.Between(proj.x, proj.y, enemy.x, enemy.y) < 120;
+        });
+
+        return recentAttack || nearbyProjectiles || (Math.random() < 0.002 * enemy.aggroLevel);
+    }
+
     updateSpawning(time, delta) {
         this.spawnTimer += delta;
         
@@ -1369,11 +1682,12 @@ export default class GameScene extends Phaser.Scene {
         const sharedBottomLevel = this.groundLevel; // Same bottom level as bikes
         
         // Create obstacle in appropriate group
-        const obstacle = obstacleData.mustJump ? 
+        // RAMPS and MUST_JUMP obstacles go to jumpObstacles for better collision detection
+        const obstacle = (obstacleData.mustJump || obstacleData.isRamp) ?
             this.jumpObstacles.create(spawnX, 0, spriteName) : // Temporary Y position
             this.obstacles.create(spawnX, 0, spriteName); // Temporary Y position
         
-        console.log(`🏗️ OBSTACLE SPAWNED: ${randomType} → ${obstacleData.mustJump ? 'jumpObstacles' : 'obstacles'} group`);
+        console.log(`🏗️ OBSTACLE SPAWNED: ${randomType} → ${(obstacleData.mustJump || obstacleData.isRamp) ? 'jumpObstacles' : 'obstacles'} group`);
         
         // Configure obstacle physics and appearance
         obstacle.setDisplaySize(obstacleData.width, obstacleData.height); // Set size FIRST
@@ -1399,10 +1713,10 @@ export default class GameScene extends Phaser.Scene {
             // Set collision box size
             obstacle.body.setSize(obstacleData.width * 0.9, obstacleData.height * 0.9);
             
-            // Jump obstacles are completely solid - no overlap allowed
-            if (obstacleData.mustJump) {
+            // Jump obstacles and RAMPS are completely solid - no overlap allowed
+            if (obstacleData.mustJump || obstacleData.isRamp) {
                 obstacle.body.setSize(obstacleData.width, obstacleData.height); // Full size collision
-                console.log(`Created SOLID jump obstacle: ${randomType} at (${spawnX}, ${yPosition})`);
+                console.log(`Created SOLID ${obstacleData.isRamp ? 'RAMP' : 'jump obstacle'}: ${randomType} at (${spawnX}, ${obstacle.y})`);
             }
             
             // DIAGNOSTIC: Log physics state to verify static behavior
@@ -1413,9 +1727,13 @@ export default class GameScene extends Phaser.Scene {
         obstacle.isRamp = obstacleData.isRamp || false;
         obstacle.mustJump = obstacleData.mustJump || false;
         
-        // Ramps should provide upward velocity
+        // Ramps should provide upward velocity and ensure collision detection
         if (obstacle.isRamp) {
             obstacle.body.checkCollision.up = true;
+            obstacle.body.checkCollision.down = true;
+            obstacle.body.checkCollision.left = true;
+            obstacle.body.checkCollision.right = true;
+            console.log(`🚀 RAMP SETUP: ${randomType} configured for collision on all sides`);
         }
         
         // DIAGNOSTIC: Add final positioning confirmation
@@ -1460,6 +1778,15 @@ export default class GameScene extends Phaser.Scene {
         enemy.points = ENEMY_TYPES.RIDER.points;
         enemy.money = ENEMY_TYPES.RIDER.money || 0;
         enemy.attackCooldown = 0;
+
+        // ⚔️ ENHANCED AI ATTACK PATTERNS ⚔️
+        enemy.attackPattern = Phaser.Utils.Array.GetRandom(['aggressive', 'defensive', 'tactical', 'berserker']);
+        enemy.lastAttackTime = 0;
+        enemy.attackRange = 80 + Math.random() * 40; // 80-120 pixels
+        enemy.aggroLevel = Math.random(); // 0-1, higher = more aggressive
+        enemy.dodgeTimer = 0;
+        enemy.lastPlayerSpeed = 0;
+        enemy.ramAttackCooldown = 0;
         
         // Set initial velocity towards player (since enemies are spawned ahead)
         enemy.body.setVelocityX(-enemy.baseSpeed);
@@ -1567,7 +1894,10 @@ export default class GameScene extends Phaser.Scene {
     performAttack() {
         this.player.canAttack = false;
         this.player.attackCooldown = 600;
-        
+
+        // ⚔️ Track attack time for enemy dodge system ⚔️
+        this.lastPlayerAttackTime = this.time.now;
+
         // Show attack indicator
         this.attackIndicator.setText('⚡');
         this.attackIndicator.setPosition(this.player.x + 20, this.player.y - 30);
@@ -1595,9 +1925,10 @@ export default class GameScene extends Phaser.Scene {
         if (enemy.health <= 0) {
             const previousScore = this.gameState.score;
             
-            // Safe score and money calculations
-            this.gameState.score = this.clampValue(this.safeAdd(this.gameState.score, enemy.points), 0, 5000);
+            // 🔥 COMBO SYSTEM INTEGRATION 🔥 - Remove the manual score addition since addCombo will handle it
             this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, enemy.money), 0, 500);
+            const comboBonus = this.addCombo('enemy', enemy.points);
+            console.log(`🎯 Enemy defeated with combo bonus: ${comboBonus}`);
             
             console.log(`🎯 SCORE! Enemy defeated: +${enemy.points} points (${previousScore} → ${this.gameState.score})`);
             console.log(`💰 MONEY EARNED! Enemy defeated: +$${enemy.money}, Total session money: $${this.gameState.money}`);
@@ -1654,9 +1985,10 @@ export default class GameScene extends Phaser.Scene {
         if (enemy.health <= 0) {
             const previousScore = this.gameState.score;
             
-            // Safe score and money calculations
-            this.gameState.score = this.clampValue(this.safeAdd(this.gameState.score, enemy.points), 0, 5000);
+            // 🔥 COMBO SYSTEM INTEGRATION 🔥 - Remove the manual score addition since addCombo will handle it
             this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, enemy.money), 0, 500);
+            const comboBonus = this.addCombo('enemy', enemy.points);
+            console.log(`🎯 Enemy defeated with combo bonus: ${comboBonus}`);
             
             console.log(`🎯 SCORE! Enemy defeated by projectile: +${enemy.points} points (${previousScore} → ${this.gameState.score})`);
             console.log(`💰 MONEY EARNED! Enemy defeated by projectile: +$${enemy.money}, Total session money: $${this.gameState.money}`);
@@ -1707,18 +2039,108 @@ export default class GameScene extends Phaser.Scene {
             }
         });
     }
-    
+
+    // ⚔️ ENEMY PROJECTILE HIT PLAYER ⚔️
+    enemyProjectileHitPlayer(player, projectile) {
+        // Only handle enemy projectiles
+        if (!projectile.isEnemyProjectile) return;
+
+        console.log('💥 Player hit by enemy projectile!');
+
+        // Apply damage to player (if health system exists)
+        if (this.gameState.health !== undefined) {
+            this.gameState.health = Math.max(0, this.gameState.health - projectile.damage);
+        }
+
+        // Visual feedback
+        player.setTint(0xFF0000);
+        this.time.delayedCall(200, () => player.clearTint());
+
+        // Screen shake for impact
+        this.cameras.main.shake(200, 0.02);
+
+        // Knockback effect
+        const knockbackForce = 150;
+        const angle = Phaser.Math.Angle.Between(projectile.x, projectile.y, player.x, player.y);
+        player.body.setVelocity(
+            player.body.velocity.x + Math.cos(angle) * knockbackForce,
+            player.body.velocity.y + Math.sin(angle) * knockbackForce
+        );
+
+        // Damage particles
+        for (let i = 0; i < 6; i++) {
+            const particle = this.add.circle(player.x, player.y, 2, 0xFF0000);
+            this.tweens.add({
+                targets: particle,
+                x: particle.x + (Math.random() - 0.5) * 40,
+                y: particle.y + (Math.random() - 0.5) * 40,
+                alpha: 0,
+                duration: 500,
+                onComplete: () => particle.destroy()
+            });
+        }
+
+        // Destroy the projectile
+        projectile.destroy();
+    }
+
     hitJumpObstacle(player, obstacle) {
         console.log(`🎯 DEBUG: hitJumpObstacle called - JUMP OBSTACLE hit! Type: ${obstacle.obstacleType}`);
         console.log(`🔥 COLLISION DETECTED! Player hit obstacle in jumpObstacles group!`);
-        console.log(`🐌 LOG/BARRIER hit! This should SLOW you down for not jumping!`);
-        
+
+        // Check if this is a RAMP first!
+        if (obstacle.isRamp) {
+            // RAMPS: Provide EPIC jump boost when touched - ENHANCED!
+            console.log('🚀🚀🚀 EPIC RAMP HIT! LAUNCHING INTO THE SKY! 🚀🚀🚀');
+            console.log(`🎯 Ramp type: ${obstacle.obstacleType}, isRamp: ${obstacle.isRamp}`);
+
+            const approachSpeed = Math.abs(player.body.velocity.x);
+            // ENHANCED: Much bigger jump boost that scales with speed
+            const baseJumpBoost = 800; // Increased from 600
+            const speedMultiplier = Math.min(4, approachSpeed * 0.015); // Speed contributes more
+            const jumpBoost = baseJumpBoost + (approachSpeed * speedMultiplier);
+
+            // ENHANCED: More significant speed boost
+            const speedBoost = Math.min(200, approachSpeed * 0.8); // Increased from 150 and 0.5
+
+            player.body.setVelocityY(-jumpBoost);
+            player.body.setVelocityX(player.body.velocity.x + speedBoost);
+
+            // 🔥 COMBO SYSTEM INTEGRATION 🔥
+            const comboBonus = this.addCombo('ramp', obstacle.points * 2);
+            console.log(`🚀 Ramp hit with combo bonus: ${comboBonus}`);
+
+            // ENHANCED: Multiple visual effects for epic feeling
+            this.createSpeedLines();
+            this.createRampBoostEffect(obstacle.x, obstacle.y);
+            this.createEpicRampExplosion(obstacle.x, obstacle.y); // New epic effect
+            this.cameras.main.shake(200, 0.02); // Screen shake for impact
+
+            // ENHANCED: Allow triple jump after ramp for extra airtime fun
+            this.player.canDoubleJump = true;
+            this.player.canTripleJump = true; // New mechanic
+
+            // ENHANCED: Temporary invincibility frames after epic ramp jump
+            this.player.setTint(0x00ffff); // Cyan glow
+            this.time.delayedCall(1000, () => {
+                this.player.clearTint();
+            });
+
+            console.log(`🚀🚀🚀 Applied EPIC ramp boost: jumpBoost=${jumpBoost}, speedBoost=${speedBoost}, TRIPLE JUMP ENABLED! 🚀🚀🚀`);
+
+            // Don't destroy ramp, let it be reused
+            return false; // Prevent physics separation
+        }
+
+        // NON-RAMP jump obstacles (LOG, BARRIER, ROCK): Slow player
+        console.log(`🐌 LOG/BARRIER/ROCK hit! This should SLOW you down for not jumping!`);
+
         if (!this.invincibilityActive) {
             // Apply temporary slowdown effect (same as hitting other jump obstacles)
             this.applySlowdownEffect(player, obstacle);
             obstacle.destroy();
         }
-        
+
         return false; // Prevent physics separation since we're handling it manually
     }
 
@@ -1727,27 +2149,44 @@ export default class GameScene extends Phaser.Scene {
         console.log(`🔥 COLLISION DETECTED! Player hit obstacle in obstacles group!`);
         
         if (obstacle.isRamp) {
-            // RAMPS: Provide massive jump boost when touched
-            console.log('🚀🚀🚀 ACTUAL RAMP HIT! This makes you FLY HIGH! 🚀🚀🚀');
+            // RAMPS: Provide EPIC jump boost when touched - ENHANCED!
+            console.log('🚀🚀🚀 EPIC RAMP HIT! LAUNCHING INTO THE SKY! 🚀🚀🚀');
             console.log(`🎯 Ramp type: ${obstacle.obstacleType}, isRamp: ${obstacle.isRamp}`);
-            
+
             const approachSpeed = Math.abs(player.body.velocity.x);
-            const jumpBoost = 600 + approachSpeed * 2; // MASSIVE jump boost
-            const speedBoost = Math.min(150, approachSpeed * 0.5);
-            
+            // ENHANCED: Much bigger jump boost that scales with speed
+            const baseJumpBoost = 800; // Increased from 600
+            const speedMultiplier = Math.min(4, approachSpeed * 0.015); // Speed contributes more
+            const jumpBoost = baseJumpBoost + (approachSpeed * speedMultiplier);
+
+            // ENHANCED: More significant speed boost
+            const speedBoost = Math.min(200, approachSpeed * 0.8); // Increased from 150 and 0.5
+
             player.body.setVelocityY(-jumpBoost);
             player.body.setVelocityX(player.body.velocity.x + speedBoost);
-            this.gameState.score += obstacle.points;
-            
-            // Visual effects
+
+            // 🔥 COMBO SYSTEM INTEGRATION 🔥
+            const comboBonus = this.addCombo('ramp', obstacle.points * 2);
+            console.log(`🚀 Ramp hit with combo bonus: ${comboBonus}`);
+
+            // ENHANCED: Multiple visual effects for epic feeling
             this.createSpeedLines();
             this.createRampBoostEffect(obstacle.x, obstacle.y);
-            
-            // Allow player to double jump again after ramp
+            this.createEpicRampExplosion(obstacle.x, obstacle.y); // New epic effect
+            this.cameras.main.shake(200, 0.02); // Screen shake for impact
+
+            // ENHANCED: Allow triple jump after ramp for extra airtime fun
             this.player.canDoubleJump = true;
-            
-            console.log(`🚀 Applied massive ramp boost: jumpBoost=${jumpBoost}, speedBoost=${speedBoost}`);
-            
+            this.player.canTripleJump = true; // New mechanic
+
+            // ENHANCED: Temporary invincibility frames after epic ramp jump
+            this.player.setTint(0x00ffff); // Cyan glow
+            this.time.delayedCall(1000, () => {
+                this.player.clearTint();
+            });
+
+            console.log(`🚀🚀🚀 Applied EPIC ramp boost: jumpBoost=${jumpBoost}, speedBoost=${speedBoost}, TRIPLE JUMP ENABLED! 🚀🚀🚀`);
+
             // Don't destroy ramp, let it be reused
             return;
         }
@@ -2120,6 +2559,84 @@ export default class GameScene extends Phaser.Scene {
             onComplete: () => boostText.destroy()
         });
     }
+
+    createEpicRampExplosion(x, y) {
+        // Create EPIC explosion effect for enhanced ramp boost
+        for (let i = 0; i < 15; i++) {
+            const particle = this.add.circle(x, y, 4 + Math.random() * 3, 0xffaa00);
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 150 + Math.random() * 100;
+
+            this.tweens.add({
+                targets: particle,
+                x: x + Math.cos(angle) * speed,
+                y: y + Math.sin(angle) * speed,
+                alpha: 0,
+                scaleX: 2,
+                scaleY: 2,
+                duration: 800,
+                ease: 'Power2',
+                onComplete: () => particle.destroy()
+            });
+        }
+
+        // Create epic boost text
+        const epicText = this.add.text(x, y - 50, '🚀 EPIC BOOST! 🚀', {
+            fontSize: '20px',
+            fill: '#FFD700',
+            fontFamily: 'Arial',
+            fontWeight: 'bold',
+            stroke: '#FF4500',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: epicText,
+            y: epicText.y - 80,
+            scaleX: 1.5,
+            scaleY: 1.5,
+            alpha: 0,
+            duration: 1200,
+            ease: 'Power2',
+            onComplete: () => epicText.destroy()
+        });
+    }
+
+    createTripleJumpEffect(x, y) {
+        // Create sparkly triple jump effect
+        for (let i = 0; i < 12; i++) {
+            const sparkle = this.add.circle(x, y, 2, 0x00ffff);
+            const angle = (Math.PI * 2 * i) / 12;
+            const radius = 30 + Math.random() * 20;
+
+            this.tweens.add({
+                targets: sparkle,
+                x: x + Math.cos(angle) * radius,
+                y: y + Math.sin(angle) * radius,
+                alpha: 0,
+                scaleX: 0,
+                scaleY: 0,
+                duration: 500,
+                onComplete: () => sparkle.destroy()
+            });
+        }
+
+        // Create triple jump text
+        const tripleText = this.add.text(x, y - 30, '⭐ TRIPLE! ⭐', {
+            fontSize: '14px',
+            fill: '#00FFFF',
+            fontFamily: 'Arial',
+            fontWeight: 'bold'
+        }).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: tripleText,
+            y: tripleText.y - 50,
+            alpha: 0,
+            duration: 600,
+            onComplete: () => tripleText.destroy()
+        });
+    }
     
     createCollisionEffect(x, y) {
         // Create collision sparks
@@ -2180,7 +2697,410 @@ export default class GameScene extends Phaser.Scene {
             this.player.trickMultiplier = 1;
         }
     }
-    
+
+    // 🔥 COMBO SYSTEM FUNCTIONS 🔥
+    addCombo(actionType, baseScore) {
+        // Reset combo if different action or too much time passed
+        if (this.lastComboAction !== actionType || this.comboTimer <= 0) {
+            this.comboCount = 1;
+            this.comboMultiplier = 1;
+        } else {
+            this.comboCount++;
+            this.comboMultiplier = Math.min(this.maxComboMultiplier, Math.floor(this.comboCount / 2) + 1);
+        }
+
+        // Reset combo timer
+        this.comboTimer = this.comboTimeLimit;
+        this.lastComboAction = actionType;
+
+        // Calculate bonus score
+        const comboBonus = baseScore * this.comboMultiplier;
+        this.gameState.score += comboBonus;
+
+        // Add nitro meter when performing combos
+        this.addNitroMeter(5 * this.comboMultiplier);
+
+        // Show combo effect
+        this.showComboEffect(comboBonus);
+
+        console.log(`🔥 COMBO x${this.comboCount}! Multiplier: ${this.comboMultiplier}x, Bonus: ${comboBonus}`);
+
+        return comboBonus;
+    }
+
+    showComboEffect(comboBonus) {
+        if (this.comboCount <= 1) return; // Don't show for single actions
+
+        // Create combo text with scaling effect
+        const comboText = this.add.text(this.player.x, this.player.y - 80,
+            `🔥 COMBO x${this.comboCount}! +${comboBonus}`, {
+            fontSize: `${16 + this.comboMultiplier * 2}px`,
+            fill: '#FF4500',
+            fontFamily: 'Arial',
+            fontWeight: 'bold',
+            stroke: '#FFFFFF',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+
+        // Pulsing scale effect
+        this.tweens.add({
+            targets: comboText,
+            scaleX: 1.5,
+            scaleY: 1.5,
+            duration: 100,
+            yoyo: true,
+            onComplete: () => {
+                this.tweens.add({
+                    targets: comboText,
+                    y: comboText.y - 60,
+                    alpha: 0,
+                    duration: 1000,
+                    onComplete: () => comboText.destroy()
+                });
+            }
+        });
+
+        // Combo particles
+        for (let i = 0; i < this.comboMultiplier; i++) {
+            const particle = this.add.circle(this.player.x, this.player.y, 3, 0xFF4500);
+            const angle = (Math.PI * 2 * i) / this.comboMultiplier;
+            const speed = 50 + this.comboMultiplier * 10;
+
+            this.tweens.add({
+                targets: particle,
+                x: this.player.x + Math.cos(angle) * speed,
+                y: this.player.y + Math.sin(angle) * speed,
+                alpha: 0,
+                duration: 800,
+                onComplete: () => particle.destroy()
+            });
+        }
+    }
+
+    updateComboSystem(delta) {
+        if (this.comboTimer > 0) {
+            this.comboTimer -= delta;
+            if (this.comboTimer <= 0) {
+                // Reset combo
+                this.comboCount = 0;
+                this.comboMultiplier = 1;
+                this.lastComboAction = '';
+                console.log('💔 Combo broken - time expired');
+            }
+        }
+    }
+
+    // 🚀 NITRO BOOST SYSTEM FUNCTIONS 🚀
+    addNitroMeter(amount) {
+        this.nitroMeter = Math.min(this.maxNitroMeter, this.nitroMeter + amount);
+    }
+
+    activateNitro() {
+        if (this.nitroMeter >= 20 && !this.nitroActive) { // Minimum 20% to use
+            this.nitroActive = true;
+            console.log('🚀 NITRO ACTIVATED!');
+
+            // Visual effects
+            this.createNitroEffect();
+            this.player.setTint(0xFF4500); // Orange glow
+        }
+    }
+
+    deactivateNitro() {
+        if (this.nitroActive) {
+            this.nitroActive = false;
+            this.player.clearTint();
+            console.log('🚀 Nitro deactivated');
+        }
+    }
+
+    updateNitroSystem(delta) {
+        if (this.nitroActive) {
+            // Consume nitro
+            this.nitroMeter -= this.nitroConsumptionRate * (delta / 16.67); // 60 FPS normalized
+            if (this.nitroMeter <= 0) {
+                this.nitroMeter = 0;
+                this.deactivateNitro();
+            }
+        } else {
+            // Recharge nitro slowly
+            this.nitroMeter = Math.min(this.maxNitroMeter,
+                this.nitroMeter + this.nitroRechargeRate * (delta / 16.67));
+        }
+    }
+
+    createNitroEffect() {
+        // Create flame trail effect
+        for (let i = 0; i < 5; i++) {
+            const flame = this.add.circle(
+                this.player.x - 40 - i * 10,
+                this.player.y + Math.random() * 20 - 10,
+                4, 0xFF4500
+            );
+
+            this.tweens.add({
+                targets: flame,
+                scaleX: 0,
+                scaleY: 0,
+                alpha: 0,
+                duration: 300,
+                onComplete: () => flame.destroy()
+            });
+        }
+    }
+
+    // ✨ PARTICLE TRAIL SYSTEM ✨
+    createTrailParticle() {
+        const speed = Math.abs(this.player.body.velocity.x);
+        const isMoving = speed > 50;
+
+        if (!isMoving) return;
+
+        // Different trail colors based on speed and boost
+        let color = 0x666666; // Default gray smoke
+        let intensity = Math.min(speed / 200, 1); // Scale by speed
+
+        if (this.nitroActive) {
+            color = 0xFF4500; // Orange flames when boosting
+            intensity = 1;
+        } else if (speed > 180) {
+            color = 0x8B4513; // Brown dust at high speed
+        } else if (speed > 120) {
+            color = 0x888888; // Gray smoke at medium speed
+        }
+
+        // Create trail particle behind the bike
+        const particle = this.add.circle(
+            this.player.x - 30 + Math.random() * 20 - 10,
+            this.player.y + 10 + Math.random() * 10 - 5,
+            2 + Math.random() * 3,
+            color
+        );
+
+        particle.alpha = 0.6 * intensity;
+
+        // Add to trail particles array for management
+        this.trailParticles.push({
+            sprite: particle,
+            life: 1000, // 1 second lifespan
+            created: this.time.now
+        });
+
+        // Animate the particle
+        this.tweens.add({
+            targets: particle,
+            scaleX: 0.1,
+            scaleY: 0.1,
+            alpha: 0,
+            y: particle.y - 20,
+            x: particle.x - 50, // Drift backwards
+            duration: 800 + Math.random() * 400,
+            ease: 'Quad.easeOut',
+            onComplete: () => {
+                particle.destroy();
+            }
+        });
+    }
+
+    updateTrailSystem(delta) {
+        // Create new trail particles based on timer and speed
+        this.trailTimer += delta;
+
+        const speed = Math.abs(this.player.body.velocity.x);
+        let trailFrequency = this.trailInterval;
+
+        // Adjust frequency based on speed
+        if (speed > 150) {
+            trailFrequency = 30; // More frequent at high speed
+        } else if (speed > 100) {
+            trailFrequency = 40;
+        }
+
+        if (this.nitroActive) {
+            trailFrequency = 20; // Very frequent when boosting
+        }
+
+        if (this.trailTimer >= trailFrequency) {
+            this.createTrailParticle();
+            this.trailTimer = 0;
+        }
+
+        // Clean up old particles
+        this.trailParticles = this.trailParticles.filter(p => {
+            if (this.time.now - p.created > p.life || !p.sprite.active) {
+                if (p.sprite.active) p.sprite.destroy();
+                return false;
+            }
+            return true;
+        });
+    }
+
+    // 🌦️ DYNAMIC WEATHER SYSTEM 🌦️
+    changeWeather() {
+        const weatherTypes = ['clear', 'rain', 'storm', 'wind'];
+        let newWeather;
+
+        // Don't pick the same weather twice in a row
+        do {
+            newWeather = Phaser.Utils.Array.GetRandom(weatherTypes);
+        } while (newWeather === this.weatherType);
+
+        this.weatherType = newWeather;
+        console.log(`🌦️ Weather changed to: ${this.weatherType}`);
+
+        // Clear existing weather particles
+        this.weatherParticles.forEach(p => {
+            if (p.sprite && p.sprite.active) p.sprite.destroy();
+        });
+        this.weatherParticles = [];
+
+        // Set wind effects
+        if (this.weatherType === 'wind') {
+            this.windDirection = Math.random() > 0.5 ? 1 : -1;
+            this.windStrength = 0.3 + Math.random() * 0.4; // 0.3 to 0.7
+        } else {
+            this.windStrength = 0;
+        }
+    }
+
+    createWeatherParticle() {
+        if (this.weatherType === 'clear') return;
+
+        let particle, color, size, behavior;
+
+        switch (this.weatherType) {
+            case 'rain':
+                // Blue raindrops
+                color = 0x4169E1;
+                size = 1 + Math.random() * 2;
+                particle = this.add.circle(
+                    this.cameras.main.scrollX + Math.random() * SCREEN_WIDTH,
+                    this.cameras.main.scrollY - 20,
+                    size, color
+                );
+
+                behavior = {
+                    velocityY: 300 + Math.random() * 200,
+                    velocityX: -20 + Math.random() * 40,
+                    life: 3000
+                };
+                break;
+
+            case 'storm':
+                // Lightning-colored rain with wind
+                color = Math.random() > 0.9 ? 0xFFFFFF : 0x4169E1; // Occasional white flashes
+                size = 1.5 + Math.random() * 2.5;
+                particle = this.add.circle(
+                    this.cameras.main.scrollX + Math.random() * SCREEN_WIDTH,
+                    this.cameras.main.scrollY - 20,
+                    size, color
+                );
+
+                behavior = {
+                    velocityY: 400 + Math.random() * 300,
+                    velocityX: -60 + Math.random() * 120,
+                    life: 2500
+                };
+                break;
+
+            case 'wind':
+                // Dust and debris
+                color = 0x8B7355; // Brown dust
+                size = 2 + Math.random() * 4;
+                particle = this.add.circle(
+                    this.cameras.main.scrollX + (this.windDirection > 0 ? -50 : SCREEN_WIDTH + 50),
+                    this.cameras.main.scrollY + Math.random() * SCREEN_HEIGHT,
+                    size, color
+                );
+
+                behavior = {
+                    velocityY: -10 + Math.random() * 20,
+                    velocityX: this.windDirection * (100 + Math.random() * 200) * this.windStrength,
+                    life: 4000
+                };
+                break;
+        }
+
+        if (particle) {
+            particle.alpha = 0.6 + Math.random() * 0.4;
+
+            this.weatherParticles.push({
+                sprite: particle,
+                velocityX: behavior.velocityX,
+                velocityY: behavior.velocityY,
+                life: behavior.life,
+                created: this.time.now
+            });
+        }
+    }
+
+    updateWeatherSystem(delta) {
+        // Change weather periodically
+        this.weatherTimer += delta;
+        if (this.weatherTimer >= this.weatherChangeInterval) {
+            this.changeWeather();
+            this.weatherTimer = 0;
+        }
+
+        // Create weather particles
+        if (this.weatherType !== 'clear') {
+            let spawnRate = 100; // Default spawn rate
+
+            switch (this.weatherType) {
+                case 'rain':
+                    spawnRate = 50;
+                    break;
+                case 'storm':
+                    spawnRate = 30; // More frequent
+                    break;
+                case 'wind':
+                    spawnRate = 80;
+                    break;
+            }
+
+            if (this.time.now % spawnRate < delta) {
+                this.createWeatherParticle();
+            }
+        }
+
+        // Update existing weather particles
+        this.weatherParticles = this.weatherParticles.filter(p => {
+            if (!p.sprite || !p.sprite.active) return false;
+
+            // Update position
+            p.sprite.x += (p.velocityX * delta / 1000);
+            p.sprite.y += (p.velocityY * delta / 1000);
+
+            // Check if particle is expired or off-screen
+            const age = this.time.now - p.created;
+            const offScreen = p.sprite.y > this.cameras.main.scrollY + SCREEN_HEIGHT + 50 ||
+                            p.sprite.x < this.cameras.main.scrollX - 100 ||
+                            p.sprite.x > this.cameras.main.scrollX + SCREEN_WIDTH + 100;
+
+            if (age > p.life || offScreen) {
+                p.sprite.destroy();
+                return false;
+            }
+
+            return true;
+        });
+
+        // Apply wind effects to player
+        if (this.weatherType === 'wind' && this.windStrength > 0) {
+            const windForce = this.windDirection * this.windStrength * 10;
+            this.player.x += windForce * (delta / 1000);
+        }
+
+        // Storm effects - occasional screen flash
+        if (this.weatherType === 'storm' && Math.random() < 0.001) {
+            this.cameras.main.flash(100, 255, 255, 255, true);
+        }
+    }
+
+    getNitroSpeedMultiplier() {
+        return this.nitroActive ? 1.8 : 1.0; // 80% speed boost when active
+    }
+
     flashScreen(color) {
         const flash = this.add.rectangle(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, SCREEN_WIDTH, SCREEN_HEIGHT, color);
         flash.setAlpha(0.3);
@@ -2247,6 +3167,41 @@ export default class GameScene extends Phaser.Scene {
         } else {
             this.speedBoostIndicator.setText('');
         }
+
+        // 🔥 UPDATE COMBO UI 🔥
+        if (this.comboCount > 1) {
+            this.comboIndicator.setText(`🔥 COMBO x${this.comboCount} (${this.comboMultiplier}x)`);
+        } else {
+            this.comboIndicator.setText('');
+        }
+
+        // 🚀 UPDATE NITRO UI 🚀
+        const nitroPercent = this.nitroMeter / this.maxNitroMeter;
+        this.nitroBar.setSize(200 * nitroPercent, 20);
+        this.nitroText.setText(`NITRO: ${Math.round(nitroPercent * 100)}%${this.nitroActive ? ' (ACTIVE!)' : ''}`);
+
+        if (this.nitroActive) {
+            this.nitroText.setFill('#FF4500');
+        } else {
+            this.nitroText.setFill('#FFFFFF');
+        }
+
+        // 🌦️ UPDATE WEATHER UI 🌦️
+        const weatherEmojis = {
+            'clear': '🌤️',
+            'rain': '🌧️',
+            'storm': '⛈️',
+            'wind': '💨'
+        };
+        const weatherColors = {
+            'clear': '#FFFFFF',
+            'rain': '#4169E1',
+            'storm': '#FFD700',
+            'wind': '#8B7355'
+        };
+
+        this.weatherText.setText(`${weatherEmojis[this.weatherType]} ${this.weatherType.charAt(0).toUpperCase() + this.weatherType.slice(1)}`);
+        this.weatherText.setFill(weatherColors[this.weatherType]);
         
         // Update distance and progress to finish line
         const distanceToFinish = Math.max(0, this.currentLevelConfig.length - this.player.x);
