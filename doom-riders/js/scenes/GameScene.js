@@ -556,25 +556,109 @@ export default class GameScene extends Phaser.Scene {
             weapon: this.weaponButton,
             pause: this.pauseButton
         };
+
+        // Add direct event listeners to buttons for better reliability
+        this.leftButton.on('pointerdown', () => {
+            console.log('Left button pressed directly');
+            this.touchInputs.left = true;
+            this.leftButton.setFillStyle(0x444444, 0.8);
+        });
+        this.leftButton.on('pointerup', () => {
+            console.log('Left button released directly');
+            this.touchInputs.left = false;
+            this.leftButton.setFillStyle(0x000000, 0.5);
+        });
+        this.leftButton.on('pointerout', () => {
+            this.touchInputs.left = false;
+            this.leftButton.setFillStyle(0x000000, 0.5);
+        });
+
+        this.rightButton.on('pointerdown', () => {
+            console.log('Right button pressed directly');
+            this.touchInputs.right = true;
+            this.rightButton.setFillStyle(0x444444, 0.8);
+        });
+        this.rightButton.on('pointerup', () => {
+            console.log('Right button released directly');
+            this.touchInputs.right = false;
+            this.rightButton.setFillStyle(0x000000, 0.5);
+        });
+        this.rightButton.on('pointerout', () => {
+            this.touchInputs.right = false;
+            this.rightButton.setFillStyle(0x000000, 0.5);
+        });
+
+        this.jumpButton.on('pointerdown', () => {
+            console.log('Jump button pressed directly');
+            this.touchInputs.jump = true;
+            this.jumpButton.setFillStyle(0x444444, 0.8);
+            this.handleTouchJump();
+        });
+        this.jumpButton.on('pointerup', () => {
+            console.log('Jump button released directly');
+            this.touchInputs.jump = false;
+            this.jumpButton.setFillStyle(0x000000, 0.5);
+        });
+
+        this.attackButton.on('pointerdown', () => {
+            console.log('Attack button pressed directly');
+            this.touchInputs.attack = true;
+            this.attackButton.setFillStyle(0x444444, 0.8);
+            this.handleTouchAttack();
+        });
+        this.attackButton.on('pointerup', () => {
+            console.log('Attack button released directly');
+            this.touchInputs.attack = false;
+            this.attackButton.setFillStyle(0x000000, 0.5);
+        });
+
+        this.weaponButton.on('pointerdown', () => {
+            console.log('Weapon button pressed directly');
+            this.touchInputs.weapon = true;
+            this.weaponButton.setFillStyle(0x444444, 0.8);
+            this.handleTouchWeapon();
+        });
+        this.weaponButton.on('pointerup', () => {
+            console.log('Weapon button released directly');
+            this.touchInputs.weapon = false;
+            this.weaponButton.setFillStyle(0x000000, 0.5);
+        });
+
+        this.pauseButton.on('pointerdown', () => {
+            console.log('Pause button pressed directly');
+            this.pauseButton.setFillStyle(0x444444, 0.8);
+            this.handleTouchPause();
+        });
+        this.pauseButton.on('pointerup', () => {
+            console.log('Pause button released directly');
+            this.pauseButton.setFillStyle(0x000000, 0.5);
+        });
     }
     
     handleTouchStart(pointer) {
         if (!this.mobileButtons) return;
-        
-        // Convert pointer coordinates to world coordinates if needed
-        const worldX = pointer.worldX || pointer.x;
-        const worldY = pointer.worldY || pointer.y;
-        
+
+        // Use screen coordinates for UI buttons (they have setScrollFactor(0))
+        const screenX = pointer.x;
+        const screenY = pointer.y;
+
+        console.log('Touch at screen coords:', screenX, screenY);
+
         // Check which button was touched
         Object.keys(this.mobileButtons).forEach(buttonKey => {
             const button = this.mobileButtons[buttonKey];
             if (button) {
-                // Calculate distance from touch to button center
-                const distance = Phaser.Math.Distance.Between(worldX, worldY, button.x, button.y);
-                if (distance < button.radius + 10) { // Add some tolerance
+                console.log(`Checking ${buttonKey} button at:`, button.x, button.y, 'radius:', button.radius);
+
+                // Calculate distance from touch to button center (using screen coordinates)
+                const distance = Phaser.Math.Distance.Between(screenX, screenY, button.x, button.y);
+                console.log(`Distance to ${buttonKey}:`, distance);
+
+                if (distance < button.radius + 15) { // Add some tolerance
+                    console.log(`✅ ${buttonKey} button pressed!`);
                     this.touchInputs[buttonKey] = true;
                     button.setFillStyle(0x444444, 0.8); // Highlight pressed button
-                    
+
                     // Handle immediate actions
                     if (buttonKey === 'jump') {
                         this.handleTouchJump();
@@ -592,19 +676,58 @@ export default class GameScene extends Phaser.Scene {
     
     handleTouchEnd(pointer) {
         if (!this.mobileButtons) return;
-        
-        // Release all buttons
+
+        // Use screen coordinates
+        const screenX = pointer.x;
+        const screenY = pointer.y;
+
+        console.log('Touch end at:', screenX, screenY);
+
+        // Check which button was released
         Object.keys(this.mobileButtons).forEach(buttonKey => {
-            this.touchInputs[buttonKey] = false;
             const button = this.mobileButtons[buttonKey];
-            if (button) {
+            if (button && this.touchInputs[buttonKey]) {
+                // Calculate distance to see if we're still on the button
+                const distance = Phaser.Math.Distance.Between(screenX, screenY, button.x, button.y);
+
+                // Release the button
+                this.touchInputs[buttonKey] = false;
                 button.setFillStyle(0x000000, 0.5); // Reset button appearance
+                console.log(`Released ${buttonKey} button`);
             }
         });
     }
-    
+
     handleTouchMove(pointer) {
-        // Handle continuous touch interactions if needed
+        if (!this.mobileButtons) return;
+
+        // Use screen coordinates
+        const screenX = pointer.x;
+        const screenY = pointer.y;
+
+        // Update touch states based on current position
+        Object.keys(this.mobileButtons).forEach(buttonKey => {
+            const button = this.mobileButtons[buttonKey];
+            if (button) {
+                const distance = Phaser.Math.Distance.Between(screenX, screenY, button.x, button.y);
+
+                // If finger is on button, keep it pressed
+                if (distance < button.radius + 15) {
+                    if (!this.touchInputs[buttonKey]) {
+                        this.touchInputs[buttonKey] = true;
+                        button.setFillStyle(0x444444, 0.8);
+                        console.log(`Touch moved onto ${buttonKey} button`);
+                    }
+                } else {
+                    // If finger moved off button, release it
+                    if (this.touchInputs[buttonKey]) {
+                        this.touchInputs[buttonKey] = false;
+                        button.setFillStyle(0x000000, 0.5);
+                        console.log(`Touch moved off ${buttonKey} button`);
+                    }
+                }
+            }
+        });
     }
     
     handleTouchJump() {
