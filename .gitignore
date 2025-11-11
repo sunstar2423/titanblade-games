@@ -76,3 +76,8 @@ saves/temp/
 # Development tools
 .prettierrc
 .eslintrc*
+
+# AI Assistant Documentation (local only)
+CLAUDE.md
+**/CLAUDE.md
+.claude/settings.local.json
