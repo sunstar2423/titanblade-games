@@ -68,6 +68,114 @@
             border-radius: 5px;
         }
 
+        /* Mobile Touch Controls */
+        .mobile-controls {
+            display: none;
+            position: absolute;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px), (pointer: coarse) {
+            .mobile-controls {
+                display: block;
+            }
+
+            #controls {
+                display: none;
+            }
+        }
+
+        /* Virtual Joystick */
+        #joystick-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            pointer-events: auto;
+        }
+
+        #joystick-base {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255, 255, 255, 0.5);
+        }
+
+        #joystick-stick {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.6);
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s;
+        }
+
+        /* Attack Button */
+        #attack-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 50, 50, 0.7);
+            border: 4px solid rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            pointer-events: auto;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #attack-button:active {
+            background: rgba(255, 100, 100, 0.9);
+            transform: scale(0.95);
+        }
+
+        /* Look/Aim Touch Area */
+        #look-area {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            pointer-events: auto;
+            touch-action: none;
+        }
+
+        /* Mobile UI adjustments */
+        @media (max-width: 768px), (pointer: coarse) {
+            #weaponBar {
+                bottom: 120px;
+                right: 10px;
+                gap: 5px;
+            }
+
+            .weapon-slot {
+                width: 40px;
+                height: 40px;
+                font-size: 14px;
+            }
+
+            #gameInfo {
+                font-size: 12px;
+                padding: 8px;
+            }
+
+            #multiplayerMenu {
+                display: none;
+            }
+        }
+
         #weaponBar {
             position: absolute;
             bottom: 10px;
@@ -177,6 +285,21 @@
             WASD: Move | Mouse: Look Around | Click: Attack<br>
             1-7: Switch Weapons | R: Reload | C: Toggle Camera | ESC: Release mouse
         </div>
+
+        <!-- Mobile Touch Controls -->
+        <div class="mobile-controls">
+            <!-- Virtual Joystick -->
+            <div id="joystick-container">
+                <div id="joystick-base"></div>
+                <div id="joystick-stick"></div>
+            </div>
+
+            <!-- Attack Button -->
+            <div id="attack-button">⚔️</div>
+
+            <!-- Look/Aim Touch Area -->
+            <div id="look-area"></div>
+        </div>
     </div>
 
     <script src="js/libs/three.min.js"></script>
@@ -194,6 +317,189 @@
         let game;
         let multiplayerManager;
 
+        // Mobile Touch Controls
+        const touchControls = {
+            joystick: {
+                active: false,
+                touchId: null,
+                startX: 0,
+                startY: 0,
+                currentX: 0,
+                currentY: 0,
+                deltaX: 0,
+                deltaY: 0
+            },
+            look: {
+                active: false,
+                touchId: null,
+                lastX: 0,
+                lastY: 0
+            },
+            attack: {
+                active: false
+            }
+        };
+
+        // Initialize Mobile Touch Controls
+        function initTouchControls() {
+            const joystickContainer = document.getElementById('joystick-container');
+            const joystickStick = document.getElementById('joystick-stick');
+            const attackButton = document.getElementById('attack-button');
+            const lookArea = document.getElementById('look-area');
+
+            if (!joystickContainer || !attackButton || !lookArea) {
+                console.log('Touch controls not found (probably desktop)');
+                return;
+            }
+
+            // Joystick Controls
+            joystickContainer.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = joystickContainer.getBoundingClientRect();
+
+                touchControls.joystick.active = true;
+                touchControls.joystick.touchId = touch.identifier;
+                touchControls.joystick.startX = rect.left + rect.width / 2;
+                touchControls.joystick.startY = rect.top + rect.height / 2;
+                touchControls.joystick.currentX = touch.clientX;
+                touchControls.joystick.currentY = touch.clientY;
+
+                updateJoystickPosition();
+            });
+
+            joystickContainer.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!touchControls.joystick.active) return;
+
+                const touch = Array.from(e.touches).find(t => t.identifier === touchControls.joystick.touchId);
+                if (!touch) return;
+
+                touchControls.joystick.currentX = touch.clientX;
+                touchControls.joystick.currentY = touch.clientY;
+
+                updateJoystickPosition();
+            });
+
+            joystickContainer.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchControls.joystick.active = false;
+                touchControls.joystick.deltaX = 0;
+                touchControls.joystick.deltaY = 0;
+
+                // Reset joystick position
+                joystickStick.style.transform = 'translate(-50%, -50%)';
+
+                // Clear movement keys
+                if (game) {
+                    game.keys['KeyW'] = false;
+                    game.keys['KeyS'] = false;
+                    game.keys['KeyA'] = false;
+                    game.keys['KeyD'] = false;
+                }
+            });
+
+            function updateJoystickPosition() {
+                const deltaX = touchControls.joystick.currentX - touchControls.joystick.startX;
+                const deltaY = touchControls.joystick.currentY - touchControls.joystick.startY;
+
+                const maxDistance = 45; // Max distance from center
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+                let finalX = deltaX;
+                let finalY = deltaY;
+
+                if (distance > maxDistance) {
+                    const angle = Math.atan2(deltaY, deltaX);
+                    finalX = Math.cos(angle) * maxDistance;
+                    finalY = Math.sin(angle) * maxDistance;
+                }
+
+                // Update visual position
+                joystickStick.style.transform = `translate(calc(-50% + ${finalX}px), calc(-50% + ${finalY}px))`;
+
+                // Normalize to -1 to 1 range
+                touchControls.joystick.deltaX = finalX / maxDistance;
+                touchControls.joystick.deltaY = finalY / maxDistance;
+
+                // Map to WASD keys
+                if (game) {
+                    const threshold = 0.3;
+                    game.keys['KeyW'] = touchControls.joystick.deltaY < -threshold;
+                    game.keys['KeyS'] = touchControls.joystick.deltaY > threshold;
+                    game.keys['KeyA'] = touchControls.joystick.deltaX < -threshold;
+                    game.keys['KeyD'] = touchControls.joystick.deltaX > threshold;
+                }
+            }
+
+            // Look/Aim Controls
+            lookArea.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+
+                touchControls.look.active = true;
+                touchControls.look.touchId = touch.identifier;
+                touchControls.look.lastX = touch.clientX;
+                touchControls.look.lastY = touch.clientY;
+            });
+
+            lookArea.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!touchControls.look.active) return;
+
+                const touch = Array.from(e.touches).find(t => t.identifier === touchControls.look.touchId);
+                if (!touch) return;
+
+                const deltaX = touch.clientX - touchControls.look.lastX;
+                const deltaY = touch.clientY - touchControls.look.lastY;
+
+                touchControls.look.lastX = touch.clientX;
+                touchControls.look.lastY = touch.clientY;
+
+                // Apply camera rotation (similar to mouse move)
+                if (game && game.currentPlayer) {
+                    const sensitivity = 0.003;
+
+                    if (game.cameraMode === 'third') {
+                        // Third person: rotate player and camera around player
+                        game.currentPlayer.group.rotation.y -= deltaX * sensitivity;
+
+                        // Vertical look (camera pitch)
+                        game.camera.rotation.x -= deltaY * sensitivity;
+                        game.camera.rotation.x = Math.max(-Math.PI/3, Math.min(Math.PI/3, game.camera.rotation.x));
+                    } else {
+                        // First person: standard first person controls
+                        game.currentPlayer.rotate(
+                            -deltaX * sensitivity,
+                            -deltaY * sensitivity
+                        );
+                    }
+                }
+            });
+
+            lookArea.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchControls.look.active = false;
+            });
+
+            // Attack Button
+            attackButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchControls.attack.active = true;
+
+                if (game && game.currentPlayer) {
+                    game.currentPlayer.attack(game);
+                }
+            });
+
+            attackButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchControls.attack.active = false;
+            });
+
+            console.log('Touch controls initialized');
+        }
+
         // Initialize the game
         function initGame() {
             try {
@@ -204,6 +510,9 @@
 
                 multiplayerManager = new MultiplayerManager(game);
                 console.log('Multiplayer manager initialized');
+
+                // Initialize touch controls for mobile devices
+                initTouchControls();
             } catch (error) {
                 console.error('Error initializing game:', error);
                 document.getElementById('gameInfo').innerHTML = '<div style="color: red;">Error: ' + error.message + '</div>';

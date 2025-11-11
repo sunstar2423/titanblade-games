@@ -161,12 +161,16 @@ class Game3D {
         document.addEventListener('click', this.onMouseClick);
         document.addEventListener('pointerlockchange', this.onPointerLockChange);
 
-        // Request pointer lock on first click
-        this.renderer.domElement.addEventListener('click', () => {
-            if (!this.isPointerLocked) {
-                this.renderer.domElement.requestPointerLock();
-            }
-        });
+        // Request pointer lock on first click (only on non-touch devices)
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+        if (!isTouchDevice) {
+            this.renderer.domElement.addEventListener('click', () => {
+                if (!this.isPointerLocked) {
+                    this.renderer.domElement.requestPointerLock();
+                }
+            });
+        }
     }
 
     onKeyDown(event) {
