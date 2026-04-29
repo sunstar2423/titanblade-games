@@ -234,16 +234,16 @@ const WEAPONS = [
 ];
 
 const PLACEABLES = [
-  { id:'flytrap',   name:'Carnivorous Plant',  emoji:'🪴', cost:40, desc:'Grabs & chomps nearby foes',       kind:'turret', dmg:30, range:2.2, cd:2.0, hp:80,  color:0x006400 },
-  { id:'cactus',    name:'Cactus Turret',      emoji:'🌵', cost:30, desc:'Auto-fires thorns at enemies',      kind:'turret', dmg:12, range:5.5, cd:0.5, hp:60,  color:0x2e8b57 },
-  { id:'pea',       name:'Pea Shooter',        emoji:'💚', cost:20, desc:'Rapid fire peas at nearest foe',    kind:'turret', dmg:8,  range:9,   cd:0.3, hp:50,  color:0x7cfc00 },
-  { id:'thorn',     name:'Thorn Bush',         emoji:'🌿', cost:15, desc:'Hurts enemies walking through it',  kind:'passive',dmg:20, range:1.8,        hp:40,  color:0x556b2f },
-  { id:'fireflwr',  name:'Fire Flower',        emoji:'🌸', cost:35, desc:'Fireballs that burn over time',     kind:'turret', dmg:15, range:8,   cd:1.0, hp:55,  color:0xff4500, burn:4 },
-  { id:'ice',       name:'Ice Plant',          emoji:'❄️', cost:25, desc:'Freezes nearby enemies (slows 70%)',kind:'freeze', dmg:0,  range:4,          hp:45,  color:0x00bfff },
-  { id:'mine',      name:'Mine Mushroom',      emoji:'💣', cost:15, desc:'Explodes when enemy steps on it',   kind:'mine',   dmg:50, range:3,   aoe:3,  hp:1,   color:0xff8c00 },
-  { id:'herb',      name:'Healing Herb',       emoji:'🌿', cost:30, desc:'Heals you 5 HP/s when nearby',      kind:'heal',   heal:5, range:3,          hp:60,  color:0x00ff7f },
-  { id:'lightning', name:'Lightning Plant',    emoji:'⚡', cost:45, desc:'Zaps enemies, chains to nearby foes',kind:'turret',dmg:25, range:6,   cd:1.5, hp:50,  color:0xffff00, chains:3 },
-  { id:'sunflwr',   name:'Giant Sunflower',    emoji:'🌻', cost:50, desc:'Long-range slow powerful cannon',   kind:'turret', dmg:45, range:13,  cd:2.2, hp:90,  color:0xffd700 },
+  { id:'flytrap',   name:'Carnivorous Plant',  emoji:'🪴', cost:40, desc:'⚔️ Grabs & chomps nearby foes',          kind:'turret', dmg:30, range:2.2, cd:2.0, hp:80,  color:0x006400 },
+  { id:'cactus',    name:'Cactus Turret',      emoji:'🌵', cost:30, desc:'⚔️ Auto-fires thorns at enemies',           kind:'turret', dmg:12, range:5.5, cd:0.5, hp:60,  color:0x2e8b57 },
+  { id:'pea',       name:'Pea Shooter',        emoji:'💚', cost:20, desc:'⚔️ Rapid fire peas at nearest foe',         kind:'turret', dmg:8,  range:9,   cd:0.3, hp:50,  color:0x7cfc00 },
+  { id:'thorn',     name:'Thorn Bush',         emoji:'🌿', cost:15, desc:'⚔️ Hurts enemies walking through it',       kind:'passive',dmg:20, range:1.8,        hp:40,  color:0x556b2f },
+  { id:'fireflwr',  name:'Fire Flower',        emoji:'🌸', cost:35, desc:'⚔️ Fireballs that burn over time',          kind:'turret', dmg:15, range:8,   cd:1.0, hp:55,  color:0xff4500, burn:4 },
+  { id:'ice',       name:'Ice Plant',          emoji:'❄️', cost:25, desc:'💚 Support — slows nearby enemies way down',kind:'freeze', dmg:0,  range:4,          hp:45,  color:0x00bfff, support:true },
+  { id:'mine',      name:'Mine Mushroom',      emoji:'💣', cost:15, desc:'⚔️ Explodes when enemy steps on it',        kind:'mine',   dmg:50, range:3,   aoe:3,  hp:1,   color:0xff8c00 },
+  { id:'herb',      name:'Healing Herb',       emoji:'🌿', cost:30, desc:'💚 Support — heals YOU 5 HP/s when nearby', kind:'heal',   heal:5, range:3,          hp:60,  color:0x00ff7f, support:true },
+  { id:'lightning', name:'Lightning Plant',    emoji:'⚡', cost:45, desc:'⚔️ Zaps enemies, chains to nearby foes',    kind:'turret', dmg:25, range:6,   cd:1.5, hp:50,  color:0xffff00, chains:3 },
+  { id:'sunflwr',   name:'Giant Sunflower',    emoji:'🌻', cost:50, desc:'⚔️ Long-range slow powerful cannon',        kind:'turret', dmg:45, range:13,  cd:2.2, hp:90,  color:0xffd700 },
 ];
 
 const DEFENSE_ITEMS = [
@@ -817,28 +817,58 @@ function renderShop() {
 
   const items = currentShopTab === 'weapons' ? WEAPONS : currentShopTab === 'plants' ? PLACEABLES : DEFENSE_ITEMS;
   items.forEach(item => {
-    const owned = currentShopTab === 'weapons' ? gs.ownedWeapons.has(item.id) : currentShopTab === 'plants' ? gs.ownedPlaceables.has(item.id) : false;
+    const owned = currentShopTab === 'weapons' && gs.ownedWeapons.has(item.id);
     const afford = gs.straw >= item.cost;
     const d = document.createElement('div');
     d.className = 'si' + (owned ? ' owned' : '') + (!afford && !owned ? ' dim' : '');
     d.innerHTML = `<div class="ie">${item.emoji}</div><div class="in">${item.name}</div><div class="id">${item.desc}</div>
-      <div class="ic">${owned ? '✅ Owned' : '🌾 ' + item.cost}</div>`;
-    if (owned && currentShopTab === 'weapons') d.onclick = () => equipWeapon(item.id);
-    else if (owned && currentShopTab === 'plants') d.onclick = () => { startPlace(item.id); toggleShop(true); };
-    else if (!owned && afford) d.onclick = () => buyItem(item, currentShopTab);
-    else if (currentShopTab === 'defenses' && afford) d.onclick = () => { startPlace(item.id); toggleShop(true); };
+      <div class="ic">${owned ? '✅ Owned — click to equip' : '🌾 ' + item.cost}</div>`;
+    if (owned) d.onclick = () => equipWeapon(item.id);
+    else if (afford) d.onclick = () => buyItem(item, currentShopTab);
     c.appendChild(d);
   });
 }
 
 function buyItem(item, tab) {
-  if (tab === 'defenses') { startPlace(item.id); toggleShop(true); return; }
   if (gs.straw < item.cost) return;
   gs.straw -= item.cost;
-  if (tab === 'weapons') { gs.ownedWeapons.add(item.id); equipWeapon(item.id); }
-  else if (tab === 'plants') gs.ownedPlaceables.add(item.id);
-  showToast('Bought ' + item.name + '! 🌱');
+  if (tab === 'weapons') {
+    gs.ownedWeapons.add(item.id);
+    equipWeapon(item.id);
+  } else if (tab === 'plants') {
+    autoPlacePlant(item);
+    toggleShop(true);
+  } else if (tab === 'defenses') {
+    startPlace(item.id);
+    toggleShop(true);
+  }
   renderShop(); saveGame();
+}
+
+function autoPlacePlant(item) {
+  // Pick a random spot on the farm away from the barn center
+  let pos, tries = 0;
+  do {
+    const angle = Math.random() * Math.PI * 2;
+    const r = 5 + Math.random() * (FARM_R - 7);
+    pos = new THREE.Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+    tries++;
+  } while (tries < 20 && gs.placedPlants.some(p => p.pos.distanceTo(pos) < 2.5));
+
+  const g = new THREE.Group();
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.8, 8), new THREE.MeshLambertMaterial({ color: 0x228B22 }));
+  stem.position.y = 0.4; stem.castShadow = true; g.add(stem);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 10), new THREE.MeshLambertMaterial({ color: item.color || 0x00ff00 }));
+  head.position.y = 0.9; head.castShadow = true; g.add(head);
+  // Support plants glow a soft green
+  if (item.support) {
+    const glow = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 8), new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.25 }));
+    glow.position.y = 0.9; g.add(glow);
+  }
+  g.position.copy(pos);
+  scene.add(g);
+  gs.placedPlants.push({ mesh: g, data: item, hp: item.hp, maxHp: item.hp, pos: pos.clone(), timer: 0 });
+  showToast(item.name + ' placed on your farm! ' + (item.support ? '💚' : '⚔️'));
 }
 
 function equipWeapon(id) {
