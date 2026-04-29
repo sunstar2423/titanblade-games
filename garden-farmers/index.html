@@ -223,7 +223,7 @@ const SKINS = [
 const WEAPONS = [
   { id:'carrot',  name:'Carrot Spear',         emoji:'🥕', cost:0,  desc:'Fast pierce through enemies',   kind:'melee',    dmg:15, range:2.5, cd:0.4,  color:0xff6600 },
   { id:'pumpkin', name:'Pumpkin Bomb',          emoji:'🎃', cost:30, desc:'Thrown AoE explosion',          kind:'throw',    dmg:40, range:12,  cd:1.5,  aoe:3.0, color:0xff8c00 },
-  { id:'apple',   name:'Speed Apple',           emoji:'🍎', cost:25, desc:'Bounces between 3 enemies',     kind:'bounce',   dmg:20, range:14,  cd:0.6,  color:0xff2222 },
+  { id:'apple',   name:'Speed Apple',           emoji:'🍎', cost:25, desc:'Bounces between 3 enemies',     kind:'bounce',   dmg:20, range:14,  cd:0.6,  bounces:3, color:0xff2222 },
   { id:'melon',   name:'Watermelon Hammer',     emoji:'🍉', cost:40, desc:'Slow heavy knockback slam',     kind:'heavy',    dmg:65, range:2.2, cd:1.8,  color:0x228b22 },
   { id:'corn',    name:'Corn Blast',            emoji:'🌽', cost:35, desc:'Shotgun burst up close',        kind:'shotgun',  dmg:8,  range:6,   cd:0.9,  pellets:7, color:0xffd700 },
   { id:'berry',   name:'Strawberry Boomerang',  emoji:'🍓', cost:30, desc:'Returns and hits twice',        kind:'boomerang',dmg:25, range:14,  cd:1.0,  color:0xff1493 },
@@ -832,6 +832,7 @@ function renderShop() {
 }
 
 function buyItem(item, tab) {
+  if (tab === 'defenses') { startPlace(item.id); toggleShop(true); return; }
   if (gs.straw < item.cost) return;
   gs.straw -= item.cost;
   if (tab === 'weapons') { gs.ownedWeapons.add(item.id); equipWeapon(item.id); }
@@ -1012,6 +1013,7 @@ function loop(ts) {
 // ═══════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════
+updateBarnRing();
 showScreen('menu');
 requestAnimationFrame(ts => { lastT = ts; requestAnimationFrame(loop); });
 </script>
