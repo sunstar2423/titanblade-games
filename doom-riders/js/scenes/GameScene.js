@@ -364,6 +364,11 @@ export default class GameScene extends Phaser.Scene {
         // Initialize jump abilities
         this.player.canDoubleJump = false;
         this.player.canTripleJump = false;
+
+        // Initialize attack and air tracking
+        this.player.canAttack = true;
+        this.player.attackCooldown = 0;
+        this.player.airTime = 0;
         
         console.log('Player setup completed with size and physics');
         
@@ -2138,11 +2143,11 @@ export default class GameScene extends Phaser.Scene {
         }
     }
     
-    showMoneyEarned(x, y, amount) {
+    showMoneyEarned(x, y, amount, color = '#00FF00') {
         // Create floating money text
         const moneyText = this.add.text(x, y - 30, `+$${amount}`, {
             fontSize: '20px',
-            fill: '#00FF00',
+            fill: color,
             fontFamily: 'Arial',
             fontWeight: 'bold',
             stroke: '#000000',
@@ -2824,7 +2829,7 @@ export default class GameScene extends Phaser.Scene {
     // 🔥 COMBO SYSTEM FUNCTIONS 🔥
     addCombo(actionType, baseScore) {
         // Reset combo if different action or too much time passed
-        if (this.lastComboAction !== actionType || this.comboTimer <= 0) {
+        if (!this.lastComboAction || this.lastComboAction !== actionType || this.comboTimer <= 0) {
             this.comboCount = 1;
             this.comboMultiplier = 1;
         } else {
@@ -3492,8 +3497,11 @@ export default class GameScene extends Phaser.Scene {
         // Update high score and total money safely
         if (this.gameState.score > this.gameState.highScore) {
             this.gameState.highScore = this.gameState.score;
+            this.gameState.isNewHighScore = true;
+        } else {
+            this.gameState.isNewHighScore = false;
         }
-        
+
         // Prevent money duplication by checking if already transferred
         if (!this.moneyTransferred) {
             const currentMoney = this.gameState.money || 0;
@@ -3715,8 +3723,11 @@ export default class GameScene extends Phaser.Scene {
         // Update high score and total money safely
         if (this.gameState.score > this.gameState.highScore) {
             this.gameState.highScore = this.gameState.score;
+            this.gameState.isNewHighScore = true;
+        } else {
+            this.gameState.isNewHighScore = false;
         }
-        
+
         // Prevent money duplication in game over too
         if (!this.moneyTransferred) {
             const currentMoney = this.gameState.money || 0;

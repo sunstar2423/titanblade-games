@@ -53,7 +53,7 @@ export default class GameOverScene extends Phaser.Scene {
         }
         
         // High score check
-        if (gameState.score === gameState.highScore && gameState.score > 0) {
+        if (gameState.isNewHighScore && gameState.score > 0) {
             this.add.text(SCREEN_WIDTH/2, 360, '🏆 NEW HIGH SCORE! 🏆', {
                 fontSize: '28px',
                 fill: '#FFD700',
