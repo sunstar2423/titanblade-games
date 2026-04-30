@@ -2049,7 +2049,7 @@ export default class GameScene extends Phaser.Scene {
             const previousScore = this.gameState.score;
             
             // 🔥 COMBO SYSTEM INTEGRATION 🔥 - Remove the manual score addition since addCombo will handle it
-            this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, enemy.money), 0, 500);
+            this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, enemy.money), 0, 2000);
             const comboBonus = this.addCombo('enemy', enemy.points);
             console.log(`🎯 Enemy defeated with combo bonus: ${comboBonus}`);
             
@@ -2109,7 +2109,7 @@ export default class GameScene extends Phaser.Scene {
             const previousScore = this.gameState.score;
             
             // 🔥 COMBO SYSTEM INTEGRATION 🔥 - Remove the manual score addition since addCombo will handle it
-            this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, enemy.money), 0, 500);
+            this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, enemy.money), 0, 2000);
             const comboBonus = this.addCombo('enemy', enemy.points);
             console.log(`🎯 Enemy defeated with combo bonus: ${comboBonus}`);
             
@@ -3473,7 +3473,7 @@ export default class GameScene extends Phaser.Scene {
         
         const previousScore = this.gameState.score;
         this.gameState.score = this.clampValue(this.safeAdd(this.gameState.score, victoryBonus), 0, 5000);
-        this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, levelMoneyBonus), 0, 500);
+        this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, levelMoneyBonus), 0, 2000);
         
         console.log(`🎯 FINAL SCORE! Level completion: +${victoryBonus} victory bonus (${previousScore} → ${this.gameState.score})`);
         console.log(`💰 DEBUG: AFTER BONUS - Session money: ${this.gameState.money}, Total money: ${this.gameState.totalMoney}`);

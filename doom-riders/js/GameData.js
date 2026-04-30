@@ -130,23 +130,23 @@ export const LEVEL_CONFIG = {
     5: {
         length: 6000,
         name: "VOLCANO HELL",
-        enemySpawnRate: 0.8,
-        obstacleSpawnRate: 0.8,
+        enemySpawnRate: 0.6,
+        obstacleSpawnRate: 0.7,
         maxEnemies: 10,
         jumpObstacleChance: 0.6,
         worldSpeedMultiplier: 1.8,
-        moneyBonus: 100,
+        moneyBonus: 200,
         background: 'volcanoBg'
     },
     6: {
         length: 8000,
         name: "CYBER CITY CIRCUIT",
-        enemySpawnRate: 1.0,
-        obstacleSpawnRate: 0.9,
+        enemySpawnRate: 0.7,
+        obstacleSpawnRate: 0.8,
         maxEnemies: 10,
         jumpObstacleChance: 0.7,
         worldSpeedMultiplier: 2.0,
-        moneyBonus: 150,
+        moneyBonus: 300,
         background: 'futureCityBg'
     }
 };
@@ -281,31 +281,31 @@ export const WEAPONS = {
         name: 'Rapid Fire',
         damage: 1,
         speed: 450,
-        cooldown: 300,
+        cooldown: 250,
         price: 500,
-        description: 'Fast firing rate with lower damage'
+        description: 'Fast firing rate — great for swarms'
     },
     POWER_SHOT: {
         name: 'Power Shot',
-        damage: 3,
-        speed: 350,
-        cooldown: 1500,
+        damage: 4,
+        speed: 380,
+        cooldown: 900,
         price: 1000,
-        description: 'Powerful shot that slows enemies significantly'
+        description: 'Hard-hitting shot that staggers enemies'
     },
     CHAIN_SHOT: {
         name: 'Chain Shot',
-        damage: 2,
-        speed: 400,
-        cooldown: 1000,
+        damage: 3,
+        speed: 420,
+        cooldown: 600,
         price: 2000,
-        description: 'Passes through multiple enemies'
+        description: 'Passes through multiple enemies at once'
     },
     ROCKET: {
         name: 'Rocket Launcher',
-        damage: 5,
-        speed: 300,
-        cooldown: 2500,
+        damage: 8,
+        speed: 350,
+        cooldown: 1800,
         price: 4000,
         description: 'Explosive rockets with area damage'
     }
