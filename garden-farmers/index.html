@@ -430,12 +430,14 @@ function buildPlayerMesh() {
   g.add(mk(new THREE.CylinderGeometry(0.52, 0.52, 0.08, 14), sk.hat, 2.0));
   // Hat top
   g.add(mk(new THREE.CylinderGeometry(0.32, 0.36, 0.42, 12), sk.hat, 2.25));
-  // Weapon
+  // Weapon — unique model per weapon type
   const wid = gs.hotbar[gs.activeSlot];
   if (wid) {
     const wd = WEAPONS.find(w => w.id === wid);
     if (wd) {
-      const wm = mk(new THREE.BoxGeometry(0.16, 0.16, 1.0), wd.color, 0.72, 0.55, -0.1);
+      const wm = buildWeaponMesh(wd);
+      wm.position.set(0.52, 0.68, 0.32);
+      wm.scale.setScalar(0.72);
       g.add(wm);
     }
   }
@@ -780,6 +782,219 @@ function checkWaveEnd() {
 // ═══════════════════════════════════════
 //  PLACEABLE PLANTS
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+//  PLANT + WEAPON MESH BUILDERS
+// ═══════════════════════════════════════
+function buildPlantMesh(data) {
+  const g = new THREE.Group();
+  const S = (col, rough=0.85) => new THREE.MeshStandardMaterial({color:col, roughness:rough, metalness:0});
+  const E = (col) => new THREE.MeshStandardMaterial({color:col, emissive:col, emissiveIntensity:0.55, roughness:0.8});
+  const Tr = (col, op) => new THREE.MeshStandardMaterial({color:col, transparent:true, opacity:op, roughness:0.1});
+  const add = (geo, mat, y=0, x=0, z=0, rx=0, ry=0, rz=0) => {
+    const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
+  };
+  switch(data.id) {
+    case 'flytrap': {
+      add(new THREE.CylinderGeometry(0.28,0.18,0.42,8), S(0xaa5522), 0.21);
+      add(new THREE.CylinderGeometry(0.07,0.09,0.7,6), S(0x228b22), 0.75);
+      const jawM = S(0x00bb33);
+      const j1 = add(new THREE.BoxGeometry(0.55,0.06,0.32), jawM, 1.22, 0, 0.16); j1.rotation.x=-0.5;
+      const j2 = add(new THREE.BoxGeometry(0.55,0.06,0.32), jawM, 1.22, 0,-0.16); j2.rotation.x= 0.5;
+      const teethM = S(0xffffff,0.4);
+      for(let i=-1;i<=1;i++) { const t=add(new THREE.ConeGeometry(0.04,0.14,4), teethM, 1.15, i*0.14, 0.2); t.rotation.x=-0.5; }
+      break;
+    }
+    case 'cactus': {
+      add(new THREE.CylinderGeometry(0.18,0.2,1.3,8), S(0x2e8b57), 0.65);
+      add(new THREE.SphereGeometry(0.22,7,7), S(0x2e8b57), 1.38);
+      add(new THREE.CylinderGeometry(0.11,0.13,0.5,7), S(0x2e8b57), 0.82, 0.38,0, 0,0, Math.PI/2);
+      add(new THREE.CylinderGeometry(0.1,0.1,0.3,7),   S(0x2e8b57), 1.05, 0.55,0, 0,0, Math.PI/2);
+      add(new THREE.CylinderGeometry(0.11,0.13,0.5,7), S(0x2e8b57), 0.82,-0.38,0, 0,0,-Math.PI/2);
+      add(new THREE.CylinderGeometry(0.1,0.1,0.3,7),   S(0x2e8b57), 1.05,-0.55,0, 0,0,-Math.PI/2);
+      const spM = S(0xcceecc,0.4);
+      [[0,1.42,0.2],[0,0.9,0.21],[0.21,0.65,0.18],[0,1.42,-0.2]].forEach(([x,y,z]) => {
+        const sp=add(new THREE.ConeGeometry(0.025,0.15,4), spM, y, x, z); sp.rotation.x=z>0?Math.PI*0.4:-Math.PI*0.4;
+      });
+      break;
+    }
+    case 'pea': {
+      add(new THREE.CylinderGeometry(0.22,0.17,0.3,8), S(0x556b2f), 0.15);
+      add(new THREE.CylinderGeometry(0.12,0.14,0.65,8), S(0x3a8a22), 0.62);
+      add(new THREE.CylinderGeometry(0.08,0.08,0.7,8), S(0x225511), 0.9, 0,0.35, Math.PI/2,0,0);
+      add(new THREE.BoxGeometry(0.45,0.05,0.22), S(0x4caf50), 0.78, 0,0, 0,0, 0.35);
+      add(new THREE.BoxGeometry(0.45,0.05,0.22), S(0x4caf50), 0.78, 0,0, 0,0,-0.35);
+      break;
+    }
+    case 'thorn': {
+      add(new THREE.SphereGeometry(0.52,8,8), S(0x3d5c22), 0.65);
+      add(new THREE.SphereGeometry(0.36,7,7), S(0x4a7a2a), 0.88, 0.28, 0.18);
+      add(new THREE.SphereGeometry(0.3,7,7),  S(0x4a7a2a), 0.78,-0.3,  0.1);
+      const thM = S(0x8b0000,0.5);
+      [[0,1.25,0],[0.5,0.85,0.3],[-0.44,0.82,0.2],[0.22,0.68,0.52],[-0.2,0.62,-0.5],[0.42,0.98,-0.34]].forEach(([x,y,z]) => {
+        const sp=add(new THREE.ConeGeometry(0.042,0.22,4), thM, y, x, z);
+        sp.lookAt(new THREE.Vector3(x*3,y+1,z*3));
+      });
+      break;
+    }
+    case 'fireflwr': {
+      add(new THREE.CylinderGeometry(0.07,0.09,1.1,7), S(0x228b22), 0.55);
+      add(new THREE.BoxGeometry(0.32,0.05,0.18), S(0x2eaa33), 0.68, 0.22,0, 0,0, 0.4);
+      const petM = S(0xff2200,0.7);
+      for(let i=0;i<8;i++) { const a=i/8*Math.PI*2; const p=add(new THREE.SphereGeometry(0.1,6,6), petM, 1.18, Math.cos(a)*0.36, Math.sin(a)*0.36); p.scale.set(0.7,0.7,1.5); p.rotation.y=-a; }
+      add(new THREE.SphereGeometry(0.2,8,8), S(0xff8800), 1.18);
+      add(new THREE.ConeGeometry(0.1,0.28,7), E(0xff4400), 1.55);
+      add(new THREE.ConeGeometry(0.06,0.2,6),  E(0xffaa00), 1.68);
+      break;
+    }
+    case 'ice': {
+      add(new THREE.CylinderGeometry(0.07,0.09,0.6,6), S(0x88ccff), 0.3);
+      const icM = Tr(0xaaddff, 0.8); icM.metalness=0.1; icM.roughness=0.05;
+      [[0,0.95,0,0,0,0],[0.28,0.72,0.28,0.4,0,0.3],[-0.24,0.68,0.2,-0.4,0,-0.4],[0.1,0.82,-0.28,0.5,0,0.2]].forEach(([x,y,z,rx,ry,rz]) => {
+        const c=new THREE.Mesh(new THREE.OctahedronGeometry(0.27), icM); c.position.set(x,y,z); c.rotation.set(rx,ry,rz); g.add(c);
+      });
+      const glow=new THREE.Mesh(new THREE.SphereGeometry(0.44,8,8), Tr(0x44aaff,0.18)); glow.position.y=0.88; g.add(glow);
+      break;
+    }
+    case 'mine': {
+      add(new THREE.CylinderGeometry(0.1,0.12,0.5,7), S(0x8b6914), 0.25);
+      add(new THREE.SphereGeometry(0.42,8,8), S(0x333333), 0.75);
+      add(new THREE.CylinderGeometry(0.06,0.06,0.4,6), S(0xcc8800), 1.28);
+      for(let i=0;i<5;i++){const a=i/5*Math.PI*2; add(new THREE.SphereGeometry(0.06,5,5), E(0xff4400), 0.85, Math.cos(a)*0.28, Math.sin(a)*0.28);}
+      break;
+    }
+    case 'herb': {
+      add(new THREE.CylinderGeometry(0.2,0.18,0.2,8), S(0x5c8833), 0.1);
+      const lM = S(0x22aa44);
+      [[0.2,0.45,0.1,0,0,0.5],[-0.2,0.45,-0.1,0,0,-0.5],[0,0.55,0.2,0.4,0,0.1],[0,0.5,-0.18,-0.4,0,0.1],[0.15,0.65,0,0,0,0.3]].forEach(([x,y,z,rx,ry,rz]) => {
+        const l=new THREE.Mesh(new THREE.SphereGeometry(0.16,6,6),lM); l.scale.set(1,0.4,1.4); l.position.set(x,y,z); l.rotation.set(rx,ry,rz); l.castShadow=true; g.add(l);
+      });
+      add(new THREE.BoxGeometry(0.06,0.3,0.06), S(0xff3333), 0.9);
+      add(new THREE.BoxGeometry(0.24,0.06,0.06), S(0xff3333), 0.9);
+      break;
+    }
+    case 'lightning': {
+      add(new THREE.CylinderGeometry(0.08,0.1,1.0,7), S(0x111133), 0.5);
+      const ltM = E(0xffff00);
+      add(new THREE.BoxGeometry(0.09,0.5,0.09), ltM, 1.18,  0.08,0, 0,0,  0.4);
+      add(new THREE.BoxGeometry(0.09,0.5,0.09), ltM, 1.52, -0.08,0, 0,0, -0.4);
+      for(let i=0;i<5;i++){const a=i/5*Math.PI*2; add(new THREE.SphereGeometry(0.055,5,5), E(0x88ffff), 1.88, Math.cos(a)*0.2, Math.sin(a)*0.2);}
+      break;
+    }
+    case 'sunflwr': {
+      add(new THREE.CylinderGeometry(0.09,0.12,1.6,8), S(0x2d8b22), 0.8);
+      add(new THREE.BoxGeometry(0.38,0.05,0.2), S(0x3aaa33), 0.72, 0.24,0, 0,0, 0.5);
+      const ptM = S(0xffd700,0.7);
+      for(let i=0;i<12;i++){const a=i/12*Math.PI*2; const p=add(new THREE.SphereGeometry(0.12,6,6), ptM, 1.7, Math.cos(a)*0.5, Math.sin(a)*0.5); p.scale.set(0.65,0.65,1.6); p.rotation.y=-a;}
+      add(new THREE.CylinderGeometry(0.3,0.3,0.1,14), S(0x553300), 1.72);
+      for(let i=0;i<7;i++){const a=i/7*Math.PI*2,r=0.05+Math.random()*0.18; add(new THREE.SphereGeometry(0.045,5,5),S(0x221100),1.8,Math.cos(a)*r,Math.sin(a)*r);}
+      break;
+    }
+    case 'fence': {
+      const fM = S(0x8B5E3C);
+      add(new THREE.BoxGeometry(0.18,0.8,0.18), fM, 0.4,-0.6);
+      add(new THREE.BoxGeometry(0.18,0.8,0.18), fM, 0.4, 0.6);
+      add(new THREE.BoxGeometry(1.4,0.1,0.1), fM, 0.7);
+      add(new THREE.BoxGeometry(1.4,0.1,0.1), fM, 0.35);
+      break;
+    }
+    case 'campfire': {
+      const logM = S(0x5c3317);
+      add(new THREE.CylinderGeometry(0.08,0.1,0.9,7), logM, 0.08, 0,0, 0,0, Math.PI/3);
+      add(new THREE.CylinderGeometry(0.08,0.1,0.9,7), logM, 0.08, 0,0, 0,0,-Math.PI/3);
+      add(new THREE.CylinderGeometry(0.08,0.1,0.8,7), logM, 0.08, 0,0, Math.PI/2.5,0,0);
+      add(new THREE.ConeGeometry(0.2,0.55,7),  E(0xff4400), 0.55);
+      add(new THREE.ConeGeometry(0.13,0.4,6),  E(0xff8800), 0.65, 0.07,0.04);
+      add(new THREE.ConeGeometry(0.09,0.28,5), E(0xffdd00), 0.72);
+      break;
+    }
+    case 'moat': {
+      const wM = Tr(0x2255cc,0.75); wM.metalness=0.3; wM.roughness=0.05;
+      const moat=new THREE.Mesh(new THREE.CircleGeometry(1.1,20), wM); moat.rotation.x=-Math.PI/2; moat.position.y=0.02; g.add(moat);
+      const rim=new THREE.Mesh(new THREE.TorusGeometry(1.1,0.1,6,20), S(0x3366aa)); rim.rotation.x=Math.PI/2; rim.position.y=0.05; g.add(rim);
+      break;
+    }
+    default: {
+      add(new THREE.CylinderGeometry(0.1,0.15,0.8,8), S(0x228B22), 0.4);
+      add(new THREE.SphereGeometry(0.38,10,10), S(data.color||0x00ff00), 0.9);
+    }
+  }
+  return g;
+}
+
+function buildWeaponMesh(wd) {
+  const g = new THREE.Group();
+  const S = (col, rough=0.7) => new THREE.MeshStandardMaterial({color:col, roughness:rough, metalness:0});
+  const E = (col) => new THREE.MeshStandardMaterial({color:col, emissive:col, emissiveIntensity:0.7, roughness:0.5});
+  const add = (geo, mat, y=0, x=0, z=0, rx=0, ry=0, rz=0) => {
+    const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
+  };
+  switch(wd.id) {
+    case 'carrot': {
+      add(new THREE.CylinderGeometry(0.04,0.12,0.88,7), S(0xff6600), 0, 0,0, 0,0, Math.PI/2);
+      for(let i=0;i<4;i++){const a=i/4*Math.PI*2; add(new THREE.BoxGeometry(0.04,0.2,0.06), S(0x228b22), 0, -0.5+Math.cos(a)*0.06, Math.sin(a)*0.06, -0.4,a,0);}
+      break;
+    }
+    case 'pumpkin': {
+      const pm=add(new THREE.SphereGeometry(0.26,8,8), S(0xff8c00), 0); pm.scale.set(1,0.9,1);
+      for(let i=0;i<6;i++){const a=i/6*Math.PI*2; const rb=add(new THREE.SphereGeometry(0.065,5,5), S(0xff6600), 0, Math.cos(a)*0.21, Math.sin(a)*0.21); rb.scale.y=1.5;}
+      add(new THREE.CylinderGeometry(0.035,0.035,0.16,5), S(0x5c3317), 0.3);
+      add(new THREE.BoxGeometry(0.035,0.13,0.025), S(0x228b22), 0.26, 0.07,0, 0,0,-0.5);
+      break;
+    }
+    case 'apple': {
+      add(new THREE.SphereGeometry(0.24,9,9), S(0xff1111), 0);
+      add(new THREE.CylinderGeometry(0.025,0.025,0.14,5), S(0x5c3317), 0.27);
+      add(new THREE.BoxGeometry(0.22,0.04,0.1), S(0x228b22), 0.24, 0.12,0, 0,0, 0.55);
+      break;
+    }
+    case 'melon': {
+      add(new THREE.CylinderGeometry(0.06,0.07,0.7,8), S(0x5c3317), 0, 0,0, 0,0, Math.PI/2);
+      const mel=add(new THREE.SphereGeometry(0.3,9,9), S(0x228b22), 0, 0.55,0); mel.scale.set(1.2,0.85,0.85);
+      for(let i=0;i<4;i++){const a=i/4*Math.PI; add(new THREE.BoxGeometry(0.02,0.25,0.5), S(0x1a5c1a), 0, 0.55+Math.cos(a)*0.24, Math.sin(a)*0.24);}
+      break;
+    }
+    case 'corn': {
+      add(new THREE.CylinderGeometry(0.14,0.12,0.64,10), S(0xffd700), 0, 0,0, 0,0, Math.PI/2);
+      for(let i=0;i<4;i++){const a=i/4*Math.PI*2; add(new THREE.BoxGeometry(0.04,0.38,0.2), S(0x228b22), 0, Math.cos(a)*0.11, Math.sin(a)*0.11, 0,a, 0.38);}
+      break;
+    }
+    case 'berry': {
+      add(new THREE.CylinderGeometry(0.04,0.05,0.7,6), S(0x8b4513), 0, 0,0, 0,0, Math.PI/2);
+      add(new THREE.SphereGeometry(0.2,8,8), S(0xff1493), 0, 0.55,0);
+      for(let i=0;i<6;i++){const a=i/6*Math.PI*2; add(new THREE.SphereGeometry(0.03,4,4), S(0xffcc44), 0, 0.55+Math.cos(a)*0.12, Math.sin(a)*0.12);}
+      break;
+    }
+    case 'tomato': {
+      add(new THREE.SphereGeometry(0.25,9,9), S(0xff2200), 0);
+      for(let i=0;i<5;i++){const a=i/5*Math.PI*2; add(new THREE.BoxGeometry(0.2,0.04,0.05), S(0x228b22), 0.24, Math.cos(a)*0.08, Math.sin(a)*0.08, 0,a,0);}
+      add(new THREE.CylinderGeometry(0.025,0.025,0.1,5), S(0x228b22), 0.32);
+      break;
+    }
+    case 'bean': {
+      add(new THREE.CylinderGeometry(0.05,0.07,1.1,7), S(0x32cd32), 0, 0,0, 0,0, Math.PI/2);
+      for(let i=0;i<4;i++) add(new THREE.SphereGeometry(0.075,6,6), S(0x28b028), 0, i*0.22-0.33);
+      break;
+    }
+    case 'mush': {
+      add(new THREE.CylinderGeometry(0.08,0.1,0.44,8), S(0xeeeeee), 0, 0,0, 0,0, Math.PI/2);
+      add(new THREE.SphereGeometry(0.3,8,7), S(0x9b59b6), 0, 0.52,0);
+      add(new THREE.CylinderGeometry(0.28,0.05,0.1,8), S(0xddbbee), 0, 0.26,0, 0,0,-Math.PI/2);
+      for(let i=0;i<5;i++){const a=i/5*Math.PI*2; add(new THREE.SphereGeometry(0.055,5,5), S(0xffffff), 0, 0.52+Math.cos(a)*0.15, Math.sin(a)*0.15);}
+      break;
+    }
+    case 'sun': {
+      add(new THREE.SphereGeometry(0.2,9,9), E(0xffd700), 0);
+      for(let i=0;i<8;i++){const a=i/8*Math.PI*2; const r=add(new THREE.BoxGeometry(0.06,0.28,0.04), S(0xffcc00), 0, Math.cos(a)*0.38, Math.sin(a)*0.38); r.rotation.z=a;}
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(0.34,0.04,5,14), E(0xffee00)); g.add(ring);
+      break;
+    }
+    default: {
+      add(new THREE.BoxGeometry(0.16,0.16,0.9), S(wd.color||0xaaaaaa), 0, 0,0, 0,0, Math.PI/2);
+    }
+  }
+  return g;
+}
+
 function placeAtMouse() {
   if (!gs.placeId) return;
   const x = mouseWorld.x, z = mouseWorld.z;
@@ -795,11 +1010,7 @@ function placeAtMouse() {
     gs.straw -= dd.cost;
   }
 
-  const g = new THREE.Group();
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.8, 8), new THREE.MeshLambertMaterial({ color: 0x228B22 }));
-  stem.position.y = 0.4; stem.castShadow = true; g.add(stem);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 10), new THREE.MeshLambertMaterial({ color: data.color || 0x00ff00 }));
-  head.position.y = 0.9; head.castShadow = true; g.add(head);
+  const g = buildPlantMesh(data);
   const pos = new THREE.Vector3(x, 0, z);
   g.position.copy(pos); scene.add(g);
 
@@ -1002,14 +1213,9 @@ function autoPlacePlant(item) {
     tries++;
   } while (tries < 20 && gs.placedPlants.some(p => p.pos.distanceTo(pos) < 2.5));
 
-  const g = new THREE.Group();
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.8, 8), new THREE.MeshLambertMaterial({ color: 0x228B22 }));
-  stem.position.y = 0.4; stem.castShadow = true; g.add(stem);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 10), new THREE.MeshLambertMaterial({ color: item.color || 0x00ff00 }));
-  head.position.y = 0.9; head.castShadow = true; g.add(head);
-  // Support plants glow a soft green
+  const g = buildPlantMesh(item);
   if (item.support) {
-    const glow = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 8), new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.25 }));
+    const glow = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 8), new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.18 }));
     glow.position.y = 0.9; g.add(glow);
   }
   g.position.copy(pos);
