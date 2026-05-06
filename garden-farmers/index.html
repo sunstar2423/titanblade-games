@@ -713,9 +713,16 @@ function updateEnemies(dt) {
     const dir = tgt.clone().sub(e.pos).setY(0);
     const dist = dir.length();
     if (dist > 0.01) dir.normalize();
+    const attackRange = 1.8 * (e.data.sz || 1);
     const spd = e.data.spd * (e.slowTimer > 0 ? 0.3 : 1);
-    e.vel.lerp(dir.multiplyScalar(spd), 0.12);
-    e.pos.add(e.vel.clone().multiplyScalar(dt));
+    if (dist > attackRange) {
+      // Walk toward target
+      e.vel.lerp(dir.multiplyScalar(spd), 0.12);
+      e.pos.add(e.vel.clone().multiplyScalar(dt));
+    } else {
+      // Stop and stand still while attacking
+      e.vel.set(0, 0, 0);
+    }
     e.mesh.position.copy(e.pos).setY(Math.sin(Date.now() * 0.003 + e.pos.x) * 0.04);
     e.mesh.lookAt(tgt.clone().add(new THREE.Vector3(0, e.pos.y, 0)));
 
@@ -724,7 +731,7 @@ function updateEnemies(dt) {
     if (e.burnTimer > 0) { e.burnTimer -= dt; e.hp -= 3 * dt; if (e.hp <= 0) killEnemy(e); }
 
     // Attack
-    if (e.attackCd <= 0 && dist < 1.8 * (e.data.sz || 1)) {
+    if (e.attackCd <= 0 && dist < attackRange) {
       e.attackCd = 1.0;
       if (tgt.distanceTo(gs.playerPos) < 1) {
         gs.playerHP -= e.data.dmg;
