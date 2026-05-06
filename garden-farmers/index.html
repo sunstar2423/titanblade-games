@@ -451,7 +451,13 @@ function doAttack() {
   if (!wd) return;
   attackCd = wd.cd;
 
-  const dir = new THREE.Vector3(mouseWorld.x - gs.playerPos.x, 0, mouseWorld.z - gs.playerPos.z).normalize();
+  let dir = new THREE.Vector3(mouseWorld.x - gs.playerPos.x, 0, mouseWorld.z - gs.playerPos.z);
+  // Auto-aim toward nearest enemy if mouse hasn't been moved over canvas yet
+  if (dir.length() < 0.5 && gs.enemies.length > 0) {
+    const nearest = gs.enemies.reduce((a, b) => a.pos.distanceTo(gs.playerPos) < b.pos.distanceTo(gs.playerPos) ? a : b);
+    dir = nearest.pos.clone().sub(gs.playerPos).setY(0);
+  }
+  dir.normalize();
   spawnFX(gs.playerPos.clone().add(dir), wd.color, 0.2, 0.3);
 
   if (wd.kind === 'melee' || wd.kind === 'heavy') {
@@ -475,7 +481,7 @@ function doAttack() {
   } else if (wd.kind === 'cloud') {
     const cp = gs.playerPos.clone().add(dir.clone().multiplyScalar(3));
     spawnFX(cp, wd.color, wd.dur, wd.aoe);
-    gs.effects.push({ type: 'cloud', pos: cp, dmg: wd.dmg, aoe: wd.aoe, timer: wd.dur, max: wd.dur, mesh: null });
+    gs.effects.push({ type: 'cloud', pos: cp, dmg: wd.dmg, aoe: wd.aoe, timer: wd.dur, max: wd.dur, mesh: null, tickTimer: 0 });
   } else if (wd.kind === 'shotgun') {
     for (let i = 0; i < (wd.pellets || 7); i++) {
       const sp = (Math.random() - 0.5) * 0.8;
@@ -520,7 +526,13 @@ function killEnemy(e) {
 function updateProjectiles(dt) {
   gs.projectiles = gs.projectiles.filter(p => {
     p.timer -= dt;
-    if (p.timer <= 0) { scene.remove(p.mesh); return false; }
+    if (p.timer <= 0) {
+      if (p.data.aoe && p.owner === 'weapon') {
+        gs.enemies.forEach(e => { if (p.pos.distanceTo(e.pos) < p.data.aoe) dmgEnemy(e, p.data.dmg * 0.6); });
+        spawnFX(p.pos.clone(), p.data.color, 0.35, p.data.aoe * 0.5);
+      }
+      scene.remove(p.mesh); return false;
+    }
     p.pos.add(p.vel.clone().multiplyScalar(dt));
     p.mesh.position.copy(p.pos);
 
@@ -729,7 +741,11 @@ function updateEffects(dt) {
     ef.timer -= dt;
     if (ef.mesh) ef.mesh.material.opacity = Math.max(0, (ef.timer / ef.max) * 0.7);
     if (ef.type === 'cloud') {
-      gs.enemies.forEach(e => { if (e.pos.distanceTo(ef.pos) < ef.aoe) { e.hp -= ef.dmg * dt; if (e.hp <= 0) killEnemy(e); } });
+      ef.tickTimer = (ef.tickTimer || 0) - dt;
+      if (ef.tickTimer <= 0) {
+        ef.tickTimer = 0.5;
+        gs.enemies.forEach(e => { if (e.pos.distanceTo(ef.pos) < ef.aoe) { dmgEnemy(e, ef.dmg * 0.5); } });
+      }
     }
     if (ef.timer <= 0 && ef.mesh) { scene.remove(ef.mesh); return false; }
     return ef.timer > 0;
