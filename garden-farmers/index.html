@@ -258,7 +258,7 @@ const ENEMY_TYPES = [
   { id:'sword',  name:'Sword Scarecrow',        hp:100, spd:1.5, dmg:15, straw:15,  sz:1,   color:0x808080 },
   { id:'flame',  name:'Flamethrower Scarecrow', hp:80,  spd:1.8, dmg:12, straw:20,  sz:1,   color:0xff4500, ranged:true },
   { id:'armor',  name:'Armored Scarecrow',      hp:200, spd:1.2, dmg:20, straw:30,  sz:1,   color:0x4a4a4a, armor:0.5 },
-  { id:'boss',   name:'BOSS Scarecrow',         hp:600, spd:1.5, dmg:30, straw:100, sz:1.8, color:0x8b0000 },
+  { id:'boss',   name:'BOSS Scarecrow',         hp:350, spd:1.2, dmg:18, straw:100, sz:1.8, color:0x8b0000 },
 ];
 
 const WAVES = [
@@ -806,12 +806,21 @@ function renderShop() {
   c.innerHTML = '';
 
   if (currentShopTab === 'barn') {
-    c.innerHTML = `<div style="grid-column:1/-1;color:#fff;margin-bottom:8px">
-      <b>Barn HP: ${Math.ceil(gs.barnHP)} / ${gs.barnMaxHP}</b></div>
-      <div class="si ${gs.straw<30?'dim':''}" onclick="buyBarnRepair()">
-        <div class="ie">🔨</div><div class="in">Repair Barn</div><div class="id">Restore 50 HP</div><div class="ic">🌾 30</div></div>
+    c.innerHTML = `
+      <div style="grid-column:1/-1;color:#fff;margin-bottom:8px">
+        <b>Your HP: ${Math.ceil(gs.playerHP)} / ${gs.playerMaxHP}</b> &nbsp;|&nbsp;
+        <b>Barn HP: ${Math.ceil(gs.barnHP)} / ${gs.barnMaxHP}</b>
+      </div>
+      <div class="si ${gs.straw<10?'dim':gs.playerHP>=gs.playerMaxHP?'dim':''}" onclick="buyHealth(25,10)">
+        <div class="ie">🧃</div><div class="in">Small Health Pack</div><div class="id">Restore 25 HP to yourself</div><div class="ic">🌾 10</div></div>
+      <div class="si ${gs.straw<25?'dim':gs.playerHP>=gs.playerMaxHP?'dim':''}" onclick="buyHealth(75,25)">
+        <div class="ie">❤️</div><div class="in">Large Health Pack</div><div class="id">Restore 75 HP to yourself</div><div class="ic">🌾 25</div></div>
+      <div class="si ${gs.straw<50?'dim':''}" onclick="buyMaxHealth()">
+        <div class="ie">💪</div><div class="in">Upgrade Max HP</div><div class="id">+25 max HP permanently</div><div class="ic">🌾 50</div></div>
+      <div class="si ${gs.straw<30?'dim':gs.barnHP>=gs.barnMaxHP?'dim':''}" onclick="buyBarnRepair()">
+        <div class="ie">🔨</div><div class="in">Repair Barn</div><div class="id">Restore 50 barn HP</div><div class="ic">🌾 30</div></div>
       <div class="si ${gs.straw<80?'dim':''}" onclick="buyBarnUpgrade()">
-        <div class="ie">🏰</div><div class="in">Upgrade Barn</div><div class="id">+100 max HP</div><div class="ic">🌾 80</div></div>`;
+        <div class="ie">🏰</div><div class="in">Upgrade Barn</div><div class="id">+100 max barn HP</div><div class="ic">🌾 80</div></div>`;
     return;
   }
 
@@ -882,6 +891,24 @@ function startPlace(id) {
   gs.placeMode = true; gs.placeId = id;
   const item = [...PLACEABLES, ...DEFENSE_ITEMS].find(x => x.id === id);
   showToast('Click on the farm to place ' + (item ? item.name : id) + '!', 3000);
+}
+
+function buyHealth(amount, cost) {
+  if (gs.straw < cost) return;
+  if (gs.playerHP >= gs.playerMaxHP) { showToast('You are already full health!'); return; }
+  gs.straw -= cost;
+  gs.playerHP = Math.min(gs.playerMaxHP, gs.playerHP + amount);
+  showToast('❤️ +' + amount + ' HP restored!');
+  renderShop(); saveGame();
+}
+
+function buyMaxHealth() {
+  if (gs.straw < 50) return;
+  gs.straw -= 50;
+  gs.playerMaxHP += 25;
+  gs.playerHP += 25;
+  showToast('💪 Max HP increased to ' + gs.playerMaxHP + '!');
+  renderShop(); saveGame();
 }
 
 function buyBarnRepair() {
