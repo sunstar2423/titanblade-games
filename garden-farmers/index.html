@@ -337,14 +337,31 @@ const ENEMY_TYPES = [
 ];
 
 const WAVES = [
+  // Wave 1-4: Easy introduction
   [{t:'basic',n:5}],
   [{t:'basic',n:4},{t:'torch',n:2}],
   [{t:'basic',n:3},{t:'sword',n:3}],
-  [{t:'torch',n:3},{t:'flame',n:2}],
-  [{t:'sword',n:2},{t:'armor',n:2},{t:'boss',n:1}],
-  [{t:'basic',n:5},{t:'torch',n:3},{t:'sword',n:3}],
+  [{t:'torch',n:4},{t:'flame',n:2}],
+  // Wave 5-8: First boss, armored scarecrows
+  [{t:'sword',n:3},{t:'armor',n:2},{t:'boss',n:1}],
+  [{t:'basic',n:6},{t:'torch',n:3},{t:'sword',n:2}],
   [{t:'armor',n:3},{t:'flame',n:3}],
   [{t:'boss',n:1},{t:'armor',n:2},{t:'torch',n:4}],
+  // Wave 9-12: Escalating — bigger swarms + two bosses
+  [{t:'basic',n:8},{t:'sword',n:4}],
+  [{t:'armor',n:4},{t:'flame',n:4},{t:'boss',n:1}],
+  [{t:'torch',n:6},{t:'sword',n:4},{t:'armor',n:2}],
+  [{t:'boss',n:2},{t:'armor',n:3},{t:'flame',n:2}],
+  // Wave 13-16: Hard — mega swarms and fire
+  [{t:'basic',n:10},{t:'flame',n:4},{t:'torch',n:4}],
+  [{t:'sword',n:5},{t:'armor',n:4},{t:'flame',n:3}],
+  [{t:'boss',n:2},{t:'armor',n:4},{t:'sword',n:3}],
+  [{t:'basic',n:8},{t:'torch',n:6},{t:'flame',n:4},{t:'sword',n:3}],
+  // Wave 17-20: Final gauntlet
+  [{t:'armor',n:5},{t:'sword',n:5},{t:'boss',n:2},{t:'flame',n:3}],
+  [{t:'boss',n:3},{t:'armor',n:5},{t:'flame',n:4}],
+  [{t:'armor',n:6},{t:'sword',n:6},{t:'flame',n:5},{t:'boss',n:2}],
+  [{t:'boss',n:5},{t:'armor',n:6},{t:'flame',n:6},{t:'sword',n:4}],
 ];
 
 // ═══════════════════════════════════════
@@ -765,8 +782,10 @@ function startNextWave() {
   gs.spawnQueue.sort(() => Math.random() - 0.5);
   gs.waveEnemiesLeft = gs.spawnQueue.length;
   gs.spawnTimer = 0;
-  showWaveAnn('⚠️ WAVE ' + gs.wave + '!');
-  showToast('Wave ' + gs.wave + ' incoming!', 2200);
+  const waveLabels = {5:'👹 BOSS WAVE!', 10:'💀 DOUBLE BOSS!', 12:'💀 DOUBLE BOSS!', 15:'☠️ BOSS ARMY!', 18:'🔥 TRIPLE BOSS!', 20:'💥 FINAL WAVE!'};
+  const label = waveLabels[gs.wave] || (gs.wave === 20 ? '💥 FINAL WAVE!' : '⚠️ WAVE ' + gs.wave + '!');
+  showWaveAnn(label);
+  showToast('Wave ' + gs.wave + ' / 20 incoming!', 2200);
 }
 
 function checkWaveEnd() {
@@ -1116,8 +1135,8 @@ function updateHUD() {
   document.getElementById('straw-txt').textContent = gs.straw;
   const wi = document.getElementById('wave-info');
   wi.textContent = gs.betweenWaves
-    ? (gs.wave === 0 ? 'Press SPACE to start!' : 'Wave ' + gs.wave + ' done! SPACE=next')
-    : 'Wave ' + gs.wave + ' — ' + (gs.enemies.length + gs.spawnQueue.length) + ' enemies';
+    ? (gs.wave === 0 ? 'Press SPACE to start!' : 'Wave ' + gs.wave + '/20 done! SPACE=next')
+    : 'Wave ' + gs.wave + '/20 — ' + (gs.enemies.length + gs.spawnQueue.length) + ' enemies left';
 }
 
 function showToast(msg, dur = 2200) {
@@ -1301,7 +1320,7 @@ function showScreen(id) {
       <button class="bbtn gray" onclick="showScreen('menu')">Menu</button>`;
   } else if (id === 'victory') {
     inn.innerHTML = `<div class="stitle">🏆 YOU WIN!</div>
-      <div class="ssub">You defended your farm through all 8 waves!</div>
+      <div class="ssub">You defended your farm through all 20 waves!</div>
       <div style="color:#FFD700;font-size:20px;margin:10px">🌾 ${gs.straw} straw | 💀 ${gs.totalKills} scarecrows defeated</div>
       <button class="bbtn" onclick="showScreen('menu')">Main Menu</button>`;
   }
