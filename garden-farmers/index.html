@@ -120,13 +120,33 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 // ═══════════════════════════════════════
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.outputEncoding = THREE.sRGBEncoding;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87CEEB);
-scene.fog = new THREE.Fog(0x87CEEB, 35, 65);
+scene.fog = new THREE.FogExp2(0x9ecfe8, 0.008);
+
+// Sky gradient dome
+(function() {
+  const c = document.createElement('canvas'); c.width = 2; c.height = 256;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0,    '#0d4fa8');
+  g.addColorStop(0.45, '#3a8de8');
+  g.addColorStop(0.75, '#7fc8f5');
+  g.addColorStop(1,    '#c8e8f8');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
+  const tex = new THREE.CanvasTexture(c);
+  const sky = new THREE.Mesh(
+    new THREE.SphereGeometry(90, 16, 8),
+    new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide })
+  );
+  scene.add(sky);
+})();
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
 const CAM_OFF = new THREE.Vector3(0, 20, 15);
@@ -173,18 +193,22 @@ const FARM_R = 42;
   gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true; scene.add(gnd);
 })();
 
-// Dirt farm circle — canvas soil texture
+// Dirt farm circle — ploughed furrow texture
 (function() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+  const c = document.createElement('canvas'); c.width = 512; c.height = 512;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#7a5410'; ctx.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 800; i++) {
-    const x = Math.random()*256, y = Math.random()*256;
+  ctx.fillStyle = '#7a5410'; ctx.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 2000; i++) {
     ctx.fillStyle = Math.random() > 0.5 ? '#6a4408' : '#8b6318';
-    ctx.fillRect(x, y, Math.random()*5+1, Math.random()*2+1);
+    ctx.fillRect(Math.random()*512, Math.random()*512, Math.random()*6+1, Math.random()*3+1);
   }
-  const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(4, 4);
-  const farm = new THREE.Mesh(new THREE.CircleGeometry(FARM_R, 48), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.98, metalness: 0 }));
+  // Ploughed furrow rows
+  for (let y = 0; y < 512; y += 22) {
+    ctx.fillStyle = '#4e2e06'; ctx.fillRect(0, y, 512, 5);
+    ctx.fillStyle = '#9a7228'; ctx.fillRect(0, y + 5, 512, 3);
+  }
+  const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(6, 6);
+  const farm = new THREE.Mesh(new THREE.CircleGeometry(FARM_R, 64), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.97, metalness: 0 }));
   farm.rotation.x = -Math.PI / 2; farm.position.y = 0.01; farm.receiveShadow = true; scene.add(farm);
 })();
 
@@ -243,6 +267,13 @@ arch.rotation.z = Math.PI/2; arch.position.set(0, 3.2, 3.08); barnGrp.add(arch);
   chim.position.set(x, 8.2, 0); barnGrp.add(chim);
 });
 scene.add(barnGrp);
+// Warm glow from barn windows
+const barnLight = new THREE.PointLight(0xffaa44, 2.5, 18);
+barnLight.position.set(0, 3.5, 3.5);
+scene.add(barnLight);
+const barnLight2 = new THREE.PointLight(0xffaa44, 1.2, 12);
+barnLight2.position.set(0, 3.5, -3.5);
+scene.add(barnLight2);
 
 // Barn HP ring
 let barnRing = null;
@@ -550,12 +581,20 @@ function floatText(pos, text, color) {
 }
 
 function spawnFX(pos, color, dur, size) {
-  const m = new THREE.Mesh(
-    new THREE.SphereGeometry(size, 8, 8),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7 })
+  const g = new THREE.Group(); g.position.copy(pos); scene.add(g);
+  // Central glow orb
+  const orb = new THREE.Mesh(
+    new THREE.SphereGeometry(size * 0.5, 7, 7),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85 })
   );
-  m.position.copy(pos); scene.add(m);
-  gs.effects.push({ mesh: m, timer: dur, max: dur });
+  g.add(orb);
+  // Expanding ring
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(size * 0.3, size * 0.08, 5, 16),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 })
+  );
+  ring.rotation.x = Math.PI / 2; ring.position.y = 0.1; g.add(ring);
+  gs.effects.push({ mesh: g, timer: dur, max: dur, _ring: ring, _orb: orb, _size: size });
 }
 
 // ═══════════════════════════════════════
@@ -724,9 +763,14 @@ function spawnEnemy(typeId) {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.7*sz, 0.06*sz, 6, 18), new THREE.MeshStandardMaterial({ color: 0xff2200, emissive: 0xff2200, emissiveIntensity: 0.8 }));
     ring.rotation.x = Math.PI/2; ring.position.y = 0.1; g.add(ring);
   }
+  // HP bar (lies flat, visible from above)
+  const hpBg = new THREE.Mesh(new THREE.PlaneGeometry(1.2*sz, 0.22), new THREE.MeshBasicMaterial({ color: 0x222222 }));
+  hpBg.rotation.x = -Math.PI/2; hpBg.position.y = 3.6*sz; g.add(hpBg);
+  const hpFill = new THREE.Mesh(new THREE.PlaneGeometry(1.2*sz, 0.2), new THREE.MeshBasicMaterial({ color: 0x44ff44 }));
+  hpFill.rotation.x = -Math.PI/2; hpFill.position.y = 3.62*sz; g.add(hpFill);
   g.position.copy(pos); scene.add(g);
   const scaledHP = data.hp * (1 + (gs.wave - 1) * 0.1);
-  gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, _dead: false });
+  gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, _dead: false, _hpFill: hpFill, _hpSz: 1.2*sz });
 }
 
 function updateEnemies(dt) {
@@ -751,8 +795,17 @@ function updateEnemies(dt) {
       // Stop and stand still while attacking
       e.vel.set(0, 0, 0);
     }
-    e.mesh.position.copy(e.pos).setY(Math.sin(Date.now() * 0.003 + e.pos.x) * 0.04);
+    const walking = e.vel.length() > 0.01;
+    const bob = walking ? Math.abs(Math.sin(Date.now() * 0.012 + e.pos.x)) * 0.12 : 0;
+    e.mesh.position.copy(e.pos).setY(bob);
     e.mesh.lookAt(tgt.clone().add(new THREE.Vector3(0, e.pos.y, 0)));
+    // Update HP bar
+    if (e._hpFill) {
+      const pct = Math.max(0, e.hp / e.maxHp);
+      e._hpFill.scale.x = pct;
+      e._hpFill.position.x = -(e._hpSz * (1 - pct)) / 2;
+      e._hpFill.material.color.setHex(pct > 0.5 ? 0x44ff44 : pct > 0.25 ? 0xff8800 : 0xff2222);
+    }
 
     e.attackCd = Math.max(0, e.attackCd - dt);
     e.slowTimer = Math.max(0, e.slowTimer - dt);
@@ -1100,7 +1153,10 @@ function updatePlacedPlants(dt) {
 function updateEffects(dt) {
   gs.effects = gs.effects.filter(ef => {
     ef.timer -= dt;
-    if (ef.mesh) ef.mesh.material.opacity = Math.max(0, (ef.timer / ef.max) * 0.7);
+    const pct = Math.max(0, ef.timer / ef.max);
+    if (ef._orb) { ef._orb.material.opacity = pct * 0.85; ef._orb.scale.setScalar(0.4 + (1 - pct) * 1.2); }
+    if (ef._ring) { ef._ring.material.opacity = pct * 0.9; ef._ring.scale.setScalar(1 + (1 - pct) * 3.5); }
+    if (!ef._orb && ef.mesh && ef.mesh.material) ef.mesh.material.opacity = Math.max(0, pct * 0.7);
     if (ef.type === 'cloud') {
       ef.tickTimer = (ef.tickTimer || 0) - dt;
       if (ef.tickTimer <= 0) {
@@ -1436,7 +1492,10 @@ function loop(ts) {
   }
 
   // Drift clouds slowly
-  scene.children.forEach(c => { if (c._isCloud) { c.position.x += 0.4 * dt; if (c.position.x > 30) c.position.x = -30; } });
+  scene.children.forEach(c => { if (c._isCloud) { c.position.x += 0.4 * dt; if (c.position.x > 50) c.position.x = -50; } });
+  // Sway plants gently in the wind
+  const t = Date.now() * 0.0015;
+  gs.placedPlants.forEach((p, i) => { if (p.mesh) { p.mesh.rotation.z = Math.sin(t + i * 1.7) * 0.04; p.mesh.rotation.x = Math.cos(t * 0.8 + i * 2.1) * 0.03; } });
 
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
