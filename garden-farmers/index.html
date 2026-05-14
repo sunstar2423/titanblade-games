@@ -145,8 +145,8 @@ const sun = new THREE.DirectionalLight(0xfff8e0, 1.6);
 sun.position.set(15, 25, 10);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -55; sun.shadow.camera.right = 55;
-sun.shadow.camera.top = 55;  sun.shadow.camera.bottom = -55;
+sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
+sun.shadow.camera.top = 75;  sun.shadow.camera.bottom = -75;
 sun.shadow.bias = -0.001;
 scene.add(sun);
 const fill = new THREE.DirectionalLight(0x8899ff, 0.35); // cool fill from opposite
@@ -156,7 +156,7 @@ scene.add(fill);
 // ═══════════════════════════════════════
 //  FARM SCENE
 // ═══════════════════════════════════════
-const FARM_R = 28;
+const FARM_R = 42;
 
 // Outer ground — canvas grass texture
 (function() {
@@ -169,7 +169,7 @@ const FARM_R = 28;
     ctx.fillRect(x, y, 3, 3);
   }
   const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(8, 8);
-  const gnd = new THREE.Mesh(new THREE.PlaneGeometry(130, 130), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0 }));
+  const gnd = new THREE.Mesh(new THREE.PlaneGeometry(180, 180), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0 }));
   gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true; scene.add(gnd);
 })();
 
@@ -190,7 +190,7 @@ const FARM_R = 28;
 
 // Fence posts + rails around edge
 const FENCE_MAT = new THREE.MeshStandardMaterial({ color: 0x8B5E3C, roughness: 0.9, metalness: 0 });
-const POST_N = 36;
+const POST_N = 52;
 for (let i = 0; i < POST_N; i++) {
   const a = (i / POST_N) * Math.PI * 2;
   const post = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.1, 0.22), FENCE_MAT);
@@ -268,16 +268,16 @@ function makeTree(x, z, scale=1) {
   });
   g.position.set(x, 0, z); scene.add(g);
 }
-// Trees in corners and mid-edges (pushed out past the bigger farm)
-[-38,-32,32,38].forEach(x => [-38,-32,32,38].forEach(z => {
-  if (Math.abs(x)===38 || Math.abs(z)===38) makeTree(x, z, 0.8 + Math.random()*0.5);
+// Trees around the outside of the farm
+[-55,-48,-42,42,48,55].forEach(x => [-55,-48,-42,42,48,55].forEach(z => {
+  if (Math.abs(x)>=48 || Math.abs(z)>=48) makeTree(x, z, 0.8 + Math.random()*0.5);
 }));
-[-35,35].forEach(x => makeTree(x, 0, 1.0 + Math.random()*0.4));
-[0].forEach(x => [-35,35].forEach(z => makeTree(x, z, 1.0 + Math.random()*0.4)));
+[-52,52].forEach(x => makeTree(x, 0, 1.0 + Math.random()*0.4));
+[-52,52].forEach(z => makeTree(0, z, 1.0 + Math.random()*0.4));
 
 // Hay bales scattered outside fence
 const hayMat = new THREE.MeshStandardMaterial({ color: 0xd4a830, roughness: 0.95 });
-[[33,8],[-33,-12],[18,-36],[-22,32],[36,-22],[-30,25]].forEach(([x,z]) => {
+[[47,10],[-48,-15],[22,-52],[-28,46],[52,-30],[-44,38],[50,45],[-50,20]].forEach(([x,z]) => {
   const hay = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 1.0, 12), hayMat);
   hay.rotation.z = Math.PI/2; hay.position.set(x, 0.6, z); hay.castShadow = true; scene.add(hay);
 });
