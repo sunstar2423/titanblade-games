@@ -460,43 +460,69 @@ function buildPlayerMesh() {
   if (playerMesh) scene.remove(playerMesh);
   const sk = SKINS.find(s => s.id === gs.skin) || SKINS[0];
   const g = new THREE.Group();
-  const mk = (geo, color, py, px=0, pz=0) => {
-    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, roughness:0.75, metalness: color===0xb8b8b8?0.4:0 }));
-    m.position.set(px, py, pz); m.castShadow = true; return m;
+  const mat = (col, rough=0.75, met=0) => new THREE.MeshStandardMaterial({color:col, roughness:rough, metalness:met});
+  const add = (geo, col, py=0, px=0, pz=0, rx=0, ry=0, rz=0) => {
+    const m = new THREE.Mesh(geo, mat(col)); m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
   };
-  // Legs
-  [-0.18, 0.18].forEach(x => {
-    const leg = mk(new THREE.BoxGeometry(0.26, 0.55, 0.26), 0x1a3a88, 0.28); leg.position.x = x; g.add(leg);
-    const boot = mk(new THREE.BoxGeometry(0.28, 0.18, 0.34), 0x2a1a00, 0.0); boot.position.set(x, 0, 0.04); g.add(boot);
+  const skinCol = 0xffcc99, darkSkin = 0xffaa77;
+  // Boots
+  [-0.19,0.19].forEach(x => {
+    add(new THREE.BoxGeometry(0.3,0.22,0.4),  0x1a0e00, 0.11, x, 0.05);
+    add(new THREE.BoxGeometry(0.27,0.16,0.27), 0x2a1500, 0.33, x);
   });
-  // Body / overalls
-  g.add(mk(new THREE.BoxGeometry(0.82, 1.05, 0.48), sk.body, 0.88));
+  // Trouser legs
+  [-0.19,0.19].forEach(x => add(new THREE.BoxGeometry(0.27,0.46,0.27), 0x1a3a88, 0.61, x));
+  // Belt
+  add(new THREE.BoxGeometry(0.78,0.14,0.46), 0x4a2200, 0.93);
+  add(new THREE.BoxGeometry(0.16,0.16,0.48), 0xcc9900, 0.93); // buckle
+  // Torso / overalls
+  add(new THREE.BoxGeometry(0.8,0.72,0.48), sk.body, 1.24);
+  // Chest pocket
+  add(new THREE.BoxGeometry(0.22,0.18,0.05), 0x000000, 1.38, 0.22, 0.25);
   // Suspenders
-  g.add(mk(new THREE.BoxGeometry(0.08, 0.6, 0.05), 0xffdd44, 1.05, -0.2, 0.25));
-  g.add(mk(new THREE.BoxGeometry(0.08, 0.6, 0.05), 0xffdd44, 1.05,  0.2, 0.25));
-  // Arms
-  [-0.55, 0.55].forEach(x => {
-    const arm = mk(new THREE.BoxGeometry(0.24, 0.62, 0.24), sk.body, 0.82); arm.position.x = x; g.add(arm);
-    const hand = mk(new THREE.SphereGeometry(0.14, 6, 6), 0xffcc99, 0.52); hand.position.x = x; g.add(hand);
+  add(new THREE.BoxGeometry(0.07,0.56,0.05), 0xffdd44, 1.22,-0.22,0.25);
+  add(new THREE.BoxGeometry(0.07,0.56,0.05), 0xffdd44, 1.22, 0.22,0.25);
+  // Shoulder caps
+  [-0.55,0.55].forEach(x => add(new THREE.SphereGeometry(0.19,7,7), sk.body, 1.54, x));
+  // Upper arms
+  [-0.55,0.55].forEach(x => add(new THREE.BoxGeometry(0.23,0.44,0.23), sk.body, 1.24, x));
+  // Forearms
+  [-0.55,0.55].forEach(x => add(new THREE.BoxGeometry(0.19,0.3,0.19), skinCol, 0.9, x));
+  // Hands
+  [-0.55,0.55].forEach(x => add(new THREE.SphereGeometry(0.13,7,7), skinCol, 0.72, x));
+  // Neck
+  add(new THREE.CylinderGeometry(0.13,0.16,0.24,8), skinCol, 1.67);
+  // Head sphere
+  add(new THREE.SphereGeometry(0.35,12,10), skinCol, 2.04);
+  // Ears
+  [-0.36,0.36].forEach(x => add(new THREE.SphereGeometry(0.075,6,5), darkSkin, 2.04, x));
+  // Eyes — white + iris + pupil
+  [-0.13,0.13].forEach(x => {
+    add(new THREE.SphereGeometry(0.072,7,7), 0xffffff,    2.1,  x,    0.29);
+    add(new THREE.SphereGeometry(0.048,6,6), 0x2244bb,    2.1,  x+0.01, 0.32);
+    add(new THREE.SphereGeometry(0.028,5,5), 0x000000,    2.11, x+0.01, 0.33);
+    add(new THREE.SphereGeometry(0.012,4,4), 0xffffff,    2.12, x+0.02, 0.34); // shine
   });
-  // Head
-  g.add(mk(new THREE.BoxGeometry(0.58, 0.58, 0.58), 0xffcc99, 1.64));
-  // Eyes
-  [-0.13, 0.13].forEach(x => { const ey = mk(new THREE.SphereGeometry(0.07, 5, 5), 0x222222, 1.68); ey.position.set(x, 0, 0.3); g.add(ey); });
+  // Eyebrows
+  [-0.13,0.13].forEach(x => { const brow=add(new THREE.BoxGeometry(0.13,0.045,0.04), 0x3a2200, 2.18, x, 0.26); brow.rotation.z = x>0?0.15:-0.15; });
+  // Nose
+  add(new THREE.SphereGeometry(0.055,6,5), darkSkin, 2.04, 0, 0.36);
+  // Mouth/smile (two segments)
+  add(new THREE.BoxGeometry(0.08,0.04,0.04), 0xaa4433, 1.95,-0.05, 0.33, 0,0, 0.3);
+  add(new THREE.BoxGeometry(0.08,0.04,0.04), 0xaa4433, 1.95, 0.05, 0.33, 0,0,-0.3);
   // Hat brim
-  g.add(mk(new THREE.CylinderGeometry(0.52, 0.52, 0.08, 14), sk.hat, 2.0));
-  // Hat top
-  g.add(mk(new THREE.CylinderGeometry(0.32, 0.36, 0.42, 12), sk.hat, 2.25));
-  // Weapon — unique model per weapon type
+  add(new THREE.CylinderGeometry(0.52,0.54,0.07,16), sk.hat, 2.4);
+  // Hat band
+  add(new THREE.CylinderGeometry(0.355,0.355,0.07,14), 0x000000, 2.44);
+  // Hat crown (tapered)
+  add(new THREE.CylinderGeometry(0.27,0.34,0.46,12), sk.hat, 2.69);
+  // Hat top indent hint
+  add(new THREE.CylinderGeometry(0.2,0.27,0.04,10), sk.hat, 2.93);
+  // Weapon
   const wid = gs.hotbar[gs.activeSlot];
   if (wid) {
     const wd = WEAPONS.find(w => w.id === wid);
-    if (wd) {
-      const wm = buildWeaponMesh(wd);
-      wm.position.set(0.52, 0.68, 0.32);
-      wm.scale.setScalar(0.72);
-      g.add(wm);
-    }
+    if (wd) { const wm = buildWeaponMesh(wd); wm.position.set(0.52,0.68,0.32); wm.scale.setScalar(0.72); g.add(wm); }
   }
   playerMesh = g;
   scene.add(playerMesh);
@@ -734,40 +760,146 @@ function spawnEnemy(typeId) {
   const pos = new THREE.Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r);
   const sz = data.sz || 1;
   const g = new THREE.Group();
-  const mk = (geo, col, py, px=0, pz=0) => {
-    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: col, roughness:0.9, metalness: col===0x888888?0.3:0 }));
-    m.position.set(px, py, pz); m.castShadow = true; return m;
+  const smat = (col, rough=0.85, met=0, emCol=0, emInt=0) => {
+    const m = new THREE.MeshStandardMaterial({ color: col, roughness: rough, metalness: met });
+    if (emInt > 0) { m.emissive.setHex(emCol); m.emissiveIntensity = emInt; }
+    return m;
   };
-  const isBoss = data.id === 'boss';
-  // Stick body (post)
-  g.add(mk(new THREE.CylinderGeometry(0.1*sz, 0.12*sz, 2.0*sz, 6), 0x8B5E3C, 1.0*sz));
-  // Shirt/body
-  g.add(mk(new THREE.BoxGeometry(0.7*sz, 0.9*sz, 0.35*sz), data.color, 0.95*sz));
-  // Cross arms
-  g.add(mk(new THREE.BoxGeometry(1.7*sz, 0.22*sz, 0.22*sz), data.color, 1.3*sz));
-  g.add(mk(new THREE.BoxGeometry(0.28*sz, 0.55*sz, 0.22*sz), data.color, 0.7*sz, -0.45*sz)); // left cuff
-  g.add(mk(new THREE.BoxGeometry(0.28*sz, 0.55*sz, 0.22*sz), data.color, 0.7*sz,  0.45*sz)); // right cuff
-  // Head (pumpkin head for boss, burlap sack otherwise)
-  const headCol = isBoss ? 0xff4400 : 0xd4a830;
-  g.add(mk(new THREE.SphereGeometry(0.38*sz, 8, 8), headCol, 2.2*sz));
-  // Eyes (glowing)
-  const eyeCol = isBoss ? 0xff0000 : 0x222200;
-  [-0.13*sz, 0.13*sz].forEach(x => { const ey = mk(new THREE.SphereGeometry(0.07*sz, 5, 5), eyeCol, 2.25*sz, x); g.add(ey); });
-  // Hat — wide brim for scarecrow look
-  g.add(mk(new THREE.CylinderGeometry(0.6*sz, 0.6*sz, 0.07*sz, 10), 0x2a1a00, 2.65*sz));
-  g.add(mk(new THREE.CylinderGeometry(0.28*sz, 0.32*sz, 0.5*sz, 8), 0x2a1a00, 2.9*sz));
-  // Straw feet
-  [-0.18*sz, 0.18*sz].forEach(x => { g.add(mk(new THREE.CylinderGeometry(0.08*sz, 0.06*sz, 0.5*sz, 6), 0xd4a830, 0.25*sz, x)); });
-  if (isBoss) {
-    // Boss glowing aura ring
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.7*sz, 0.06*sz, 6, 18), new THREE.MeshStandardMaterial({ color: 0xff2200, emissive: 0xff2200, emissiveIntensity: 0.8 }));
-    ring.rotation.x = Math.PI/2; ring.position.y = 0.1; g.add(ring);
+  const mk = (geo, col, py=0, px=0, pz=0, rx=0, ry=0, rz=0, rough=0.85, met=0, emCol=0, emInt=0) => {
+    const m = new THREE.Mesh(geo, smat(col, rough, met, emCol, emInt));
+    m.position.set(px, py, pz); m.rotation.set(rx, ry, rz); m.castShadow = true; return m;
+  };
+  const isBoss  = data.id === 'boss';
+  const isArmor = data.id === 'armor';
+  const isTorch = data.id === 'torch';
+  const isSword = data.id === 'sword';
+  const isFlame = data.id === 'flame';
+
+  // Legs — two wooden post legs
+  [-0.19*sz, 0.19*sz].forEach(x => {
+    g.add(mk(new THREE.CylinderGeometry(0.09*sz, 0.11*sz, 1.05*sz, 6), 0x6B3E26, 0.52*sz, x));
+  });
+  // Straw tufts at feet
+  [-0.26*sz, 0.26*sz].forEach(x => {
+    g.add(mk(new THREE.CylinderGeometry(0.07*sz, 0.05*sz, 0.28*sz, 5), 0xd4a830, 0.08*sz, x,        0.05*sz,  0.22, 0,  0));
+    g.add(mk(new THREE.CylinderGeometry(0.06*sz, 0.04*sz, 0.26*sz, 5), 0xc8961e, 0.08*sz, x+0.08*sz, 0.06*sz,  0.26, 0,  0.28));
+    g.add(mk(new THREE.CylinderGeometry(0.06*sz, 0.04*sz, 0.26*sz, 5), 0xd4a830, 0.08*sz, x-0.08*sz, 0.06*sz,  0.26, 0, -0.28));
+  });
+
+  // Torso / shirt
+  const bodyCol = data.color;
+  g.add(mk(new THREE.BoxGeometry(0.74*sz, 0.88*sz, 0.42*sz), bodyCol, 1.12*sz));
+  // Chest patch
+  g.add(mk(new THREE.BoxGeometry(0.23*sz, 0.19*sz, 0.44*sz), 0x8B5E3C, 1.22*sz, 0.18*sz));
+  // Rope belt
+  g.add(mk(new THREE.CylinderGeometry(0.39*sz, 0.39*sz, 0.09*sz, 10), 0x7a5c2e, 0.72*sz));
+  // Straw tufts at collar
+  [-0.12*sz, 0, 0.12*sz].forEach((x, i) => {
+    g.add(mk(new THREE.CylinderGeometry(0.04*sz, 0.03*sz, 0.22*sz, 5), 0xd4a830, 1.63*sz, x, 0.14*sz, -0.38, 0, (i-1)*0.28));
+  });
+
+  // Armor plate for armored type
+  if (isArmor) {
+    g.add(mk(new THREE.BoxGeometry(0.76*sz, 0.72*sz, 0.1*sz),  0x555566, 1.12*sz, 0, 0.23*sz, 0, 0, 0, 0.55, 0.75));
+    g.add(mk(new THREE.BoxGeometry(0.72*sz, 0.1*sz,  0.44*sz), 0x666677, 0.72*sz, 0, 0,       0, 0, 0, 0.55, 0.75));
+    [-0.46*sz, 0.46*sz].forEach(x => {
+      g.add(mk(new THREE.BoxGeometry(0.24*sz, 0.2*sz, 0.24*sz), 0x555566, 1.46*sz, x, 0, 0, 0, 0, 0.55, 0.75));
+    });
   }
-  // HP bar (lies flat, visible from above)
+
+  // Arms — upper crossbar + forearms + hands
+  g.add(mk(new THREE.BoxGeometry(1.62*sz, 0.22*sz, 0.22*sz), bodyCol, 1.42*sz));
+  [-0.74*sz, 0.74*sz].forEach((x, i) => {
+    const lean = i === 0 ? 0.16 : -0.16;
+    g.add(mk(new THREE.BoxGeometry(0.21*sz, 0.44*sz, 0.21*sz), bodyCol, 1.17*sz, x, 0, lean));
+    g.add(mk(new THREE.SphereGeometry(0.13*sz, 6, 6), 0xc8a850, 0.92*sz, x));
+    // Sleeve straw tufts
+    g.add(mk(new THREE.CylinderGeometry(0.05*sz, 0.04*sz, 0.2*sz, 5), 0xd4a830, 0.79*sz, x+0.05*sz, 0.08*sz, 0, 0,  0.45));
+    g.add(mk(new THREE.CylinderGeometry(0.05*sz, 0.04*sz, 0.18*sz, 5), 0xc8961e, 0.8*sz,  x-0.05*sz, 0.07*sz, 0, 0, -0.4));
+  });
+
+  // Type-specific weapon props
+  if (isTorch) {
+    g.add(mk(new THREE.CylinderGeometry(0.06*sz, 0.06*sz, 0.56*sz, 7), 0x5c3a00, 0.9*sz, 0.79*sz, 0.12*sz, 0, 0, 0.25));
+    g.add(mk(new THREE.ConeGeometry(0.13*sz, 0.28*sz, 7), 0xff6600, 1.18*sz, 0.84*sz, 0.12*sz, 0, 0, 0, 0.5, 0, 0xff4400, 1.3));
+    g.add(mk(new THREE.SphereGeometry(0.1*sz, 5, 5), 0xffaa00, 1.26*sz, 0.84*sz, 0.12*sz, 0, 0, 0, 0.3, 0, 0xff8800, 1.5));
+  }
+  if (isSword) {
+    g.add(mk(new THREE.BoxGeometry(0.07*sz, 0.72*sz, 0.05*sz), 0xccccdd, 0.62*sz, 0.79*sz, 0.12*sz, 0, 0, 0.12, 0.25, 0.85));
+    g.add(mk(new THREE.BoxGeometry(0.3*sz,  0.07*sz, 0.07*sz), 0x998855, 1.0*sz,  0.79*sz, 0.12*sz));
+    g.add(mk(new THREE.CylinderGeometry(0.05*sz, 0.05*sz, 0.18*sz, 6), 0x6b4400, 0.83*sz, 0.79*sz, 0.12*sz));
+  }
+  if (isFlame) {
+    g.add(mk(new THREE.CylinderGeometry(0.09*sz, 0.09*sz, 0.58*sz, 7), 0x555555, 0.9*sz, 0.79*sz, 0.12*sz, 0, 0, Math.PI/2 + 0.18, 0.5, 0.6));
+    g.add(mk(new THREE.ConeGeometry(0.11*sz, 0.28*sz, 7), 0xff6600, 0.9*sz, 1.09*sz, 0.12*sz, 0, 0, -Math.PI/2, 0.35, 0, 0xff4400, 1.0));
+    g.add(mk(new THREE.CylinderGeometry(0.07*sz, 0.1*sz, 0.3*sz, 7), 0x444444, 0.9*sz, 0.72*sz, 0.12*sz, 0.3, 0, 0, 0.5, 0.6));
+  }
+
+  // HEAD
+  if (isBoss) {
+    // Pumpkin head with ridges, stem, carved eyes + grin
+    const pHead = new THREE.Mesh(new THREE.SphereGeometry(0.46*sz, 10, 8), smat(0xff6600, 0.65, 0));
+    pHead.scale.y = 0.82; pHead.position.set(0, 2.38*sz, 0); pHead.castShadow = true; g.add(pHead);
+    // Pumpkin vertical ridges
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const ridge = new THREE.Mesh(new THREE.CylinderGeometry(0.07*sz, 0.07*sz, 0.72*sz, 5), smat(0xdd5500, 0.7));
+      ridge.scale.y = 0.82; ridge.position.set(Math.cos(a)*0.38*sz, 2.38*sz, Math.sin(a)*0.38*sz);
+      ridge.castShadow = true; g.add(ridge);
+    }
+    // Stem
+    g.add(mk(new THREE.CylinderGeometry(0.07*sz, 0.1*sz, 0.22*sz, 6), 0x3a6600, 2.9*sz));
+    // Carved triangle eyes
+    [-0.17*sz, 0.17*sz].forEach(x => {
+      g.add(mk(new THREE.ConeGeometry(0.1*sz, 0.15*sz, 3), 0xff2200, 2.44*sz, x, 0.4*sz, 0, 0, Math.PI, 0.3, 0, 0xff0000, 2.0));
+    });
+    // Carved grin teeth
+    [-0.16*sz, 0, 0.16*sz].forEach(x => {
+      g.add(mk(new THREE.BoxGeometry(0.11*sz, 0.09*sz, 0.06*sz), 0xff2200, 2.18*sz, x, 0.43*sz, 0, 0, 0, 0.3, 0, 0xff0000, 1.5));
+    });
+    // Boss aura rings
+    const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.82*sz, 0.07*sz, 6, 18), smat(0xff2200, 0.4, 0, 0xff2200, 1.2));
+    ring1.rotation.x = Math.PI/2; ring1.position.y = 0.12; g.add(ring1);
+    const ring2 = new THREE.Mesh(new THREE.TorusGeometry(1.15*sz, 0.05*sz, 6, 18), smat(0xff6600, 0.4, 0, 0xff6600, 0.8));
+    ring2.rotation.x = Math.PI/2; ring2.position.y = 0.18; g.add(ring2);
+  } else {
+    // Burlap sack head
+    const hCol = 0xc8a850;
+    g.add(mk(new THREE.SphereGeometry(0.38*sz, 9, 8), hCol, 2.26*sz));
+    g.add(mk(new THREE.BoxGeometry(0.54*sz, 0.19*sz, 0.5*sz), hCol, 2.04*sz));
+    // Burlap seam ridge
+    g.add(mk(new THREE.BoxGeometry(0.025*sz, 0.3*sz, 0.04*sz), 0x9a7430, 2.4*sz, 0, 0.36*sz));
+    // Stitched X-eyes
+    [-0.14*sz, 0.14*sz].forEach(x => {
+      g.add(mk(new THREE.BoxGeometry(0.18*sz, 0.04*sz, 0.04*sz), 0x3a2000, 2.32*sz, x, 0.37*sz, 0, 0,  0.62));
+      g.add(mk(new THREE.BoxGeometry(0.18*sz, 0.04*sz, 0.04*sz), 0x3a2000, 2.32*sz, x, 0.37*sz, 0, 0, -0.62));
+    });
+    // Stitched mouth dots
+    [-0.13*sz, 0, 0.13*sz].forEach(x => {
+      g.add(mk(new THREE.SphereGeometry(0.04*sz, 4, 4), 0x3a2000, 2.12*sz, x, 0.38*sz));
+    });
+  }
+
+  // HAT
+  if (isBoss) {
+    g.add(mk(new THREE.CylinderGeometry(0.74*sz, 0.74*sz, 0.09*sz, 10), 0x1a0e00, 2.9*sz));
+    g.add(mk(new THREE.CylinderGeometry(0.31*sz, 0.39*sz, 0.84*sz, 8), 0x2a1a00, 3.32*sz));
+    g.add(mk(new THREE.CylinderGeometry(0.4*sz, 0.4*sz, 0.09*sz, 8), 0xcc9900, 2.97*sz, 0, 0, 0, 0, 0, 0.5, 0.5));
+  } else {
+    // Floppy hat slightly tilted
+    g.add(mk(new THREE.CylinderGeometry(0.63*sz, 0.63*sz, 0.07*sz, 10), 0x1a0e00, 2.7*sz, 0.07*sz, 0,  0.08, 0,  0.06));
+    g.add(mk(new THREE.CylinderGeometry(0.25*sz, 0.33*sz, 0.48*sz, 8), 0x2a1a00, 2.94*sz, 0.06*sz, 0,  0.14, 0,  0.1));
+    g.add(mk(new THREE.CylinderGeometry(0.34*sz, 0.34*sz, 0.07*sz, 8), 0x6a3a00, 2.72*sz, 0.06*sz));
+    // Straw tuft poking out of hat
+    g.add(mk(new THREE.CylinderGeometry(0.04*sz, 0.03*sz, 0.25*sz, 5), 0xd4a830, 2.97*sz, -0.21*sz, 0.12*sz, -0.48, 0, -0.3));
+    g.add(mk(new THREE.CylinderGeometry(0.04*sz, 0.03*sz, 0.22*sz, 5), 0xc8961e, 2.96*sz, -0.25*sz, 0.1*sz,  -0.38, 0, -0.52));
+  }
+
+  // HP bar
   const hpBg = new THREE.Mesh(new THREE.PlaneGeometry(1.2*sz, 0.22), new THREE.MeshBasicMaterial({ color: 0x222222 }));
-  hpBg.rotation.x = -Math.PI/2; hpBg.position.y = 3.6*sz; g.add(hpBg);
+  hpBg.rotation.x = -Math.PI/2; hpBg.position.y = 3.8*sz; g.add(hpBg);
   const hpFill = new THREE.Mesh(new THREE.PlaneGeometry(1.2*sz, 0.2), new THREE.MeshBasicMaterial({ color: 0x44ff44 }));
-  hpFill.rotation.x = -Math.PI/2; hpFill.position.y = 3.62*sz; g.add(hpFill);
+  hpFill.rotation.x = -Math.PI/2; hpFill.position.y = 3.82*sz; g.add(hpFill);
   g.position.copy(pos); scene.add(g);
   const scaledHP = data.hp * (1 + (gs.wave - 1) * 0.1);
   gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, _dead: false, _hpFill: hpFill, _hpSz: 1.2*sz });
