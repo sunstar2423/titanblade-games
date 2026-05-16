@@ -71,6 +71,22 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 
 /* Controls hint */
 #hint { position:absolute; bottom:100px; right:12px; background:rgba(0,0,0,0.6); border-radius:8px; padding:8px 12px; color:#777; font-size:11px; line-height:1.9; }
+
+/* Touch controls */
+#joystick-zone { position:absolute; bottom:20px; left:20px; width:140px; height:140px; pointer-events:all; display:none; touch-action:none; z-index:5; }
+#joystick-base { width:140px; height:140px; border-radius:50%; background:rgba(255,255,255,0.11); border:3px solid rgba(255,255,255,0.28); position:relative; }
+#joystick-knob { position:absolute; width:62px; height:62px; border-radius:50%; background:rgba(255,255,255,0.46); top:39px; left:39px; box-shadow:0 0 14px rgba(255,255,255,0.25); pointer-events:none; }
+#attack-btn { position:absolute; bottom:24px; right:24px; width:88px; height:88px; border-radius:50%; background:rgba(220,50,50,0.55); border:3px solid rgba(255,110,110,0.7); font-size:34px; display:none; align-items:center; justify-content:center; pointer-events:all; touch-action:none; box-shadow:0 0 18px rgba(220,50,50,0.35); z-index:5; -webkit-user-select:none; user-select:none; }
+#wave-start-btn { position:absolute; bottom:250px; left:50%; transform:translateX(-50%); padding:15px 36px; background:rgba(76,175,80,0.92); border:3px solid #4CAF50; border-radius:18px; color:#fff; font-size:21px; font-weight:bold; display:none; pointer-events:all; touch-action:none; white-space:nowrap; box-shadow:0 0 20px rgba(76,175,80,0.55); z-index:5; -webkit-user-select:none; user-select:none; }
+#c { touch-action:none; }
+@media (pointer: coarse) {
+  .hotslot { width:58px; height:58px; }
+  .hotslot .se { font-size:24px; }
+  #hint { display:none; }
+  #shop-box { width:96vw; padding:14px; }
+  .shop-grid { grid-template-columns:repeat(2,1fr); }
+  .stitle { font-size:38px; }
+}
 </style>
 </head>
 <body>
@@ -88,6 +104,9 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div id="hint">WASD — Move<br>Click — Attack<br>1-5 — Switch weapon<br>B — Shop<br>SPACE — Start Wave</div>
   <div id="toast"></div>
   <div id="wave-ann"></div>
+  <div id="joystick-zone"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
+  <div id="attack-btn">⚔️</div>
+<div id="wave-start-btn">▶ START WAVE</div>
 
   <!-- Shop -->
   <div id="shop-overlay">
@@ -177,6 +196,7 @@ scene.add(fill);
 //  FARM SCENE
 // ═══════════════════════════════════════
 const FARM_R = 42;
+const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
 // Outer ground — canvas grass texture
 (function() {
@@ -540,7 +560,7 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Digit3') setSlot(2);
   if (e.code === 'Digit4') setSlot(3);
   if (e.code === 'Digit5') setSlot(4);
-  if (e.code === 'Escape') { toggleShop(true); gs.placeMode = false; gs.placeId = null; }
+  if (e.code === 'Escape') { toggleShop(true); gs.placeMode = false; gs.placeId = null; const ab=document.getElementById('attack-btn'); if(ab) ab.textContent='⚔️'; }
   if (e.code === 'Space' && gameStarted && gs.betweenWaves && !shopOpen) {
     e.preventDefault(); startNextWave();
   }
@@ -552,6 +572,77 @@ document.getElementById('c').addEventListener('click', () => {
   if (gs.placeMode) { placeAtMouse(); return; }
   doAttack();
 });
+
+// ═══════════════════════════════════════
+//  TOUCH CONTROLS
+// ═══════════════════════════════════════
+const joystick = { active: false, id: -1, x0: 0, y0: 0, dx: 0, dy: 0 };
+const JMAX = 46;
+
+if (isMobile) {
+  document.getElementById('joystick-zone').style.display = 'block';
+  document.getElementById('attack-btn').style.display = 'flex';
+  document.getElementById('hotbar').style.bottom = '170px';
+}
+
+{
+  const jZone = document.getElementById('joystick-zone');
+  const jKnob = document.getElementById('joystick-knob');
+
+  jZone.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    joystick.active = true; joystick.id = t.identifier;
+    joystick.x0 = t.clientX; joystick.y0 = t.clientY;
+    joystick.dx = 0; joystick.dy = 0;
+  }, { passive: false });
+
+  document.addEventListener('touchmove', e => {
+    for (const t of e.changedTouches) {
+      if (joystick.active && t.identifier === joystick.id) {
+        let dx = t.clientX - joystick.x0, dy = t.clientY - joystick.y0;
+        const d = Math.hypot(dx, dy);
+        if (d > JMAX) { dx *= JMAX / d; dy *= JMAX / d; }
+        joystick.dx = dx / JMAX; joystick.dy = dy / JMAX;
+        jKnob.style.transform = `translate(${dx}px,${dy}px)`;
+      }
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchend', e => {
+    for (const t of e.changedTouches) {
+      if (joystick.active && t.identifier === joystick.id) {
+        joystick.active = false; joystick.dx = 0; joystick.dy = 0;
+        jKnob.style.transform = '';
+      }
+    }
+  });
+
+  document.getElementById('attack-btn').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (!gameStarted || gs.betweenWaves) return;
+    if (gs.placeMode) placeAtMouse(); else doAttack();
+  }, { passive: false });
+
+  document.getElementById('wave-start-btn').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (gameStarted && gs.betweenWaves && !shopOpen) startNextWave();
+  }, { passive: false });
+
+  // Canvas touch: update aim direction from finger position
+  document.getElementById('c').addEventListener('touchstart', e => {
+    if (!gameStarted || gs.betweenWaves) return;
+    for (const t of e.changedTouches) {
+      if (t.identifier !== joystick.id) {
+        const mx = (t.clientX / window.innerWidth) * 2 - 1;
+        const my = -(t.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera({ x: mx, y: my }, camera);
+        raycaster.ray.intersectPlane(groundPlane, mouseWorld);
+        break;
+      }
+    }
+  }, { passive: true });
+}
 
 function setSlot(i) {
   gs.activeSlot = i;
@@ -568,6 +659,7 @@ function updatePlayer(dt) {
   if (keys['KeyS'] || keys['ArrowDown'])  gs.playerVel.z += spd * dt;
   if (keys['KeyA'] || keys['ArrowLeft'])  gs.playerVel.x -= spd * dt;
   if (keys['KeyD'] || keys['ArrowRight']) gs.playerVel.x += spd * dt;
+  if (joystick.active) { gs.playerVel.x += joystick.dx * spd * dt; gs.playerVel.z += joystick.dy * spd * dt; }
   gs.playerVel.multiplyScalar(0.78);
   gs.playerPos.add(gs.playerVel);
   // clamp to farm
@@ -1234,6 +1326,8 @@ function placeAtMouse() {
   }
 
   gs.placeMode = false; gs.placeId = null;
+  const ab = document.getElementById('attack-btn');
+  if (ab) ab.textContent = '⚔️';
   showToast('Placed! 🌱');
 }
 
@@ -1332,8 +1426,10 @@ function updateHUD() {
   document.getElementById('straw-txt').textContent = gs.straw;
   const wi = document.getElementById('wave-info');
   wi.textContent = gs.betweenWaves
-    ? (gs.wave === 0 ? 'Press SPACE to start!' : 'Wave ' + gs.wave + '/20 done! SPACE=next')
+    ? (gs.wave === 0 ? (isMobile ? 'Tap ▶ START WAVE' : 'Press SPACE to start!') : 'Wave ' + gs.wave + '/20 done!')
     : 'Wave ' + gs.wave + '/20 — ' + (gs.enemies.length + gs.spawnQueue.length) + ' enemies left';
+  const wsb = document.getElementById('wave-start-btn');
+  if (wsb) wsb.style.display = (isMobile && gameStarted && gs.betweenWaves) ? 'block' : 'none';
 }
 
 function showToast(msg, dur = 2200) {
@@ -1450,7 +1546,9 @@ function equipWeapon(id) {
 function startPlace(id) {
   gs.placeMode = true; gs.placeId = id;
   const item = [...PLACEABLES, ...DEFENSE_ITEMS].find(x => x.id === id);
-  showToast('Click on the farm to place ' + (item ? item.name : id) + '!', 3000);
+  const ab = document.getElementById('attack-btn');
+  if (ab) ab.textContent = '🌱';
+  showToast((isMobile ? 'Tap ▶ to place ' : 'Click to place ') + (item ? item.name : id) + '!', 3000);
 }
 
 function buyHealth(amount, cost) {
@@ -1528,7 +1626,7 @@ function startGame() {
   document.getElementById('screen').classList.add('hidden');
   gameStarted = true;
   buildPlayerMesh(); buildHotbar(); updateHUD();
-  showToast('Welcome! Press SPACE to start Wave 1!', 4000);
+  showToast(isMobile ? 'Tap ▶ START WAVE to begin!' : 'Welcome! Press SPACE to start Wave 1!', 4000);
 }
 
 function loadAndPlay() {
@@ -1536,7 +1634,7 @@ function loadAndPlay() {
   document.getElementById('screen').classList.add('hidden');
   gameStarted = true;
   buildPlayerMesh(); buildHotbar(); updateHUD();
-  showToast('Game loaded! Press SPACE to continue.', 3000);
+  showToast(isMobile ? 'Game loaded! Tap ▶ START WAVE.' : 'Game loaded! Press SPACE to continue.', 3000);
 }
 
 function endGame() {
