@@ -485,13 +485,15 @@ function buildPlayerMesh() {
     const m = new THREE.Mesh(geo, mat(col)); m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
   };
   const skinCol = 0xffcc99, darkSkin = 0xffaa77;
-  // Boots
-  [-0.19,0.19].forEach(x => {
-    add(new THREE.BoxGeometry(0.3,0.22,0.4),  0x1a0e00, 0.11, x, 0.05);
-    add(new THREE.BoxGeometry(0.27,0.16,0.27), 0x2a1500, 0.33, x);
-  });
-  // Trouser legs
-  [-0.19,0.19].forEach(x => add(new THREE.BoxGeometry(0.27,0.46,0.27), 0x1a3a88, 0.61, x));
+  // Leg pivot groups — pivot point is at hip level (y=0.84)
+  const mkLeg = (lg) => {
+    const addL = (geo, col, ly, lx=0, lz=0) => { const m=new THREE.Mesh(geo,mat(col)); m.position.set(lx,ly,lz); m.castShadow=true; lg.add(m); };
+    addL(new THREE.BoxGeometry(0.3,0.22,0.4),  0x1a0e00, -0.73, 0, 0.05); // boot sole
+    addL(new THREE.BoxGeometry(0.27,0.16,0.27), 0x2a1500, -0.51);          // boot upper
+    addL(new THREE.BoxGeometry(0.27,0.46,0.27), 0x1a3a88, -0.23);          // trouser
+  };
+  const legL = new THREE.Group(); legL.position.set(-0.19, 0.84, 0); mkLeg(legL); g.add(legL);
+  const legR = new THREE.Group(); legR.position.set( 0.19, 0.84, 0); mkLeg(legR); g.add(legR);
   // Belt
   add(new THREE.BoxGeometry(0.78,0.14,0.46), 0x4a2200, 0.93);
   add(new THREE.BoxGeometry(0.16,0.16,0.48), 0xcc9900, 0.93); // buckle
@@ -502,14 +504,16 @@ function buildPlayerMesh() {
   // Suspenders
   add(new THREE.BoxGeometry(0.07,0.56,0.05), 0xffdd44, 1.22,-0.22,0.25);
   add(new THREE.BoxGeometry(0.07,0.56,0.05), 0xffdd44, 1.22, 0.22,0.25);
-  // Shoulder caps
-  [-0.55,0.55].forEach(x => add(new THREE.SphereGeometry(0.19,7,7), sk.body, 1.54, x));
-  // Upper arms
-  [-0.55,0.55].forEach(x => add(new THREE.BoxGeometry(0.23,0.44,0.23), sk.body, 1.24, x));
-  // Forearms
-  [-0.55,0.55].forEach(x => add(new THREE.BoxGeometry(0.19,0.3,0.19), skinCol, 0.9, x));
-  // Hands
-  [-0.55,0.55].forEach(x => add(new THREE.SphereGeometry(0.13,7,7), skinCol, 0.72, x));
+  // Arm pivot groups — pivot at shoulder (y=1.54)
+  const mkArm = (ag) => {
+    const addA = (geo, col, ly, lx=0, lz=0) => { const m=new THREE.Mesh(geo,mat(col)); m.position.set(lx,ly,lz); m.castShadow=true; ag.add(m); };
+    addA(new THREE.SphereGeometry(0.19,7,7),    sk.body,  0);     // shoulder cap
+    addA(new THREE.BoxGeometry(0.23,0.44,0.23), sk.body,  -0.3);  // upper arm
+    addA(new THREE.BoxGeometry(0.19,0.3,0.19),  skinCol,  -0.64); // forearm
+    addA(new THREE.SphereGeometry(0.13,7,7),    skinCol,  -0.82); // hand
+  };
+  const armL = new THREE.Group(); armL.position.set(-0.55, 1.54, 0); mkArm(armL); g.add(armL);
+  const armR = new THREE.Group(); armR.position.set( 0.55, 1.54, 0); mkArm(armR); g.add(armR);
   // Neck
   add(new THREE.CylinderGeometry(0.13,0.16,0.24,8), skinCol, 1.67);
   // Head sphere
@@ -544,6 +548,7 @@ function buildPlayerMesh() {
     const wd = WEAPONS.find(w => w.id === wid);
     if (wd) { const wm = buildWeaponMesh(wd); wm.position.set(0.52,0.68,0.32); wm.scale.setScalar(0.72); g.add(wm); }
   }
+  g._legL = legL; g._legR = legR; g._armL = armL; g._armR = armR;
   playerMesh = g;
   scene.add(playerMesh);
 }
@@ -671,13 +676,24 @@ function updatePlayer(dt) {
   }
   gs.playerPos.y = 0.75;
   if (playerMesh) {
-    playerMesh.position.copy(gs.playerPos);
-    // face mouse
+    playerMesh.position.x = gs.playerPos.x;
+    playerMesh.position.z = gs.playerPos.z;
     const dx = mouseWorld.x - gs.playerPos.x;
     const dz = mouseWorld.z - gs.playerPos.z;
     if (Math.hypot(dx, dz) > 0.1) playerMesh.rotation.y = Math.atan2(dx, dz);
-    // bob
-    playerMesh.position.y = gs.playerPos.y + Math.sin(Date.now() * 0.008) * 0.04;
+    // Walking animation
+    const moving = gs.playerVel.length() > 0.05;
+    const now = Date.now() * 0.013;
+    if (moving) {
+      const swing = Math.sin(now) * 0.52;
+      playerMesh.position.y = gs.playerPos.y + Math.abs(Math.sin(now)) * 0.08;
+      if (playerMesh._legL) { playerMesh._legL.rotation.x = swing; playerMesh._legR.rotation.x = -swing; }
+      if (playerMesh._armL) { playerMesh._armL.rotation.x = -swing * 0.55; playerMesh._armR.rotation.x = swing * 0.55; }
+    } else {
+      playerMesh.position.y = gs.playerPos.y;
+      if (playerMesh._legL) { playerMesh._legL.rotation.x *= 0.78; playerMesh._legR.rotation.x *= 0.78; }
+      if (playerMesh._armL) { playerMesh._armL.rotation.x *= 0.78; playerMesh._armR.rotation.x *= 0.78; }
+    }
   }
 }
 
@@ -994,7 +1010,7 @@ function spawnEnemy(typeId) {
   hpFill.rotation.x = -Math.PI/2; hpFill.position.y = 3.82*sz; g.add(hpFill);
   g.position.copy(pos); scene.add(g);
   const scaledHP = data.hp * (1 + (gs.wave - 1) * 0.1);
-  gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, _dead: false, _hpFill: hpFill, _hpSz: 1.2*sz });
+  gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, _dead: false, _hpFill: hpFill, _hpSz: 1.2*sz, _phase: Math.random() * Math.PI * 2, _swayZ: 0, _leanX: 0, _bob: 0 });
 }
 
 function updateEnemies(dt) {
@@ -1020,9 +1036,16 @@ function updateEnemies(dt) {
       e.vel.set(0, 0, 0);
     }
     const walking = e.vel.length() > 0.01;
-    const bob = walking ? Math.abs(Math.sin(Date.now() * 0.012 + e.pos.x)) * 0.12 : 0;
-    e.mesh.position.copy(e.pos).setY(bob);
-    e.mesh.lookAt(tgt.clone().add(new THREE.Vector3(0, e.pos.y, 0)));
+    const et = Date.now() * 0.001;
+    const freq = (e.data.spd || 2) * 1.7;
+    const step = Math.sin(et * freq + e._phase);
+    e._bob   = e._bob   * 0.84 + (walking ? Math.abs(step) * 0.15 : 0) * 0.16;
+    e._swayZ = e._swayZ * 0.84 + (walking ? Math.sin(et * freq + e._phase + Math.PI * 0.5) * 0.12 : 0) * 0.16;
+    e._leanX = e._leanX * 0.84 + (walking ? -0.08 : 0) * 0.16;
+    e.mesh.position.copy(e.pos).setY(e._bob);
+    const faceDir = tgt.clone().sub(e.pos).setY(0);
+    const faceY = faceDir.length() > 0.01 ? Math.atan2(faceDir.x, faceDir.z) : e.mesh.rotation.y;
+    e.mesh.rotation.set(e._leanX, faceY, e._swayZ);
     // Update HP bar
     if (e._hpFill) {
       const pct = Math.max(0, e.hp / e.maxHp);
@@ -1724,8 +1747,15 @@ function loop(ts) {
   // Drift clouds slowly
   scene.children.forEach(c => { if (c._isCloud) { c.position.x += 0.4 * dt; if (c.position.x > 50) c.position.x = -50; } });
   // Sway plants gently in the wind
-  const t = Date.now() * 0.0015;
-  gs.placedPlants.forEach((p, i) => { if (p.mesh) { p.mesh.rotation.z = Math.sin(t + i * 1.7) * 0.04; p.mesh.rotation.x = Math.cos(t * 0.8 + i * 2.1) * 0.03; } });
+  const t = Date.now() * 0.001;
+  gs.placedPlants.forEach((p, i) => {
+    if (!p.mesh) return;
+    if (!p._swayPh)  p._swayPh  = i * 2.4 + Math.random() * 1.8;
+    if (!p._swaySpd) p._swaySpd = 0.6 + (i % 5) * 0.16;
+    const sp = p._swaySpd, ph = p._swayPh;
+    p.mesh.rotation.z = Math.sin(t * sp + ph) * 0.15 + Math.sin(t * sp * 2.2 + ph + 1.3) * 0.05;
+    p.mesh.rotation.x = Math.cos(t * sp * 0.87 + ph + 1.0) * 0.1 + Math.sin(t * sp * 1.7 + ph + 0.6) * 0.03;
+  });
 
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
