@@ -382,9 +382,13 @@ const PLACEABLES = [
 ];
 
 const DEFENSE_ITEMS = [
-  { id:'fence',    name:'Fence',    emoji:'🪵', cost:10, desc:'Slows/blocks enemy path',   type:'fence',    hp:50,  color:0x8b4513 },
-  { id:'campfire', name:'Campfire', emoji:'🔥', cost:15, desc:'Burns nearby enemies 3/s',  type:'campfire', hp:999, dmg:3, range:2.5, color:0xff4500 },
-  { id:'moat',     name:'Moat',     emoji:'💧', cost:20, desc:'Slows enemies crossing it', type:'moat',     hp:999, slow:0.7, color:0x4169e1 },
+  { id:'fence',    name:'Fence',         emoji:'🪵', cost:10, desc:'Slows/blocks enemy path',              type:'fence',    hp:50,  color:0x8b4513 },
+  { id:'campfire', name:'Campfire',      emoji:'🔥', cost:15, desc:'Burns nearby enemies 3/s',             type:'campfire', hp:999, dmg:3,  range:2.5, color:0xff4500 },
+  { id:'moat',     name:'Moat',          emoji:'💧', cost:20, desc:'Slows enemies crossing it',            type:'moat',     hp:999, slow:0.7, color:0x4169e1 },
+  { id:'arrowtwr', name:'Arrow Tower',   emoji:'🏹', cost:25, desc:'Shoots arrows at enemies (range 8)',   type:'arrowtwr', hp:100, dmg:28, range:8,  cd:1.2 },
+  { id:'bombtwr',  name:'Bomb Tower',    emoji:'💣', cost:40, desc:'AoE bomb every 3s (range 5)',          type:'bombtwr',  hp:80,  dmg:60, range:5,  cd:3.0, aoe:3 },
+  { id:'spike',    name:'Spike Trap',    emoji:'🗡️', cost:15, desc:'Damages enemies walking over it',      type:'spike',    hp:80,  dmg:18, range:1.6 },
+  { id:'tesla',    name:'Tesla Coil',    emoji:'⚡', cost:35, desc:'Zaps up to 4 enemies every 2s',        type:'tesla',    hp:70,  dmg:22, range:5.5, cd:2.0, chains:4 },
 ];
 
 const ENEMY_TYPES = [
@@ -1241,6 +1245,54 @@ function buildPlantMesh(data) {
       const rim=new THREE.Mesh(new THREE.TorusGeometry(1.1,0.1,6,20), S(0x3366aa)); rim.rotation.x=Math.PI/2; rim.position.y=0.05; g.add(rim);
       break;
     }
+    case 'arrowtwr': {
+      // Stone base
+      add(new THREE.CylinderGeometry(0.32,0.38,0.55,8), S(0x888888), 0.28);
+      // Tower walls (4 sides)
+      [-0.22,0.22].forEach(x => {
+        add(new THREE.BoxGeometry(0.1,0.7,0.44), S(0x777777), 0.65, x);
+        add(new THREE.BoxGeometry(0.44,0.7,0.1), S(0x777777), 0.65, 0, x);
+      });
+      // Crenellations
+      for (let i = 0; i < 4; i++) { const a = i/4*Math.PI*2; add(new THREE.BoxGeometry(0.14,0.22,0.14), S(0x666666), 1.12, Math.cos(a)*0.2, Math.sin(a)*0.2); }
+      // Arrow/crossbow on top
+      add(new THREE.CylinderGeometry(0.035,0.04,0.6,6), S(0x5c3317), 0.92, 0,0, 0,0,Math.PI/2);
+      add(new THREE.BoxGeometry(0.44,0.07,0.05), S(0x5c3317), 0.92);
+      break;
+    }
+    case 'bombtwr': {
+      // Stone base
+      add(new THREE.CylinderGeometry(0.34,0.4,0.5,8), S(0x666666), 0.25);
+      add(new THREE.CylinderGeometry(0.3,0.34,0.55,8), S(0x777777), 0.75);
+      // Barrel pointing up
+      add(new THREE.CylinderGeometry(0.12,0.14,0.6,8), S(0x444444), 1.18, 0,0, 0,0,0);
+      add(new THREE.CylinderGeometry(0.09,0.12,0.1,8), S(0x333333), 1.53);
+      // Fuse
+      add(new THREE.CylinderGeometry(0.025,0.025,0.18,5), S(0x5c3317), 1.57, 0.08,0, 0,0,0.4);
+      add(new THREE.SphereGeometry(0.06,5,5), E(0xff8800), 1.65, 0.1,0);
+      break;
+    }
+    case 'spike': {
+      // Wooden base plate
+      add(new THREE.BoxGeometry(1.1,0.12,1.1), S(0x5c3317), 0.06);
+      // Spike rows
+      for (let ix = -1; ix <= 1; ix++) for (let iz = -1; iz <= 1; iz++) {
+        add(new THREE.ConeGeometry(0.06,0.38,5), S(0x888888), 0.25, ix*0.32, iz*0.32);
+      }
+      break;
+    }
+    case 'tesla': {
+      // Metal base
+      add(new THREE.CylinderGeometry(0.26,0.3,0.3,8), S(0x557755), 0.15, 0,0,0,0,0,0.5,0.7);
+      // Pole
+      add(new THREE.CylinderGeometry(0.06,0.08,1.0,8), S(0x557755), 0.65, 0,0,0,0,0,0.5,0.7);
+      // Coil rings
+      [0.4,0.6,0.8].forEach(y => add(new THREE.TorusGeometry(0.18,0.04,5,12), S(0x888855), y+0.2, 0,0, Math.PI/2,0,0));
+      // Spark orb
+      add(new THREE.SphereGeometry(0.2,8,8), E(0x88ffff), 1.28);
+      add(new THREE.SphereGeometry(0.13,6,6), E(0xffffff), 1.28);
+      break;
+    }
     default: {
       add(new THREE.CylinderGeometry(0.1,0.15,0.8,8), S(0x228B22), 0.4);
       add(new THREE.SphereGeometry(0.38,10,10), S(data.color||0x00ff00), 0.9);
@@ -1345,7 +1397,7 @@ function placeAtMouse() {
   if (pd) {
     gs.placedPlants.push({ mesh: g, data: pd, hp: pd.hp, maxHp: pd.hp, pos: pos.clone(), timer: 0 });
   } else {
-    gs.defenses.push({ mesh: g, data: dd, pos: pos.clone() });
+    gs.defenses.push({ mesh: g, data: dd, pos: pos.clone(), timer: 0 });
   }
 
   gs.placeMode = false; gs.placeId = null;
@@ -1395,6 +1447,38 @@ function updatePlacedPlants(dt) {
     }
     if (d.data.type === 'moat') {
       gs.enemies.forEach(e => { if (e.pos.distanceTo(d.pos) < 1.5) e.slowTimer = Math.max(e.slowTimer, 0.1 + dt); });
+    }
+    if (d.data.type === 'spike') {
+      gs.enemies.forEach(e => { if (e.pos.distanceTo(d.pos) < (d.data.range || 1.6)) { e.hp -= (d.data.dmg || 18) * dt; if (e.hp <= 0) killEnemy(e); } });
+    }
+    if (d.data.type === 'arrowtwr') {
+      d.timer -= dt;
+      if (d.timer <= 0) {
+        let tgt = null, best = d.data.range;
+        gs.enemies.forEach(e => { const dist = e.pos.distanceTo(d.pos); if (dist < best) { best = dist; tgt = e; } });
+        if (tgt) { dmgEnemy(tgt, d.data.dmg); spawnFX(tgt.pos.clone(), 0xffdd44, 0.25, 0.5); d.timer = d.data.cd; }
+      }
+    }
+    if (d.data.type === 'bombtwr') {
+      d.timer -= dt;
+      if (d.timer <= 0) {
+        let tgt = null, best = d.data.range;
+        gs.enemies.forEach(e => { const dist = e.pos.distanceTo(d.pos); if (dist < best) { best = dist; tgt = e; } });
+        if (tgt) {
+          spawnFX(tgt.pos.clone(), 0xff6600, 0.7, 1.8);
+          gs.enemies.forEach(e => { if (e.pos.distanceTo(tgt.pos) < (d.data.aoe || 3)) dmgEnemy(e, d.data.dmg); });
+          d.timer = d.data.cd;
+        }
+      }
+    }
+    if (d.data.type === 'tesla') {
+      d.timer -= dt;
+      if (d.timer <= 0) {
+        const inRange = gs.enemies.filter(e => e.pos.distanceTo(d.pos) < d.data.range);
+        inRange.sort((a, b) => a.pos.distanceTo(d.pos) - b.pos.distanceTo(d.pos));
+        inRange.slice(0, d.data.chains || 4).forEach(e => { dmgEnemy(e, d.data.dmg); spawnFX(e.pos.clone(), 0x88ffff, 0.3, 0.6); });
+        if (inRange.length > 0) d.timer = d.data.cd;
+      }
     }
   });
 }
