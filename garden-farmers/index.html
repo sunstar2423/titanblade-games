@@ -409,21 +409,6 @@ let windmillBlades = null;
   g.position.set(-8, 0, -5); scene.add(g);
 })();
 
-// Raised wooden garden beds — add height variation to farm floor
-[[14,12],[-13,9],[9,-16],[-16,-11],[20,-6]].forEach(([x, z], idx) => {
-  const bedMat  = new THREE.MeshStandardMaterial({ color: 0x5c3317, roughness: 0.95 });
-  const soilMat = new THREE.MeshStandardMaterial({ color: 0x5a3808, roughness: 0.97 });
-  const w = 3.2 + (idx%2) * 0.8, d = 1.6;
-  const bed = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, 0.48, d + 0.3), bedMat);
-  bed.position.set(x, 0.24, z); bed.castShadow = true; bed.receiveShadow = true; scene.add(bed);
-  const soil = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, d), soilMat);
-  soil.position.set(x, 0.5, z); soil.receiveShadow = true; scene.add(soil);
-  for (let i = 0; i < 4; i++) {
-    const plant = new THREE.Mesh(new THREE.SphereGeometry(0.18, 5, 5), new THREE.MeshStandardMaterial({ color: 0x2d7a20, roughness: 0.9 }));
-    plant.scale.y = 1.4; plant.position.set(x + (i - 1.5) * (w / 3.8), 0.72, z); plant.castShadow = true; scene.add(plant);
-  }
-});
-
 // Rock clusters outside fence
 [[46,10],[-44,22],[22,50],[-26,-49],[50,-24]].forEach(([x, z]) => {
   const rockMat = new THREE.MeshStandardMaterial({ color: 0x777770, roughness: 0.92 });
