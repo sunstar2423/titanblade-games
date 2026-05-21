@@ -69,6 +69,13 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 #wave-ann { position:absolute; top:45%; left:50%; transform:translate(-50%,-50%); font-size:52px; font-weight:bold; color:#ff4444; text-shadow:0 0 20px #ff4444; pointer-events:none; opacity:0; transition:opacity 0.4s; }
 #wave-ann.show { opacity:1; }
 
+/* Event banner */
+#event-banner { position:absolute; top:30%; left:50%; transform:translate(-50%,-50%); font-size:28px; font-weight:bold; color:#fff; text-align:center; background:rgba(0,0,0,0.72); border:3px solid #FFD700; border-radius:16px; padding:14px 28px; pointer-events:none; opacity:0; transition:opacity 0.4s; white-space:nowrap; text-shadow:0 0 10px #FFD700; }
+#event-banner.show { opacity:1; }
+#event-banner.bad { border-color:#ff4444; text-shadow:0 0 10px #ff4444; }
+#event-timer-bar-wrap { width:260px; height:8px; background:#333; border-radius:4px; margin:8px auto 0; overflow:hidden; }
+#event-timer-bar { height:100%; background:#FFD700; border-radius:4px; transition:width 0.5s linear; }
+
 /* Controls hint */
 #hint { position:absolute; bottom:100px; right:12px; background:rgba(0,0,0,0.6); border-radius:8px; padding:8px 12px; color:#777; font-size:11px; line-height:1.9; }
 
@@ -107,6 +114,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div id="joystick-zone"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
   <div id="attack-btn">⚔️</div>
 <div id="wave-start-btn">▶ START WAVE</div>
+<div id="event-banner"><span id="event-text"></span><div id="event-timer-bar-wrap"><div id="event-timer-bar"></div></div></div>
 
   <!-- Shop -->
   <div id="shop-overlay">
@@ -476,6 +484,19 @@ const DEFENSE_ITEMS = [
   { id:'tesla',    name:'Tesla Coil',    emoji:'⚡', cost:35, desc:'Zaps up to 4 enemies every 2s',        type:'tesla',    hp:70,  dmg:22, range:5.5, cd:2.0, chains:4 },
 ];
 
+const RANDOM_EVENTS = [
+  // Good events
+  { id:'strawBonus',  name:'🌾 Harvest Bonus!',      desc:'+100 straw instantly!',           bad:false, instant:true },
+  { id:'healRain',    name:'🌧️ Healing Rain!',        desc:'You heal 8 HP/s for 20 seconds',  bad:false, dur:20 },
+  { id:'barnShield',  name:'🛡️ Magic Shield!',        desc:'Barn is invincible for 15 seconds',bad:false, dur:15 },
+  { id:'powerUp',     name:'⚡ Power Surge!',         desc:'Double damage for 25 seconds',     bad:false, dur:25 },
+  { id:'freezeWave',  name:'❄️ Deep Freeze!',         desc:'All enemies frozen for 12 seconds',bad:false, dur:12 },
+  { id:'strawRain',   name:'🌾 Straw Rain!',          desc:'+6 straw every 2s for 20 seconds', bad:false, dur:20 },
+  // Bad events
+  { id:'enemyRage',   name:'😡 Enemy Rage!',          desc:'Enemies move 70% faster for 20s',  bad:true,  dur:20 },
+  { id:'stampede',    name:'💀 Stampede!',             desc:'12 scarecrows rush the farm!',      bad:true,  instant:true },
+];
+
 const ENEMY_TYPES = [
   { id:'basic',  name:'Basic Scarecrow',        hp:40,  spd:2.0, dmg:5,  straw:5,   sz:1,   color:0xd2b48c },
   { id:'torch',  name:'Torch Scarecrow',        hp:60,  spd:2.5, dmg:8,  straw:10,  sz:1,   color:0xff8c00 },
@@ -542,6 +563,8 @@ const gs = {
   totalKills: 0,
   placeMode: false,
   placeId: null,
+  eventTimer: 300,
+  activeEvents: {},
 };
 
 let playerMesh = null;
@@ -885,7 +908,8 @@ function spawnProj(pos, dir, spd, data, owner, life) {
 
 function dmgEnemy(e, dmg) {
   const armor = e.data.armor || 0;
-  const actual = Math.round(dmg * (1 - armor));
+  const mult = gs.activeEvents.powerUp ? 2 : 1;
+  const actual = Math.round(dmg * mult * (1 - armor));
   e.hp -= actual;
   floatText(e.pos.clone(), '-' + actual, 0xff4444);
   if (e.hp <= 0) killEnemy(e);
@@ -895,10 +919,11 @@ function killEnemy(e) {
   if (e._dead) return; e._dead = true;
   scene.remove(e.mesh);
   gs.enemies = gs.enemies.filter(x => x !== e);
-  gs.straw += e.data.straw;
+  const straw = gs.activeEvents.strawRain ? e.data.straw * 2 : e.data.straw;
+  gs.straw += straw;
   gs.totalKills++;
   gs.waveEnemiesLeft = Math.max(0, gs.waveEnemiesLeft - 1);
-  floatText(e.pos.clone(), '+' + e.data.straw + '🌾', 0xFFD700);
+  floatText(e.pos.clone(), '+' + straw + '🌾', 0xFFD700);
 }
 
 // ═══════════════════════════════════════
@@ -1115,7 +1140,9 @@ function updateEnemies(dt) {
     const dist = dir.length();
     if (dist > 0.01) dir.normalize();
     const attackRange = 1.8 * (e.data.sz || 1);
-    const spd = e.data.spd * (e.slowTimer > 0 ? 0.3 : 1);
+    const rageMult = gs.activeEvents.enemyRage ? 1.7 : 1;
+    const frozenMult = gs.activeEvents.freezeWave ? 0.05 : 1;
+    const spd = e.data.spd * rageMult * frozenMult * (e.slowTimer > 0 ? 0.3 : 1);
     if (dist > attackRange) {
       // Walk toward target
       e.vel.lerp(dir.multiplyScalar(spd), 0.12);
@@ -1154,9 +1181,11 @@ function updateEnemies(dt) {
         gs.playerHP -= e.data.dmg;
         if (gs.playerHP <= 0) { gs.playerHP = 0; endGame(); }
       } else if (tgt.length() < 2.5) {
-        gs.barnHP -= e.data.dmg;
-        if (gs.barnHP <= 0) { gs.barnHP = 0; endGame(); }
-        updateBarnRing();
+        if (!gs.activeEvents.barnShield) {
+          gs.barnHP -= e.data.dmg;
+          if (gs.barnHP <= 0) { gs.barnHP = 0; endGame(); }
+          updateBarnRing();
+        }
       } else {
         const pp = gs.placedPlants.find(p => p.pos.distanceTo(e.pos) < 2);
         if (pp) {
@@ -1166,6 +1195,87 @@ function updateEnemies(dt) {
       }
     }
   });
+}
+
+// ═══════════════════════════════════════
+//  RANDOM EVENTS
+// ═══════════════════════════════════════
+const eventBanner = document.getElementById('event-banner');
+const eventText   = document.getElementById('event-text');
+const eventTimerBar = document.getElementById('event-timer-bar');
+let _eventBannerTimeout = null;
+
+function showEventBanner(ev, remaining, total) {
+  eventText.textContent = ev.name + ' — ' + ev.desc;
+  eventBanner.className = 'show' + (ev.bad ? ' bad' : '');
+  if (ev.instant) {
+    eventTimerBar.style.display = 'none';
+    clearTimeout(_eventBannerTimeout);
+    _eventBannerTimeout = setTimeout(() => { eventBanner.className = ''; }, 3000);
+  } else {
+    eventTimerBar.style.display = 'block';
+    eventTimerBar.style.width = (remaining / total * 100) + '%';
+  }
+}
+
+function hideEventBanner() {
+  eventBanner.className = '';
+}
+
+function triggerRandomEvent() {
+  const ev = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
+  showEventBanner(ev, ev.dur, ev.dur);
+
+  if (ev.id === 'strawBonus') {
+    gs.straw += 100;
+    floatText(gs.playerPos.clone().add(new THREE.Vector3(0,2,0)), '+100🌾', 0xFFD700);
+  } else if (ev.id === 'stampede') {
+    for (let i = 0; i < 12; i++) spawnEnemy('basic');
+    gs.waveEnemiesLeft += 12;
+  } else if (ev.dur) {
+    gs.activeEvents[ev.id] = ev.dur;
+  }
+}
+
+function updateEventSystem(dt) {
+  // Countdown to next event (every 5 minutes = 300s, but start first one after 90s)
+  gs.eventTimer -= dt;
+  if (gs.eventTimer <= 0) {
+    gs.eventTimer = 300;
+    triggerRandomEvent();
+  }
+
+  // Tick active durations
+  let anyActive = false;
+  for (const id of Object.keys(gs.activeEvents)) {
+    gs.activeEvents[id] -= dt;
+    if (gs.activeEvents[id] <= 0) {
+      delete gs.activeEvents[id];
+      hideEventBanner();
+    } else {
+      anyActive = true;
+      const ev = RANDOM_EVENTS.find(e => e.id === id);
+      if (ev) showEventBanner(ev, gs.activeEvents[id], ev.dur);
+    }
+  }
+
+  // Straw rain tick
+  if (gs.activeEvents.strawRain) {
+    if (!gs._strawRainTick) gs._strawRainTick = 0;
+    gs._strawRainTick -= dt;
+    if (gs._strawRainTick <= 0) {
+      gs._strawRainTick = 2;
+      gs.straw += 6;
+      floatText(gs.playerPos.clone().add(new THREE.Vector3(0,2,0)), '+6🌾', 0xFFD700);
+    }
+  } else {
+    gs._strawRainTick = 0;
+  }
+
+  // Heal rain tick
+  if (gs.activeEvents.healRain && gs.playerHP < gs.playerMaxHP) {
+    gs.playerHP = Math.min(gs.playerMaxHP, gs.playerHP + 8 * dt);
+  }
 }
 
 // ═══════════════════════════════════════
@@ -1876,6 +1986,8 @@ function resetGame() {
   gs.ownedWeapons = new Set(['carrot']); gs.ownedPlaceables = new Set();
   gs.hotbar = ['carrot', null, null, null, null]; gs.activeSlot = 0;
   gs.totalKills = 0; attackCd = 0;
+  gs.eventTimer = 90; gs.activeEvents = {}; gs._strawRainTick = 0;
+  hideEventBanner();
   updateBarnRing();
 }
 
@@ -1903,6 +2015,7 @@ function loop(ts) {
     updateProjectiles(dt);
     updatePlacedPlants(dt);
     updateEffects(dt);
+    updateEventSystem(dt);
 
     // Camera follows player
     camera.position.lerp(gs.playerPos.clone().add(CAM_OFF), 0.06);
