@@ -143,7 +143,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.32;
+renderer.toneMappingExposure = 0.55;
 renderer.outputEncoding = THREE.sRGBEncoding;
 
 const scene = new THREE.Scene();
@@ -179,8 +179,8 @@ window.addEventListener('resize', () => {
 });
 
 // Lighting
-scene.add(new THREE.HemisphereLight(0x223355, 0x1a2a00, 0.12));
-const sun = new THREE.DirectionalLight(0xaab8d0, 0.38);
+scene.add(new THREE.HemisphereLight(0x6688bb, 0x336611, 0.35));
+const sun = new THREE.DirectionalLight(0xfff0cc, 0.75);
 sun.position.set(15, 25, 10);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -188,10 +188,10 @@ sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
 sun.shadow.camera.top = 75;  sun.shadow.camera.bottom = -75;
 sun.shadow.bias = -0.001;
 scene.add(sun);
-const fill = new THREE.DirectionalLight(0x334466, 0.1);
+const fill = new THREE.DirectionalLight(0x8899cc, 0.2);
 fill.position.set(-10, 8, -10);
 scene.add(fill);
-const rimLight = new THREE.DirectionalLight(0x998877, 0.12);
+const rimLight = new THREE.DirectionalLight(0xffeedd, 0.25);
 rimLight.position.set(-8, 6, 18);
 scene.add(rimLight);
 
