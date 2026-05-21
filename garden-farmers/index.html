@@ -167,8 +167,8 @@ scene.fog = new THREE.FogExp2(0x9ecfe8, 0.008);
   scene.add(sky);
 })();
 
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-const CAM_OFF = new THREE.Vector3(0, 20, 15);
+const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 120);
+const CAM_OFF = new THREE.Vector3(0, 14, 24);
 camera.position.copy(CAM_OFF);
 camera.lookAt(0, 0, 0);
 
@@ -188,9 +188,12 @@ sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
 sun.shadow.camera.top = 75;  sun.shadow.camera.bottom = -75;
 sun.shadow.bias = -0.001;
 scene.add(sun);
-const fill = new THREE.DirectionalLight(0x8899ff, 0.15); // cool fill from opposite
+const fill = new THREE.DirectionalLight(0x8899ff, 0.18);
 fill.position.set(-10, 8, -10);
 scene.add(fill);
+const rimLight = new THREE.DirectionalLight(0xffeedd, 0.22);
+rimLight.position.set(-8, 6, 18);
+scene.add(rimLight);
 
 // ═══════════════════════════════════════
 //  FARM SCENE
@@ -343,6 +346,103 @@ const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness:1, 
   });
   cg.position.set(x, y, z); cg._isCloud = true; scene.add(cg);
 });
+
+// Silo — tall metal grain silo right of barn
+(function() {
+  const g = new THREE.Group();
+  const siloMat  = new THREE.MeshStandardMaterial({ color: 0xc8c0a0, roughness: 0.75 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x999988, roughness: 0.4, metalness: 0.6 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 10, 14), siloMat);
+  body.position.y = 5; body.castShadow = true; g.add(body);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(1.5, 14, 7, 0, Math.PI*2, 0, Math.PI/2), siloMat);
+  dome.position.y = 10; g.add(dome);
+  for (let y = 1; y <= 9; y += 1.6) {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(1.52, 0.07, 5, 18), metalMat);
+    band.rotation.x = Math.PI/2; band.position.y = y; g.add(band);
+  }
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.3, 0.12), new THREE.MeshStandardMaterial({ color: 0x5c3317 }));
+  door.position.set(0, 0.65, 1.52); g.add(door);
+  g.position.set(11, 0, 1); scene.add(g);
+})();
+
+// Windmill — animated blades
+let windmillBlades = null;
+(function() {
+  const g = new THREE.Group();
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x8B6320, roughness: 0.9 });
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.35, 7, 8), woodMat);
+  post.position.y = 3.5; post.castShadow = true; g.add(post);
+  const plat = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 0.18, 8), woodMat);
+  plat.position.y = 7.1; g.add(plat);
+  const hub = new THREE.Mesh(new THREE.SphereGeometry(0.25, 7, 7), new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.7 }));
+  hub.position.y = 7.5; g.add(hub);
+  const blades = new THREE.Group(); blades.position.y = 7.5; blades.position.z = 0.15;
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2;
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.2, 0.07), woodMat);
+    blade.position.set(Math.sin(a) * 1.2, Math.cos(a) * 1.2, 0);
+    blade.rotation.z = -a; blade.castShadow = true; blades.add(blade);
+  }
+  g.add(blades); windmillBlades = blades;
+  g.position.set(-35, 0, -35); scene.add(g);
+})();
+
+// Well — decorative stone well near barn
+(function() {
+  const g = new THREE.Group();
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x888878, roughness: 0.95 });
+  const woodMat  = new THREE.MeshStandardMaterial({ color: 0x7a5510, roughness: 0.9 });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.75, 0.9, 12), stoneMat);
+  base.position.y = 0.45; base.castShadow = true; g.add(base);
+  [-0.7, 0.7].forEach(px => {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.5, 0.16), woodMat);
+    post.position.set(px, 1.2, 0); post.castShadow = true; g.add(post);
+  });
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.6, 7), woodMat);
+  beam.position.y = 1.95; beam.rotation.z = Math.PI/2; beam.castShadow = true; g.add(beam);
+  const roof1 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 0.9), woodMat);
+  roof1.position.set(0, 2.22, -0.22); roof1.rotation.x = 0.5; g.add(roof1);
+  const roof2 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 0.9), woodMat);
+  roof2.position.set(0, 2.22,  0.22); roof2.rotation.x = -0.5; g.add(roof2);
+  const bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.11, 0.28, 8), stoneMat);
+  bucket.position.set(0.32, 1.3, 0); g.add(bucket);
+  g.position.set(-8, 0, -5); scene.add(g);
+})();
+
+// Raised wooden garden beds — add height variation to farm floor
+[[14,12],[-13,9],[9,-16],[-16,-11],[20,-6]].forEach(([x, z], idx) => {
+  const bedMat  = new THREE.MeshStandardMaterial({ color: 0x5c3317, roughness: 0.95 });
+  const soilMat = new THREE.MeshStandardMaterial({ color: 0x5a3808, roughness: 0.97 });
+  const w = 3.2 + (idx%2) * 0.8, d = 1.6;
+  const bed = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, 0.48, d + 0.3), bedMat);
+  bed.position.set(x, 0.24, z); bed.castShadow = true; bed.receiveShadow = true; scene.add(bed);
+  const soil = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, d), soilMat);
+  soil.position.set(x, 0.5, z); soil.receiveShadow = true; scene.add(soil);
+  for (let i = 0; i < 4; i++) {
+    const plant = new THREE.Mesh(new THREE.SphereGeometry(0.18, 5, 5), new THREE.MeshStandardMaterial({ color: 0x2d7a20, roughness: 0.9 }));
+    plant.scale.y = 1.4; plant.position.set(x + (i - 1.5) * (w / 3.8), 0.72, z); plant.castShadow = true; scene.add(plant);
+  }
+});
+
+// Rock clusters outside fence
+[[46,10],[-44,22],[22,50],[-26,-49],[50,-24]].forEach(([x, z]) => {
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x777770, roughness: 0.92 });
+  const grp = new THREE.Group();
+  [[0,0,0,1.1],[1.3,0.05,0.5,0.75],[-0.9,0,-0.4,0.85],[0.3,0,-1.2,0.6]].forEach(([rx,ry,rz,rs]) => {
+    const r = new THREE.Mesh(new THREE.OctahedronGeometry(rs, 1), rockMat);
+    r.position.set(rx, rs * 0.5, rz); r.rotation.set(Math.random(), Math.random(), Math.random());
+    r.castShadow = true; grp.add(r);
+  });
+  grp.position.set(x, 0, z); grp.rotation.y = Math.random() * Math.PI; scene.add(grp);
+});
+
+// Dirt path from barn south to fence
+(function() {
+  const pathMat = new THREE.MeshStandardMaterial({ color: 0x8a6010, roughness: 0.97 });
+  const path = new THREE.Mesh(new THREE.PlaneGeometry(2.4, FARM_R - 6), pathMat);
+  path.rotation.x = -Math.PI / 2; path.position.set(0, 0.018, (FARM_R - 6) / 2 + 4);
+  path.receiveShadow = true; scene.add(path);
+})();
 
 // ═══════════════════════════════════════
 //  GAME DATA
@@ -1827,6 +1927,8 @@ function loop(ts) {
 
   // Drift clouds slowly
   scene.children.forEach(c => { if (c._isCloud) { c.position.x += 0.4 * dt; if (c.position.x > 50) c.position.x = -50; } });
+  // Spin windmill blades
+  if (windmillBlades) windmillBlades.rotation.z += dt * 0.7;
   // Sway plants gently in the wind
   const t = Date.now() * 0.001;
   gs.placedPlants.forEach((p, i) => {
