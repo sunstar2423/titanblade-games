@@ -1385,10 +1385,7 @@ function placeAtMouse() {
   const data = pd || dd;
   if (!data) return;
 
-  if (dd) { // defenses cost straw each placement
-    if (gs.straw < dd.cost) { showToast('Not enough straw!'); return; }
-    gs.straw -= dd.cost;
-  }
+
 
   const g = buildPlantMesh(data);
   const pos = new THREE.Vector3(x, 0, z);
