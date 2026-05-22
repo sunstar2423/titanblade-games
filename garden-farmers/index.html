@@ -103,6 +103,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
     <div class="hud-block">❤️ <div id="hp-bar-wrap"><div id="hp-bar"></div></div> <span id="hp-txt">100/100</span></div>
     <div class="hud-block" id="wave-info">Press SPACE to start!</div>
     <div class="hud-block">🌾 <span id="straw-txt">0</span></div>
+    <div class="hud-block" id="event-countdown" style="display:none">🎲 Next event: <span id="event-cd-txt">5:00</span></div>
   </div>
   <div id="hotbar"></div>
   <div id="side-panel">
@@ -1237,12 +1238,30 @@ function triggerRandomEvent() {
   }
 }
 
+const _evCdEl  = document.getElementById('event-countdown');
+const _evCdTxt = document.getElementById('event-cd-txt');
+
 function updateEventSystem(dt) {
   // Countdown to next event (every 5 minutes = 300s, but start first one after 90s)
   gs.eventTimer -= dt;
   if (gs.eventTimer <= 0) {
     gs.eventTimer = 300;
     triggerRandomEvent();
+  }
+
+  // Show countdown only when game is active and no event is running
+  const noActive = Object.keys(gs.activeEvents).length === 0;
+  if (gameStarted && noActive) {
+    _evCdEl.style.display = '';
+    const secs = Math.ceil(gs.eventTimer);
+    const m = Math.floor(secs / 60);
+    const s = String(secs % 60).padStart(2, '0');
+    _evCdTxt.textContent = m + ':' + s;
+    // Turn red when under 10 seconds
+    _evCdEl.style.borderColor = secs <= 10 ? '#ff4444' : '#555';
+    _evCdEl.style.color = secs <= 10 ? '#ff8888' : '#fff';
+  } else {
+    _evCdEl.style.display = 'none';
   }
 
   // Tick active durations
@@ -1987,6 +2006,7 @@ function resetGame() {
   gs.hotbar = ['carrot', null, null, null, null]; gs.activeSlot = 0;
   gs.totalKills = 0; attackCd = 0;
   gs.eventTimer = 90; gs.activeEvents = {}; gs._strawRainTick = 0;
+  _evCdEl.style.display = 'none';
   hideEventBanner();
   updateBarnRing();
 }
