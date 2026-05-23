@@ -1052,6 +1052,26 @@ function updateProjectiles(dt) {
       gs.effects.push({ mesh: trail, timer: 0.14, max: 0.14, type: 'trail' });
     }
 
+    if (p.owner === 'enemy') {
+      p.mesh.rotation.y += dt * 6;
+      if (p.pos.distanceTo(gs.playerPos) < 1.0) {
+        gs.playerHP -= p.data.dmg;
+        if (gs.playerHP <= 0) { gs.playerHP = 0; endGame(); }
+        spawnFX(p.pos.clone(), p.data.color, 0.32, 0.65);
+        spawnImpact(p.pos.clone().add(new THREE.Vector3(0, 0.6, 0)), p.data.color);
+        scene.remove(p.mesh); return false;
+      }
+      const barnDist = new THREE.Vector2(p.pos.x, p.pos.z).length();
+      if (barnDist < 2.5) {
+        if (!gs.activeEvents.barnShield) {
+          gs.barnHP -= p.data.dmg;
+          if (gs.barnHP <= 0) { gs.barnHP = 0; endGame(); }
+          updateBarnRing();
+        }
+        spawnFX(p.pos.clone(), p.data.color, 0.32, 0.65);
+        scene.remove(p.mesh); return false;
+      }
+    }
     if (p.owner === 'weapon' || p.owner === 'plant') {
       for (const e of gs.enemies) {
         if (p.hitSet.has(e)) continue;
@@ -1085,6 +1105,48 @@ function updateProjectiles(dt) {
 // ═══════════════════════════════════════
 //  ENEMY SPAWN + UPDATE
 // ═══════════════════════════════════════
+function spawnEnemyAttackFX(e, hitPos, dir) {
+  switch (e.data.id) {
+    case 'basic':
+      spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 1.0, 0)), dir, 0xd4a830, 1.4);
+      spawnImpact(hitPos.clone().add(new THREE.Vector3(0, 0.8, 0)), 0xd2b48c);
+      break;
+    case 'torch':
+      spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 1.0, 0)), dir, 0xff6600, 1.8);
+      spawnFX(hitPos.clone().add(new THREE.Vector3(0, 0.8, 0)), 0xff6600, 0.32, 0.75);
+      break;
+    case 'sword':
+      spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), dir, 0xddeeff, 2.1);
+      spawnImpact(hitPos.clone().add(new THREE.Vector3(0, 1.0, 0)), 0xaaccff);
+      break;
+    case 'armor':
+      spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), dir, 0xaaaaaa, 2.3);
+      spawnFX(e.pos.clone().add(new THREE.Vector3(0, 0.05, 0)), 0x888888, 0.45, 1.7);
+      break;
+    case 'boss':
+      spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 2.0, 0)), dir, 0xff2200, 3.8);
+      spawnFX(e.pos.clone().add(new THREE.Vector3(0, 0.05, 0)), 0xff2200, 0.6, 3.0);
+      spawnImpact(hitPos.clone().add(new THREE.Vector3(0, 1.0, 0)), 0xff2200);
+      break;
+    default:
+      spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 1.0, 0)), dir, e.data.color || 0xff4444, 1.5);
+  }
+}
+
+function spawnEnemyFireball(pos, dir, enemyData) {
+  const col = 0xff4500;
+  const g = new THREE.Group();
+  const outer = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8),
+    new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.95, roughness: 0.2 }));
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.14, 6, 6),
+    new THREE.MeshBasicMaterial({ color: 0xffffaa }));
+  g.add(outer); g.add(core);
+  g.position.copy(pos); scene.add(g);
+  gs.projectiles.push({ mesh: g, pos: pos.clone(), vel: dir.clone().multiplyScalar(7),
+    data: { color: col, dmg: enemyData.dmg, kind: 'fireball' },
+    owner: 'enemy', timer: 3.0, hitSet: new Set(), bounceLeft: 0, _trailT: 0 });
+}
+
 function spawnEnemy(typeId) {
   const data = ENEMY_TYPES.find(e => e.id === typeId);
   if (!data) return;
@@ -1250,7 +1312,7 @@ function updateEnemies(dt) {
     const dir = tgt.clone().sub(e.pos).setY(0);
     const dist = dir.length();
     if (dist > 0.01) dir.normalize();
-    const attackRange = 1.8 * (e.data.sz || 1);
+    const attackRange = e.data.ranged ? 6.5 : (1.8 * (e.data.sz || 1));
     const rageMult = gs.activeEvents.enemyRage ? 1.7 : 1;
     const frozenMult = gs.activeEvents.freezeWave ? 0.05 : 1;
     const spd = e.data.spd * rageMult * frozenMult * (e.slowTimer > 0 ? 0.3 : 1);
@@ -1287,21 +1349,27 @@ function updateEnemies(dt) {
 
     // Attack
     if (e.attackCd <= 0 && dist < attackRange) {
-      e.attackCd = 1.0;
-      if (tgt.distanceTo(gs.playerPos) < 1) {
-        gs.playerHP -= e.data.dmg;
-        if (gs.playerHP <= 0) { gs.playerHP = 0; endGame(); }
-      } else if (tgt.length() < 2.5) {
-        if (!gs.activeEvents.barnShield) {
-          gs.barnHP -= e.data.dmg;
-          if (gs.barnHP <= 0) { gs.barnHP = 0; endGame(); }
-          updateBarnRing();
-        }
+      e.attackCd = e.data.ranged ? 1.8 : 1.0;
+      const atkDir = tgt.clone().sub(e.pos).setY(0).normalize();
+      if (e.data.ranged) {
+        spawnEnemyFireball(e.pos.clone().add(new THREE.Vector3(0, 1.5, 0)), atkDir, e.data);
       } else {
-        const pp = gs.placedPlants.find(p => p.pos.distanceTo(e.pos) < 2);
-        if (pp) {
-          pp.hp -= e.data.dmg;
-          if (pp.hp <= 0) { scene.remove(pp.mesh); gs.placedPlants = gs.placedPlants.filter(x => x !== pp); showToast('A plant was destroyed!'); }
+        spawnEnemyAttackFX(e, tgt.clone(), atkDir);
+        if (tgt.distanceTo(gs.playerPos) < 1) {
+          gs.playerHP -= e.data.dmg;
+          if (gs.playerHP <= 0) { gs.playerHP = 0; endGame(); }
+        } else if (tgt.length() < 2.5) {
+          if (!gs.activeEvents.barnShield) {
+            gs.barnHP -= e.data.dmg;
+            if (gs.barnHP <= 0) { gs.barnHP = 0; endGame(); }
+            updateBarnRing();
+          }
+        } else {
+          const pp = gs.placedPlants.find(p => p.pos.distanceTo(e.pos) < 2);
+          if (pp) {
+            pp.hp -= e.data.dmg;
+            if (pp.hp <= 0) { scene.remove(pp.mesh); gs.placedPlants = gs.placedPlants.filter(x => x !== pp); showToast('A plant was destroyed!'); }
+          }
         }
       }
     }
