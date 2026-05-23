@@ -543,7 +543,7 @@ const gs = {
   playerPos: new THREE.Vector3(5, 0.75, 0),
   playerVel: new THREE.Vector3(),
   skin: 'classic',
-  straw: 0,
+  straw: 25,
   ownedWeapons: new Set(['carrot']),
   ownedPlaceables: new Set(),
   hotbar: ['carrot', null, null, null, null],
@@ -2194,7 +2194,7 @@ function resetGame() {
   gs.floatingTexts.forEach(f => scene.remove(f.sp));
   gs.enemies = []; gs.projectiles = []; gs.placedPlants = [];
   gs.defenses = []; gs.effects = []; gs.floatingTexts = [];
-  gs.playerHP = 100; gs.playerMaxHP = 100; gs.straw = 0;
+  gs.playerHP = 100; gs.playerMaxHP = 100; gs.straw = 25;
   gs.playerPos.set(5, 0.75, 0); gs.playerVel.set(0, 0, 0);
   gs.wave = 0; gs.waveActive = false; gs.betweenWaves = true;
   gs.barnHP = 200; gs.barnMaxHP = 200;
