@@ -108,6 +108,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div id="hotbar"></div>
   <div id="side-panel">
     <div class="side-btn" title="Shop (B)" onclick="toggleShop()">🛒</div>
+    <div class="side-btn" title="Music" id="mute-btn" onclick="toggleMute()">🔊</div>
   </div>
   <div id="hint">WASD — Move<br>Click — Attack<br>1-5 — Switch weapon<br>B — Shop<br>SPACE — Start Wave</div>
   <div id="toast"></div>
@@ -2102,6 +2103,7 @@ function showScreen(id) {
   const sc = document.getElementById('screen');
   const inn = document.getElementById('screen-inner');
   sc.classList.remove('hidden');
+  startTheme();
   if (id === 'menu') {
     inn.innerHTML = `<div class="stitle">🌱 Garden Farmers</div>
       <div class="ssub">Grow plants. Arm yourself. Defend your farm!</div>
@@ -2136,6 +2138,7 @@ function showScreen(id) {
 }
 
 function startGame() {
+  stopTheme();
   resetGame();
   document.getElementById('screen').classList.add('hidden');
   gameStarted = true;
@@ -2144,6 +2147,7 @@ function startGame() {
 }
 
 function loadAndPlay() {
+  stopTheme();
   loadGame();
   document.getElementById('screen').classList.add('hidden');
   gameStarted = true;
@@ -2256,6 +2260,149 @@ function loop(ts) {
 
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════
+//  THEME SONG
+// ═══════════════════════════════════════
+let _audioCtx = null, _masterGain = null;
+let _themeActive = false, _themeMuted = false;
+let _themeLoopTimeout = null;
+
+function _getCtx() {
+  if (!_audioCtx) {
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    _masterGain = _audioCtx.createGain();
+    _masterGain.gain.value = 0.24;
+    _masterGain.connect(_audioCtx.destination);
+  }
+  return _audioCtx;
+}
+
+function startTheme() {
+  if (_themeActive) return;
+  _themeActive = true;
+  const ctx = _getCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  _scheduleLoop(ctx.currentTime + 0.05);
+}
+
+function stopTheme() {
+  _themeActive = false;
+  clearTimeout(_themeLoopTimeout);
+  if (_masterGain) {
+    _masterGain.gain.setTargetAtTime(0, _audioCtx.currentTime, 0.5);
+    setTimeout(() => { if (_masterGain && !_themeMuted) _masterGain.gain.value = 0.24; }, 2000);
+  }
+}
+
+function toggleMute() {
+  _themeMuted = !_themeMuted;
+  if (_masterGain) _masterGain.gain.setTargetAtTime(_themeMuted ? 0 : 0.24, _audioCtx.currentTime, 0.2);
+  const btn = document.getElementById('mute-btn');
+  if (btn) btn.textContent = _themeMuted ? '🔇' : '🔊';
+}
+
+function _scheduleLoop(t0) {
+  if (!_themeActive) return;
+  const ctx = _getCtx();
+  const end = _playTheme(t0);
+  const msLeft = (end - ctx.currentTime) * 1000 - 200;
+  _themeLoopTimeout = setTimeout(() => _scheduleLoop(end), Math.max(0, msLeft));
+}
+
+function _playTheme(t0) {
+  const ctx = _getCtx();
+  const BPM = 126, b = 60 / BPM;
+  const e8 = b / 2, q = b, h = b * 2, w = b * 4;
+  const N = {
+    G3:196.00, A3:220.00, C4:261.63, D4:293.66, E4:329.63, Fs4:369.99,
+    G4:392.00, A4:440.00, B4:493.88, C5:523.25, D5:587.33,
+    E5:659.25, Fs5:739.99, G5:783.99
+  };
+
+  function pluck(freq, t, dur, vol=0.38, filterHz=2400) {
+    if (!_themeActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'sawtooth'; osc.frequency.value = freq;
+    filt.type = 'lowpass'; filt.frequency.value = filterHz; filt.Q.value = 1.8;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(dur * 0.85, 0.52));
+    osc.connect(filt); filt.connect(g); g.connect(_masterGain);
+    osc.start(t); osc.stop(t + Math.min(dur * 0.88, 0.56));
+  }
+  function bass(freq, t, dur) { pluck(freq, t, dur, 0.26, 900); }
+  function chordStrum(freqs, t) { freqs.forEach(f => pluck(f, t, q * 0.35, 0.10, 1700)); }
+
+  function kick(t) {
+    if (!_themeActive) return;
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(160, t); osc.frequency.exponentialRampToValueAtTime(44, t + 0.11);
+    g.gain.setValueAtTime(0.58, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    osc.connect(g); g.connect(_masterGain); osc.start(t); osc.stop(t + 0.2);
+  }
+  function snare(t) {
+    if (!_themeActive) return;
+    const sr = ctx.sampleRate, len = Math.ceil(sr * 0.14);
+    const buf = ctx.createBuffer(1, len, sr);
+    const d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter(); filt.type = 'bandpass'; filt.frequency.value = 1600; filt.Q.value = 0.8;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.2, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+    src.connect(filt); filt.connect(g); g.connect(_masterGain); src.start(t); src.stop(t + 0.15);
+    const osc = ctx.createOscillator(), g2 = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = 195;
+    g2.gain.setValueAtTime(0.1, t); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+    osc.connect(g2); g2.connect(_masterGain); osc.start(t); osc.stop(t + 0.09);
+  }
+  function hihat(t, vol=0.065) {
+    if (!_themeActive) return;
+    const sr = ctx.sampleRate, len = Math.ceil(sr * 0.038);
+    const buf = ctx.createBuffer(1, len, sr);
+    const d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter(); filt.type = 'highpass'; filt.frequency.value = 7000;
+    const g = ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.036);
+    src.connect(filt); filt.connect(g); g.connect(_masterGain); src.start(t); src.stop(t + 0.04);
+  }
+
+  // 8-bar melody — Garden Farmers' Jig
+  const melody = [
+    [N.G4,e8],[N.B4,e8],[N.D5,e8],[N.G5,e8],[N.Fs5,e8],[N.E5,e8],[N.D5,e8],[N.B4,e8], // bar 1
+    [N.C5,e8],[N.E5,e8],[N.G5,e8],[N.E5,e8],[N.D5,e8],[N.C5,e8],[N.B4,e8],[N.A4,e8],   // bar 2
+    [N.G4,e8],[N.A4,e8],[N.B4,e8],[N.C5,e8],[N.D5,e8],[N.E5,e8],[N.D5,e8],[N.C5,e8],   // bar 3
+    [N.B4,q],[N.A4,q],[N.G4,h],                                                          // bar 4
+    [N.E5,e8],[N.D5,e8],[N.C5,e8],[N.B4,e8],[N.C5,e8],[N.D5,e8],[N.E5,e8],[N.G5,e8],   // bar 5
+    [N.D5,q],[N.G5,q],[N.E5,q],[N.D5,q],                                                 // bar 6
+    [N.C5,e8],[N.B4,e8],[N.A4,e8],[N.G4,e8],[N.A4,e8],[N.B4,e8],[N.C5,e8],[N.D5,e8],   // bar 7
+    [N.G4,w],                                                                             // bar 8
+  ];
+  const bassLine = [ [N.G3,w],[N.C4,w],[N.G3,w],[N.D4,w],[N.A3,w],[N.G3,w],[N.C4,w],[N.G3,w] ];
+  const chords = [
+    [[N.G4,N.B4,N.D5],[N.G4,N.B4,N.D5]],
+    [[N.C5,N.E5,N.G5],[N.C5,N.E5,N.G5]],
+    [[N.G4,N.B4,N.D5],[N.G4,N.B4,N.D5]],
+    [[N.D5,N.Fs5,N.A4],[N.D5,N.Fs5,N.A4]],
+    [[N.A4,N.C5,N.E5],[N.A4,N.C5,N.E5]],
+    [[N.G4,N.B4,N.D5],[N.G4,N.B4,N.D5]],
+    [[N.C5,N.E5,N.G5],[N.C5,N.E5,N.G5]],
+    [[N.G4,N.B4,N.D5],[N.G4,N.B4,N.D5]],
+  ];
+
+  let mt = t0; melody.forEach(([f,d]) => { pluck(f, mt, d); mt += d; });
+  let bt = t0; bassLine.forEach(([f,d]) => { bass(f, bt, d); bt += d; });
+  for (let bar = 0; bar < 8; bar++) {
+    chords[bar].forEach((ch, i) => chordStrum(ch, t0 + bar * w + i * h));
+  }
+  for (let beat = 0; beat < 32; beat++) {
+    const bt2 = t0 + beat * q;
+    if (beat % 4 === 0 || beat % 4 === 2) kick(bt2);
+    if (beat % 4 === 1 || beat % 4 === 3) snare(bt2);
+    hihat(bt2); hihat(bt2 + e8);
+  }
+  return t0 + w * 8;
 }
 
 // ═══════════════════════════════════════
