@@ -1500,7 +1500,7 @@ function checkWaveEnd() {
   const bonus = gs.wave * 10;
   gs.straw += bonus;
   showToast('Wave ' + gs.wave + ' cleared! +' + bonus + ' straw bonus! 🎉', 3000);
-  if (gs.wave >= WAVES.length) setTimeout(() => showScreen('victory'), 2000);
+  if (gs.wave >= WAVES.length) setTimeout(() => { stopBattleTheme(); showScreen('victory'); }, 2000);
   saveGame();
 }
 
@@ -2139,6 +2139,7 @@ function showScreen(id) {
 
 function startGame() {
   stopTheme();
+  startBattleTheme();
   resetGame();
   document.getElementById('screen').classList.add('hidden');
   gameStarted = true;
@@ -2148,6 +2149,7 @@ function startGame() {
 
 function loadAndPlay() {
   stopTheme();
+  startBattleTheme();
   loadGame();
   document.getElementById('screen').classList.add('hidden');
   gameStarted = true;
@@ -2156,7 +2158,9 @@ function loadAndPlay() {
 }
 
 function endGame() {
-  gameStarted = false; showScreen('gameover');
+  gameStarted = false;
+  stopBattleTheme();
+  showScreen('gameover');
 }
 
 // ═══════════════════════════════════════
@@ -2209,6 +2213,150 @@ function resetGame() {
   _evCdEl.style.display = 'none';
   hideEventBanner();
   updateBarnRing();
+}
+
+let _battleActive = false, _battleLoopTimeout = null, _battleGain = null;
+
+function startBattleTheme() {
+  if (_battleActive) return;
+  _battleActive = true;
+  const ctx = _getCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  if (!_battleGain) { _battleGain = ctx.createGain(); _battleGain.gain.value = 0; _battleGain.connect(ctx.destination); }
+  _battleGain.gain.setTargetAtTime(_themeMuted ? 0 : 0.28, ctx.currentTime, 0.8);
+  _scheduleBattleLoop(ctx.currentTime + 0.1);
+}
+
+function stopBattleTheme() {
+  _battleActive = false;
+  clearTimeout(_battleLoopTimeout);
+  if (_battleGain) _battleGain.gain.setTargetAtTime(0, _audioCtx.currentTime, 0.6);
+}
+
+function _scheduleBattleLoop(t0) {
+  if (!_battleActive) return;
+  const ctx = _getCtx();
+  const end = _playBattleTheme(t0);
+  const msLeft = (end - ctx.currentTime) * 1000 - 200;
+  _battleLoopTimeout = setTimeout(() => _scheduleBattleLoop(end), Math.max(0, msLeft));
+}
+
+function _playBattleTheme(t0) {
+  const ctx = _getCtx();
+  const bg = _battleGain;
+  const BPM = 140, b = 60 / BPM;
+  const e8 = b / 2, q = b, h = b * 2, w = b * 4;
+  // D major
+  const N = {
+    D3:146.83, G3:196.00, A3:220.00, B3:246.94,
+    D4:293.66, E4:329.63, Fs4:369.99, G4:392.00, A4:440.00, B4:493.88,
+    Cs5:554.37, D5:587.33, E5:659.25, Fs5:739.99, G5:783.99, A5:880.00, B5:987.77
+  };
+
+  function plk(freq, t, dur, vol=0.36, filterHz=2600) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'sawtooth'; osc.frequency.value = freq;
+    filt.type = 'lowpass'; filt.frequency.value = filterHz; filt.Q.value = 2.0;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(dur * 0.82, 0.48));
+    osc.connect(filt); filt.connect(g); g.connect(bg);
+    osc.start(t); osc.stop(t + Math.min(dur * 0.85, 0.52));
+  }
+  function bss(freq, t, dur) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = freq;
+    filt.type = 'lowpass'; filt.frequency.value = 850; filt.Q.value = 1.4;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.3, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.75);
+    osc.connect(filt); filt.connect(g); g.connect(bg);
+    osc.start(t); osc.stop(t + dur * 0.78);
+  }
+  function chd(freqs, t) { freqs.forEach(f => plk(f, t, q * 0.3, 0.09, 1600)); }
+  function kick(t) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(170, t); osc.frequency.exponentialRampToValueAtTime(42, t + 0.1);
+    g.gain.setValueAtTime(0.62, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.17);
+    osc.connect(g); g.connect(bg); osc.start(t); osc.stop(t + 0.19);
+  }
+  function snare(t) {
+    if (!_battleActive) return;
+    const sr = ctx.sampleRate, len = Math.ceil(sr * 0.13);
+    const buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter(); filt.type = 'bandpass'; filt.frequency.value = 1700; filt.Q.value = 0.9;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.24, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    src.connect(filt); filt.connect(g); g.connect(bg); src.start(t); src.stop(t + 0.14);
+    const osc2 = ctx.createOscillator(), g2 = ctx.createGain();
+    osc2.type = 'sine'; osc2.frequency.value = 210;
+    g2.gain.setValueAtTime(0.12, t); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    osc2.connect(g2); g2.connect(bg); osc2.start(t); osc2.stop(t + 0.08);
+  }
+  function hihat(t, vol=0.07) {
+    if (!_battleActive) return;
+    const sr = ctx.sampleRate, len = Math.ceil(sr * 0.032);
+    const buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter(); filt.type = 'highpass'; filt.frequency.value = 7500;
+    const g = ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+    src.connect(filt); filt.connect(g); g.connect(bg); src.start(t); src.stop(t + 0.034);
+  }
+
+  // "Scarecrow Chase" — 8 bars in D major, 140 BPM
+  const melody = [
+    // Bar 1: heroic call
+    [N.D5,e8],[N.Fs5,e8],[N.A5,e8],[N.D5,e8],[N.B4,e8],[N.D5,e8],[N.Fs5,e8],[N.A5,e8],
+    // Bar 2: descending answer
+    [N.G5,e8],[N.Fs5,e8],[N.E5,e8],[N.D5,e8],[N.Cs5,e8],[N.B4,e8],[N.A4,e8],[N.G4,e8],
+    // Bar 3: climbing back
+    [N.D5,e8],[N.E5,e8],[N.Fs5,e8],[N.G5,e8],[N.A5,q],[N.Fs5,q],
+    // Bar 4: tension peak
+    [N.E5,q],[N.D5,q],[N.Cs5,h],
+    // Bar 5: second phrase — driving
+    [N.D5,e8],[N.D5,e8],[N.Fs5,e8],[N.A5,e8],[N.G5,e8],[N.Fs5,e8],[N.E5,e8],[N.D5,e8],
+    // Bar 6: ornamental run
+    [N.A4,e8],[N.B4,e8],[N.Cs5,e8],[N.D5,e8],[N.E5,q],[N.A5,q],
+    // Bar 7: sweeping descent
+    [N.G5,e8],[N.Fs5,e8],[N.E5,e8],[N.D5,e8],[N.E5,e8],[N.Fs5,e8],[N.G5,e8],[N.A5,e8],
+    // Bar 8: resolve
+    [N.D5,h],[N.D4,h],
+  ];
+  const bassLine = [
+    [N.D3,w],[N.G3,w],[N.D3,w],[N.A3,w],
+    [N.D3,w],[N.A3,w],[N.G3,w],[N.D3,w],
+  ];
+  const chords = [
+    [[N.D4,N.Fs4,N.A4],[N.D4,N.Fs4,N.A4]],  // D D
+    [[N.G4,N.B4,N.D5],[N.G4,N.B4,N.D5]],    // G G
+    [[N.D4,N.Fs4,N.A4],[N.D4,N.Fs4,N.A4]],  // D D
+    [[N.A4,N.Cs5,N.E5],[N.A4,N.Cs5,N.E5]],  // A A
+    [[N.D4,N.Fs4,N.A4],[N.D4,N.Fs4,N.A4]],  // D D
+    [[N.A4,N.Cs5,N.E5],[N.A4,N.Cs5,N.E5]],  // A A
+    [[N.G4,N.B4,N.D5],[N.G4,N.B4,N.D5]],    // G G
+    [[N.D4,N.Fs4,N.A4],[N.D4,N.Fs4,N.A4]],  // D D
+  ];
+
+  let mt = t0; melody.forEach(([f,d]) => { plk(f, mt, d); mt += d; });
+  let bt = t0; bassLine.forEach(([f,d]) => { bss(f, bt, d); bt += d; });
+  for (let bar = 0; bar < 8; bar++) {
+    chords[bar].forEach((ch, i) => chd(ch, t0 + bar * w + i * h));
+  }
+  // Driving drum pattern
+  for (let beat = 0; beat < 32; beat++) {
+    const bt2 = t0 + beat * q;
+    if (beat % 4 === 0 || beat % 4 === 2) kick(bt2);
+    if (beat % 2 === 0) kick(bt2 + e8 * 1.5); // extra syncopated kick
+    if (beat % 4 === 1 || beat % 4 === 3) snare(bt2);
+    hihat(bt2); hihat(bt2 + e8);
+  }
+  return t0 + w * 8;
 }
 
 // ═══════════════════════════════════════
@@ -2298,7 +2446,9 @@ function stopTheme() {
 
 function toggleMute() {
   _themeMuted = !_themeMuted;
-  if (_masterGain) _masterGain.gain.setTargetAtTime(_themeMuted ? 0 : 0.24, _audioCtx.currentTime, 0.2);
+  const t = _audioCtx ? _audioCtx.currentTime : 0;
+  if (_masterGain) _masterGain.gain.setTargetAtTime(_themeMuted ? 0 : 0.24, t, 0.2);
+  if (_battleGain)  _battleGain.gain.setTargetAtTime(_themeMuted ? 0 : 0.28, t, 0.2);
   const btn = document.getElementById('mute-btn');
   if (btn) btn.textContent = _themeMuted ? '🔇' : '🔊';
 }
