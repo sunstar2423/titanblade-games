@@ -920,6 +920,8 @@ function doAttack() {
     dir = nearest.pos.clone().sub(gs.playerPos).setY(0);
   }
   dir.normalize();
+  // Attack sound
+  ({ melee:sfxSwing, heavy:sfxHeavySlam, beam:sfxBeamFire, slow:sfxSplat, bounce:sfxBounce, boomerang:sfxBoomerang, cloud:()=>sfxShoot(0.28), shotgun:()=>sfxShoot(0.5), throw:()=>sfxShoot(0.42) }[wd.kind] || sfxShoot)();
 
   if (wd.kind === 'melee' || wd.kind === 'heavy') {
     spawnSlash(gs.playerPos.clone(), dir, wd.color, wd.range);
@@ -1011,6 +1013,7 @@ function dmgEnemy(e, dmg) {
 
 function killEnemy(e) {
   if (e._dead) return; e._dead = true;
+  sfxKill(e.data.id === 'boss' ? 0.65 : 0.38);
   scene.remove(e.mesh);
   gs.enemies = gs.enemies.filter(x => x !== e);
   const straw = gs.activeEvents.strawRain ? e.data.straw * 2 : e.data.straw;
@@ -1031,6 +1034,7 @@ function updateProjectiles(dt) {
         gs.enemies.forEach(e => { if (p.pos.distanceTo(e.pos) < p.data.aoe) dmgEnemy(e, p.data.dmg * 0.6); });
         spawnFX(p.pos.clone(), p.data.color, 0.4, p.data.aoe * 0.55);
         spawnImpact(p.pos.clone().add(new THREE.Vector3(0,0.5,0)), p.data.color || 0xff8800);
+        sfxExplosion();
       }
       scene.remove(p.mesh); return false;
     }
@@ -1080,6 +1084,7 @@ function updateProjectiles(dt) {
           p.hitSet.add(e);
           dmgEnemy(e, p.data.dmg);
           spawnImpact(p.pos.clone().add(new THREE.Vector3(0, 0.6, 0)), p.data.color || 0xff8800);
+          sfxImpact();
           if (p.data.slow) e.slowTimer = p.data.slowDur || 2;
           if (p.data.burn) e.burnTimer = p.data.burn;
           // AoE on impact
@@ -1088,6 +1093,7 @@ function updateProjectiles(dt) {
               if (!p.hitSet.has(e2) && p.pos.distanceTo(e2.pos) < p.data.aoe) { dmgEnemy(e2, p.data.dmg * 0.6); p.hitSet.add(e2); }
             });
             spawnFX(p.pos.clone(), p.data.color, 0.4, p.data.aoe * 0.55);
+            sfxExplosion(0.5);
           }
           // bounce
           if (p.bounceLeft > 0) {
@@ -1111,30 +1117,37 @@ function spawnEnemyAttackFX(e, hitPos, dir) {
     case 'basic':
       spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 1.0, 0)), dir, 0xd4a830, 1.4);
       spawnImpact(hitPos.clone().add(new THREE.Vector3(0, 0.8, 0)), 0xd2b48c);
+      sfxSwing(0.3);
       break;
     case 'torch':
       spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 1.0, 0)), dir, 0xff6600, 1.8);
       spawnFX(hitPos.clone().add(new THREE.Vector3(0, 0.8, 0)), 0xff6600, 0.32, 0.75);
+      sfxSwing(0.32);
       break;
     case 'sword':
       spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), dir, 0xddeeff, 2.1);
       spawnImpact(hitPos.clone().add(new THREE.Vector3(0, 1.0, 0)), 0xaaccff);
+      sfxSwing(0.4);
       break;
     case 'armor':
       spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), dir, 0xaaaaaa, 2.3);
       spawnFX(e.pos.clone().add(new THREE.Vector3(0, 0.05, 0)), 0x888888, 0.45, 1.7);
+      sfxHeavySlam(0.4);
       break;
     case 'boss':
       spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 2.0, 0)), dir, 0xff2200, 3.8);
       spawnFX(e.pos.clone().add(new THREE.Vector3(0, 0.05, 0)), 0xff2200, 0.6, 3.0);
       spawnImpact(hitPos.clone().add(new THREE.Vector3(0, 1.0, 0)), 0xff2200);
+      sfxHeavySlam(0.6);
       break;
     default:
       spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 1.0, 0)), dir, e.data.color || 0xff4444, 1.5);
+      sfxSwing(0.28);
   }
 }
 
 function spawnEnemyFireball(pos, dir, enemyData) {
+  sfxFireball();
   const col = 0xff4500;
   const g = new THREE.Group();
   const outer = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8),
@@ -1358,10 +1371,12 @@ function updateEnemies(dt) {
         spawnEnemyAttackFX(e, tgt.clone(), atkDir);
         if (tgt.distanceTo(gs.playerPos) < 1) {
           gs.playerHP -= e.data.dmg;
+          sfxPlayerHurt();
           if (gs.playerHP <= 0) { gs.playerHP = 0; endGame(); }
         } else if (tgt.length() < 2.5) {
           if (!gs.activeEvents.barnShield) {
             gs.barnHP -= e.data.dmg;
+            sfxBarnHit();
             if (gs.barnHP <= 0) { gs.barnHP = 0; endGame(); }
             updateBarnRing();
           }
@@ -1846,7 +1861,7 @@ function updatePlacedPlants(dt) {
       if (d.timer <= 0) {
         let tgt = null, best = d.data.range;
         gs.enemies.forEach(e => { const dist = e.pos.distanceTo(d.pos); if (dist < best) { best = dist; tgt = e; } });
-        if (tgt) { dmgEnemy(tgt, d.data.dmg); spawnFX(tgt.pos.clone(), 0xffdd44, 0.25, 0.5); d.timer = d.data.cd; }
+        if (tgt) { dmgEnemy(tgt, d.data.dmg); spawnFX(tgt.pos.clone(), 0xffdd44, 0.25, 0.5); sfxImpact(0.3); d.timer = d.data.cd; }
       }
     }
     if (d.data.type === 'bombtwr') {
@@ -1857,6 +1872,7 @@ function updatePlacedPlants(dt) {
         if (tgt) {
           spawnFX(tgt.pos.clone(), 0xff6600, 0.7, 1.8);
           gs.enemies.forEach(e => { if (e.pos.distanceTo(tgt.pos) < (d.data.aoe || 3)) dmgEnemy(e, d.data.dmg); });
+          sfxExplosion(0.5);
           d.timer = d.data.cd;
         }
       }
@@ -1867,7 +1883,7 @@ function updatePlacedPlants(dt) {
         const inRange = gs.enemies.filter(e => e.pos.distanceTo(d.pos) < d.data.range);
         inRange.sort((a, b) => a.pos.distanceTo(d.pos) - b.pos.distanceTo(d.pos));
         inRange.slice(0, d.data.chains || 4).forEach(e => { dmgEnemy(e, d.data.dmg); spawnFX(e.pos.clone(), 0x88ffff, 0.3, 0.6); });
-        if (inRange.length > 0) d.timer = d.data.cd;
+        if (inRange.length > 0) { sfxZap(); d.timer = d.data.cd; }
       }
     }
   });
@@ -2217,6 +2233,143 @@ function resetGame() {
 
 let _battleActive = false, _battleLoopTimeout = null, _battleGain = null;
 
+// ─── SFX helpers ───────────────────────────────────────────
+let _sfxGain = null;
+function _sfx() {
+  if (!_audioCtx || _themeMuted) return null;
+  if (!_sfxGain) { _sfxGain = _audioCtx.createGain(); _sfxGain.gain.value = 0.46; _sfxGain.connect(_audioCtx.destination); }
+  return _sfxGain;
+}
+function _noise(dur) {
+  const sr = _audioCtx.sampleRate, len = Math.ceil(sr * dur);
+  const buf = _audioCtx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = _audioCtx.createBufferSource(); src.buffer = buf; return src;
+}
+function sfxSwing(vol=0.55) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime, src = _noise(0.14);
+  const filt = _audioCtx.createBiquadFilter(); filt.type='bandpass'; filt.Q.value=2.2;
+  filt.frequency.setValueAtTime(220,t); filt.frequency.exponentialRampToValueAtTime(1800,t+0.12);
+  const gn = _audioCtx.createGain(); gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.14);
+  src.connect(filt); filt.connect(gn); gn.connect(g); src.start(t); src.stop(t+0.15);
+}
+function sfxHeavySlam(vol=0.6) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime;
+  const osc = _audioCtx.createOscillator(), gn = _audioCtx.createGain();
+  osc.type='sine'; osc.frequency.setValueAtTime(130,t); osc.frequency.exponentialRampToValueAtTime(28,t+0.28);
+  gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.32);
+  osc.connect(gn); gn.connect(g); osc.start(t); osc.stop(t+0.34);
+  sfxSwing(vol*0.4);
+}
+function sfxShoot(vol=0.38) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime;
+  const osc = _audioCtx.createOscillator(), gn = _audioCtx.createGain();
+  osc.type='triangle'; osc.frequency.setValueAtTime(700,t); osc.frequency.exponentialRampToValueAtTime(220,t+0.09);
+  gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.11);
+  osc.connect(gn); gn.connect(g); osc.start(t); osc.stop(t+0.12);
+}
+function sfxBounce(vol=0.35) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime;
+  const osc = _audioCtx.createOscillator(), gn = _audioCtx.createGain();
+  osc.type='sine'; osc.frequency.setValueAtTime(320,t); osc.frequency.exponentialRampToValueAtTime(750,t+0.05); osc.frequency.exponentialRampToValueAtTime(320,t+0.1);
+  gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.12);
+  osc.connect(gn); gn.connect(g); osc.start(t); osc.stop(t+0.13);
+}
+function sfxBoomerang(vol=0.38) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime, src = _noise(0.2);
+  const filt = _audioCtx.createBiquadFilter(); filt.type='bandpass'; filt.Q.value=3.5;
+  filt.frequency.setValueAtTime(500,t); filt.frequency.exponentialRampToValueAtTime(2200,t+0.1); filt.frequency.exponentialRampToValueAtTime(500,t+0.2);
+  const gn = _audioCtx.createGain(); gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.2);
+  src.connect(filt); filt.connect(gn); gn.connect(g); src.start(t); src.stop(t+0.21);
+}
+function sfxSplat(vol=0.42) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime, src = _noise(0.16);
+  const filt = _audioCtx.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=550;
+  const gn = _audioCtx.createGain(); gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.16);
+  src.connect(filt); filt.connect(gn); gn.connect(g); src.start(t); src.stop(t+0.17);
+}
+function sfxBeamFire(vol=0.5) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime;
+  const osc = _audioCtx.createOscillator(), filt = _audioCtx.createBiquadFilter(), gn = _audioCtx.createGain();
+  osc.type='sawtooth'; filt.type='lowpass'; filt.frequency.value=1800;
+  osc.frequency.setValueAtTime(200,t); osc.frequency.exponentialRampToValueAtTime(1000,t+0.08); osc.frequency.exponentialRampToValueAtTime(500,t+0.38);
+  gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.4);
+  osc.connect(filt); filt.connect(gn); gn.connect(g); osc.start(t); osc.stop(t+0.42);
+}
+function sfxExplosion(vol=0.6) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime;
+  const osc = _audioCtx.createOscillator(), gn = _audioCtx.createGain();
+  osc.type='sine'; osc.frequency.setValueAtTime(110,t); osc.frequency.exponentialRampToValueAtTime(22,t+0.32);
+  gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.36);
+  osc.connect(gn); gn.connect(g); osc.start(t); osc.stop(t+0.38);
+  const src = _noise(0.28), filt = _audioCtx.createBiquadFilter(), gn2 = _audioCtx.createGain();
+  filt.type='lowpass'; filt.frequency.value=1100;
+  gn2.gain.setValueAtTime(vol*0.75,t); gn2.gain.exponentialRampToValueAtTime(0.001,t+0.28);
+  src.connect(filt); filt.connect(gn2); gn2.connect(g); src.start(t); src.stop(t+0.29);
+}
+function sfxImpact(vol=0.38) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime, src = _noise(0.09);
+  const filt = _audioCtx.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=900; filt.Q.value=1.4;
+  const gn = _audioCtx.createGain(); gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.09);
+  src.connect(filt); filt.connect(gn); gn.connect(g); src.start(t); src.stop(t+0.1);
+}
+function sfxKill(vol=0.38) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime;
+  const osc = _audioCtx.createOscillator(), gn = _audioCtx.createGain();
+  osc.type='square'; osc.frequency.setValueAtTime(460,t); osc.frequency.exponentialRampToValueAtTime(100,t+0.28);
+  gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.30);
+  osc.connect(gn); gn.connect(g); osc.start(t); osc.stop(t+0.31);
+}
+function sfxPlayerHurt(vol=0.55) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime;
+  const osc = _audioCtx.createOscillator(), filt = _audioCtx.createBiquadFilter(), gn = _audioCtx.createGain();
+  osc.type='sawtooth'; filt.type='highpass'; filt.frequency.value=380;
+  osc.frequency.setValueAtTime(340,t); osc.frequency.exponentialRampToValueAtTime(160,t+0.16);
+  gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.18);
+  osc.connect(filt); filt.connect(gn); gn.connect(g); osc.start(t); osc.stop(t+0.2);
+}
+function sfxBarnHit(vol=0.42) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime;
+  const osc = _audioCtx.createOscillator(), gn = _audioCtx.createGain();
+  osc.type='sine'; osc.frequency.setValueAtTime(190,t); osc.frequency.exponentialRampToValueAtTime(55,t+0.13);
+  gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.15);
+  osc.connect(gn); gn.connect(g); osc.start(t); osc.stop(t+0.16);
+}
+function sfxFireball(vol=0.38) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime;
+  const osc = _audioCtx.createOscillator(), gn = _audioCtx.createGain();
+  osc.type='sawtooth'; osc.frequency.setValueAtTime(200,t); osc.frequency.exponentialRampToValueAtTime(80,t+0.14);
+  gn.gain.setValueAtTime(vol*0.6,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.16);
+  osc.connect(gn); gn.connect(g); osc.start(t); osc.stop(t+0.17);
+  const src = _noise(0.13), filt = _audioCtx.createBiquadFilter(), gn2 = _audioCtx.createGain();
+  filt.type='bandpass'; filt.frequency.value=700; filt.Q.value=0.9;
+  gn2.gain.setValueAtTime(vol,t); gn2.gain.exponentialRampToValueAtTime(0.001,t+0.13);
+  src.connect(filt); filt.connect(gn2); gn2.connect(g); src.start(t); src.stop(t+0.14);
+}
+function sfxZap(vol=0.32) {
+  const g = _sfx(); if (!g) return;
+  const t = _audioCtx.currentTime;
+  const osc = _audioCtx.createOscillator(), filt = _audioCtx.createBiquadFilter(), gn = _audioCtx.createGain();
+  osc.type='sawtooth'; filt.type='highpass'; filt.frequency.value=500;
+  osc.frequency.setValueAtTime(900,t); osc.frequency.exponentialRampToValueAtTime(1900,t+0.03); osc.frequency.exponentialRampToValueAtTime(440,t+0.11);
+  gn.gain.setValueAtTime(vol,t); gn.gain.exponentialRampToValueAtTime(0.001,t+0.13);
+  osc.connect(filt); filt.connect(gn); gn.connect(g); osc.start(t); osc.stop(t+0.14);
+}
+// ─── end SFX ───────────────────────────────────────────────
+
 function startBattleTheme() {
   if (_battleActive) return;
   _battleActive = true;
@@ -2448,7 +2601,8 @@ function toggleMute() {
   _themeMuted = !_themeMuted;
   const t = _audioCtx ? _audioCtx.currentTime : 0;
   if (_masterGain) _masterGain.gain.setTargetAtTime(_themeMuted ? 0 : 0.24, t, 0.2);
-  if (_battleGain)  _battleGain.gain.setTargetAtTime(_themeMuted ? 0 : 0.28, t, 0.2);
+  if (_battleGain) _battleGain.gain.setTargetAtTime(_themeMuted ? 0 : 0.28, t, 0.2);
+  if (_sfxGain)    _sfxGain.gain.setTargetAtTime(_themeMuted ? 0 : 0.46, t, 0.2);
   const btn = document.getElementById('mute-btn');
   if (btn) btn.textContent = _themeMuted ? '🔇' : '🔊';
 }
