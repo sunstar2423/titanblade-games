@@ -464,16 +464,22 @@ const WEAPONS = [
 ];
 
 const PLACEABLES = [
-  { id:'flytrap',   name:'Carnivorous Plant',  emoji:'🪴', cost:40, desc:'⚔️ Grabs & chomps nearby foes',          kind:'turret', dmg:30, range:2.2, cd:2.0, hp:80,  color:0x006400 },
-  { id:'cactus',    name:'Cactus Turret',      emoji:'🌵', cost:30, desc:'⚔️ Auto-fires thorns at enemies',           kind:'turret', dmg:12, range:5.5, cd:0.5, hp:60,  color:0x2e8b57 },
-  { id:'pea',       name:'Pea Shooter',        emoji:'💚', cost:20, desc:'⚔️ Rapid fire peas at nearest foe',         kind:'turret', dmg:8,  range:9,   cd:0.3, hp:50,  color:0x7cfc00 },
-  { id:'thorn',     name:'Thorn Bush',         emoji:'🌿', cost:15, desc:'⚔️ Hurts enemies walking through it',       kind:'passive',dmg:20, range:1.8,        hp:40,  color:0x556b2f },
-  { id:'fireflwr',  name:'Fire Flower',        emoji:'🌸', cost:35, desc:'⚔️ Fireballs that burn over time',          kind:'turret', dmg:15, range:8,   cd:1.0, hp:55,  color:0xff4500, burn:4 },
-  { id:'ice',       name:'Ice Plant',          emoji:'❄️', cost:25, desc:'💚 Support — slows nearby enemies way down',kind:'freeze', dmg:0,  range:4,          hp:45,  color:0x00bfff, support:true },
-  { id:'mine',      name:'Mine Mushroom',      emoji:'💣', cost:15, desc:'⚔️ Explodes when enemy steps on it',        kind:'mine',   dmg:50, range:3,   aoe:3,  hp:1,   color:0xff8c00 },
-  { id:'herb',      name:'Healing Herb',       emoji:'🌿', cost:30, desc:'💚 Support — heals YOU 5 HP/s when nearby', kind:'heal',   heal:5, range:3,          hp:60,  color:0x00ff7f, support:true },
-  { id:'lightning', name:'Lightning Plant',    emoji:'⚡', cost:45, desc:'⚔️ Zaps enemies, chains to nearby foes',    kind:'turret', dmg:25, range:6,   cd:1.5, hp:50,  color:0xffff00, chains:3 },
-  { id:'sunflwr',   name:'Giant Sunflower',    emoji:'🌻', cost:50, desc:'⚔️ Long-range slow powerful cannon',        kind:'turret', dmg:45, range:13,  cd:2.2, hp:90,  color:0xffd700 },
+  { id:'flytrap',    name:'Carnivorous Plant',  emoji:'🪴', cost:40, desc:'⚔️ Grabs & chomps nearby foes',               kind:'turret', dmg:30, range:2.2, cd:2.0, hp:80,  color:0x006400 },
+  { id:'cactus',     name:'Cactus Turret',      emoji:'🌵', cost:30, desc:'⚔️ Auto-fires thorns at enemies',             kind:'turret', dmg:12, range:5.5, cd:0.5, hp:60,  color:0x2e8b57 },
+  { id:'pea',        name:'Pea Shooter',        emoji:'💚', cost:20, desc:'⚔️ Rapid fire peas at nearest foe',           kind:'turret', dmg:8,  range:9,   cd:0.3, hp:50,  color:0x7cfc00 },
+  { id:'thorn',      name:'Thorn Bush',         emoji:'🌿', cost:15, desc:'⚔️ Hurts enemies walking through it',         kind:'passive',dmg:20, range:1.8,        hp:40,  color:0x556b2f },
+  { id:'fireflwr',   name:'Fire Flower',        emoji:'🌸', cost:35, desc:'⚔️ Fireballs that burn over time',            kind:'turret', dmg:15, range:8,   cd:1.0, hp:55,  color:0xff4500, burn:4 },
+  { id:'ice',        name:'Ice Plant',          emoji:'❄️', cost:25, desc:'💚 Support — slows nearby enemies way down',  kind:'freeze', dmg:0,  range:4,          hp:45,  color:0x00bfff, support:true },
+  { id:'mine',       name:'Mine Mushroom',      emoji:'💣', cost:15, desc:'⚔️ Explodes when enemy steps on it',          kind:'mine',   dmg:50, range:3,   aoe:3,  hp:1,   color:0xff8c00 },
+  { id:'herb',       name:'Healing Herb',       emoji:'🌿', cost:30, desc:'💚 Support — heals YOU 5 HP/s when nearby',   kind:'heal',   heal:5, range:3,          hp:60,  color:0x00ff7f, support:true },
+  { id:'lightning',  name:'Lightning Plant',    emoji:'⚡', cost:45, desc:'⚔️ Zaps enemies, chains to nearby foes',      kind:'turret', dmg:25, range:6,   cd:1.5, hp:50,  color:0xffff00, chains:3 },
+  { id:'sunflwr',    name:'Giant Sunflower',    emoji:'🌻', cost:50, desc:'⚔️ Long-range slow powerful cannon',          kind:'turret', dmg:45, range:13,  cd:2.2, hp:90,  color:0xffd700 },
+  // New plants
+  { id:'bramble',    name:'Bramble Wall',       emoji:'🌾', cost:18, desc:'⚔️ Slows AND damages passing enemies',        kind:'passive',dmg:14, range:1.8,        hp:120, color:0x6b4226, slow:true },
+  { id:'pepper',     name:'Ghost Pepper',       emoji:'🌶️', cost:40, desc:'⚔️ Fires hot peppers that cause heavy burn', kind:'turret', dmg:18, range:7,   cd:0.9, hp:60,  color:0xff2200, burn:8 },
+  { id:'beehive',    name:'Beehive',            emoji:'🐝', cost:35, desc:'⚔️ Bees chain to up to 6 nearby enemies',    kind:'turret', dmg:10, range:8.5, cd:1.0, hp:55,  color:0xf5a623, chains:6 },
+  { id:'pumpkin_twr',name:'Pumpkin Cannon',     emoji:'🎃', cost:55, desc:'⚔️ Huge AoE cannonball, big cooldown',       kind:'turret', dmg:48, range:11,  cd:4.0, hp:90,  color:0xff7700, aoe:4 },
+  { id:'frostbulb',  name:'Frost Bulb',         emoji:'🔵', cost:30, desc:'⚔️ Ice shots that massively slow enemies',   kind:'turret', dmg:8,  range:6.5, cd:1.8, hp:50,  color:0x88ccff, slow:0.8, slowDur:4 },
 ];
 
 const DEFENSE_ITEMS = [
@@ -506,6 +512,12 @@ const ENEMY_TYPES = [
   { id:'flame',  name:'Flamethrower Scarecrow', hp:80,  spd:1.8, dmg:12, straw:20,  sz:1,   color:0xff4500, ranged:true },
   { id:'armor',  name:'Armored Scarecrow',      hp:120, spd:1.2, dmg:14, straw:30,  sz:1,   color:0x4a4a4a, armor:0.25 },
   { id:'boss',   name:'BOSS Scarecrow',         hp:350, spd:1.2, dmg:18, straw:100, sz:1.8, color:0x8b0000 },
+  // New scarecrows
+  { id:'speedy', name:'Speed Demon',            hp:28,  spd:5.5, dmg:5,  straw:8,   sz:0.85,color:0xffee00 },
+  { id:'bomb',   name:'Bomb Scarecrow',         hp:90,  spd:1.6, dmg:14, straw:22,  sz:1.1, color:0x2a2a2a },
+  { id:'ice',    name:'Ice Scarecrow',          hp:75,  spd:1.5, dmg:9,  straw:18,  sz:1,   color:0x88ccff, ranged:true },
+  { id:'shadow', name:'Shadow Scarecrow',       hp:65,  spd:3.0, dmg:12, straw:20,  sz:0.9, color:0x440088 },
+  { id:'giant',  name:'Giant Scarecrow',        hp:700, spd:0.65,dmg:28, straw:120, sz:2.6, color:0x5c3d1e },
 ];
 
 const WAVES = [
@@ -534,6 +546,11 @@ const WAVES = [
   [{t:'boss',n:3},{t:'armor',n:5},{t:'flame',n:4}],
   [{t:'armor',n:6},{t:'sword',n:6},{t:'flame',n:5},{t:'boss',n:2}],
   [{t:'boss',n:5},{t:'armor',n:6},{t:'flame',n:6},{t:'sword',n:4}],
+  // Wave 21-24: New enemy chaos
+  [{t:'speedy',n:12},{t:'bomb',n:4},{t:'basic',n:6}],
+  [{t:'giant',n:1},{t:'shadow',n:5},{t:'armor',n:4}],
+  [{t:'ice',n:6},{t:'speedy',n:8},{t:'bomb',n:4},{t:'sword',n:4}],
+  [{t:'giant',n:2},{t:'shadow',n:6},{t:'boss',n:3},{t:'bomb',n:5},{t:'ice',n:4}],
 ];
 
 // ═══════════════════════════════════════
@@ -563,6 +580,7 @@ const gs = {
   spawnTimer: 0,
   waveEnemiesLeft: 0,
   totalKills: 0,
+  playerSlowTimer: 0,
   placeMode: false,
   placeId: null,
   eventTimer: 300,
@@ -773,7 +791,8 @@ function setSlot(i) {
 //  PLAYER UPDATE
 // ═══════════════════════════════════════
 function updatePlayer(dt) {
-  const spd = 7;
+  gs.playerSlowTimer = Math.max(0, gs.playerSlowTimer - dt);
+  const spd = 7 * (gs.playerSlowTimer > 0 ? 0.25 : 1);
   if (keys['KeyW'] || keys['ArrowUp'])    gs.playerVel.z -= spd * dt;
   if (keys['KeyS'] || keys['ArrowDown'])  gs.playerVel.z += spd * dt;
   if (keys['KeyA'] || keys['ArrowLeft'])  gs.playerVel.x -= spd * dt;
@@ -1013,7 +1032,13 @@ function dmgEnemy(e, dmg) {
 
 function killEnemy(e) {
   if (e._dead) return; e._dead = true;
-  sfxKill(e.data.id === 'boss' ? 0.65 : 0.38);
+  sfxKill(e.data.id === 'boss' || e.data.id === 'giant' ? 0.65 : 0.38);
+  if (e.data.id === 'bomb') {
+    const br = 3.5;
+    gs.enemies.forEach(e2 => { if (e2 !== e && e2.pos.distanceTo(e.pos) < br) dmgEnemy(e2, 45); });
+    if (gs.playerPos.distanceTo(e.pos) < br) { gs.playerHP -= 32; if (gs.playerHP <= 0) { gs.playerHP = 0; endGame(); } sfxPlayerHurt(); }
+    spawnFX(e.pos.clone(), 0xff6600, 0.7, br * 0.55); sfxExplosion(0.65);
+  }
   scene.remove(e.mesh);
   gs.enemies = gs.enemies.filter(x => x !== e);
   const straw = gs.activeEvents.strawRain ? e.data.straw * 2 : e.data.straw;
@@ -1061,8 +1086,9 @@ function updateProjectiles(dt) {
       p.mesh.rotation.y += dt * 6;
       if (p.pos.distanceTo(gs.playerPos) < 1.0) {
         gs.playerHP -= p.data.dmg;
+        if (p.data.freeze) gs.playerSlowTimer = 2.5;
         if (gs.playerHP <= 0) { gs.playerHP = 0; endGame(); }
-        spawnFX(p.pos.clone(), p.data.color, 0.32, 0.65);
+        sfxPlayerHurt(); spawnFX(p.pos.clone(), p.data.color, 0.32, 0.65);
         spawnImpact(p.pos.clone().add(new THREE.Vector3(0, 0.6, 0)), p.data.color);
         scene.remove(p.mesh); return false;
       }
@@ -1140,6 +1166,13 @@ function spawnEnemyAttackFX(e, hitPos, dir) {
       spawnImpact(hitPos.clone().add(new THREE.Vector3(0, 1.0, 0)), 0xff2200);
       sfxHeavySlam(0.6);
       break;
+    case 'giant':
+      spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 3.5, 0)), dir, 0x8B5e3c, 6.0);
+      spawnFX(e.pos.clone().add(new THREE.Vector3(0, 0.05, 0)), 0x5c3d1e, 0.9, 5.5);
+      spawnImpact(hitPos.clone().add(new THREE.Vector3(0, 1.0, 0)), 0xaa7744);
+      spawnFX(hitPos.clone().add(new THREE.Vector3(0, 0.05, 0)), 0xaa7744, 0.55, 2.5);
+      sfxHeavySlam(1.0);
+      break;
     default:
       spawnSlash(e.pos.clone().add(new THREE.Vector3(0, 1.0, 0)), dir, e.data.color || 0xff4444, 1.5);
       sfxSwing(0.28);
@@ -1148,16 +1181,30 @@ function spawnEnemyAttackFX(e, hitPos, dir) {
 
 function spawnEnemyFireball(pos, dir, enemyData) {
   sfxFireball();
-  const col = 0xff4500;
+  const isIce = enemyData.id === 'ice';
+  const col = isIce ? 0x88ccff : 0xff4500;
   const g = new THREE.Group();
-  const outer = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8),
-    new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.95, roughness: 0.2 }));
-  const core = new THREE.Mesh(new THREE.SphereGeometry(0.14, 6, 6),
-    new THREE.MeshBasicMaterial({ color: 0xffffaa }));
-  g.add(outer); g.add(core);
+  if (isIce) {
+    // Blue ice crystal projectile
+    const crystalM = new THREE.MeshStandardMaterial({ color: 0x88ccff, emissive: 0x88ccff, emissiveIntensity: 0.8, roughness: 0.05, metalness: 0.4 });
+    const outer = new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 0), crystalM); g.add(outer);
+    const inner = new THREE.Mesh(new THREE.OctahedronGeometry(0.15, 0), new THREE.MeshBasicMaterial({ color: 0xddeeff })); g.add(inner);
+    // Small side shards
+    for (let i = 0; i < 4; i++) {
+      const a = i/4*Math.PI*2;
+      const shard = new THREE.Mesh(new THREE.OctahedronGeometry(0.09, 0), crystalM);
+      shard.position.set(Math.cos(a)*0.2, 0, Math.sin(a)*0.2); g.add(shard);
+    }
+  } else {
+    const outer = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8),
+      new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.95, roughness: 0.2 }));
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.14, 6, 6),
+      new THREE.MeshBasicMaterial({ color: 0xffffaa }));
+    g.add(outer); g.add(core);
+  }
   g.position.copy(pos); scene.add(g);
   gs.projectiles.push({ mesh: g, pos: pos.clone(), vel: dir.clone().multiplyScalar(7),
-    data: { color: col, dmg: enemyData.dmg, kind: 'fireball' },
+    data: { color: col, dmg: enemyData.dmg, kind: 'fireball', freeze: isIce },
     owner: 'enemy', timer: 3.0, hitSet: new Set(), bounceLeft: 0, _trailT: 0 });
 }
 
@@ -1357,6 +1404,16 @@ function updateEnemies(dt) {
       e._hpFill.material.color.setHex(pct > 0.5 ? 0x44ff44 : pct > 0.25 ? 0xff8800 : 0xff2222);
     }
 
+    // Shadow teleport
+    if (e.data.id === 'shadow') {
+      e._teleportTimer = (e._teleportTimer || 3.5) - dt;
+      if (e._teleportTimer <= 0 && dist > 3) {
+        e._teleportTimer = 3.2 + Math.random() * 1.5;
+        e.pos.add(dir.clone().multiplyScalar(Math.min(9, dist * 0.55)));
+        e.mesh.position.copy(e.pos);
+        spawnFX(e.pos.clone(), 0x8800ff, 0.4, 0.9);
+      }
+    }
     e.attackCd = Math.max(0, e.attackCd - dt);
     e.slowTimer = Math.max(0, e.slowTimer - dt);
     if (e.burnTimer > 0) { e.burnTimer -= dt; e.hp -= 3 * dt; if (e.hp <= 0) killEnemy(e); }
@@ -1503,7 +1560,7 @@ function startNextWave() {
   gs.spawnQueue.sort(() => Math.random() - 0.5);
   gs.waveEnemiesLeft = gs.spawnQueue.length;
   gs.spawnTimer = 0;
-  const waveLabels = {5:'👹 BOSS WAVE!', 10:'💀 DOUBLE BOSS!', 12:'💀 DOUBLE BOSS!', 15:'☠️ BOSS ARMY!', 18:'🔥 TRIPLE BOSS!', 20:'💥 FINAL WAVE!'};
+  const waveLabels = {5:'👹 BOSS WAVE!', 10:'💀 DOUBLE BOSS!', 12:'💀 DOUBLE BOSS!', 15:'☠️ BOSS ARMY!', 18:'🔥 TRIPLE BOSS!', 20:'💥 WAVE 20!', 21:'⚡ SPEED DEMONS!', 22:'🏔️ GIANT AWAKENS!', 23:'🧊 ICE AGE!', 24:'💥 APOCALYPSE!'};
   const label = waveLabels[gs.wave] || (gs.wave === 20 ? '💥 FINAL WAVE!' : '⚠️ WAVE ' + gs.wave + '!');
   showWaveAnn(label);
   showToast('Wave ' + gs.wave + ' / 20 incoming!', 2200);
@@ -1701,6 +1758,89 @@ function buildPlantMesh(data) {
       add(new THREE.SphereGeometry(0.13,6,6), E(0xffffff), 1.28);
       break;
     }
+    case 'bramble': {
+      // Brown thorny bush base
+      add(new THREE.SphereGeometry(0.42,8,8), S(0x6b4226), 0.42);
+      add(new THREE.SphereGeometry(0.3,7,7), S(0x5a3518), 0.5, 0.2, 0.1);
+      add(new THREE.SphereGeometry(0.28,7,7), S(0x6b4226), 0.44, -0.18, 0.1);
+      // Thorn spikes
+      for (let i = 0; i < 8; i++) {
+        const a = i/8*Math.PI*2, r = 0.38;
+        add(new THREE.ConeGeometry(0.04,0.28,4), S(0x3a2010), 0.42+Math.sin(i)*0.12, Math.cos(a)*r, Math.sin(a)*r, Math.PI/2*Math.sign(Math.cos(a)), a, 0);
+      }
+      // A few upward thorns
+      for (let i = 0; i < 4; i++) {
+        const a = i/4*Math.PI*2;
+        add(new THREE.ConeGeometry(0.035,0.24,4), S(0x3a2010), 0.78, Math.cos(a)*0.2, Math.sin(a)*0.2);
+      }
+      break;
+    }
+    case 'pepper': {
+      // Green stem
+      add(new THREE.CylinderGeometry(0.05,0.07,0.55,7), S(0x228B22), 0.28);
+      // Leaf
+      add(new THREE.BoxGeometry(0.28,0.06,0.12), S(0x22aa22), 0.45, 0.12);
+      // Red pepper body (elongated sphere)
+      const pepM = new THREE.MeshStandardMaterial({color:0xdd1100, roughness:0.45, metalness:0.0, emissive:0xdd1100, emissiveIntensity:0.18});
+      const pep = new THREE.Mesh(new THREE.SphereGeometry(0.18,8,8), pepM); pep.scale.y=1.85; pep.position.set(0,0.85,0); pep.castShadow=true; g.add(pep);
+      // Pepper tip
+      add(new THREE.ConeGeometry(0.04,0.12,6), S(0xcc1100), 1.22, 0,0, Math.PI,0,0);
+      // Pepper stem nub
+      add(new THREE.CylinderGeometry(0.025,0.04,0.1,6), S(0x228B22), 1.22);
+      break;
+    }
+    case 'beehive': {
+      // Wooden post
+      add(new THREE.CylinderGeometry(0.07,0.09,0.5,7), S(0x5c3317), 0.25);
+      // Hive body - stacked rings making a dome
+      [0.55,0.72,0.84,0.9,0.93].forEach((y,i) => {
+        const r = [0.28,0.34,0.3,0.22,0.12][i];
+        add(new THREE.CylinderGeometry(r,r+0.03,0.16,10), new THREE.MeshStandardMaterial({color:i%2===0?0xf5a623:0xd4881a, roughness:0.65}), y);
+      });
+      // Entry hole
+      const holeM = new THREE.MeshBasicMaterial({color:0x1a0a00});
+      const hole = new THREE.Mesh(new THREE.CircleGeometry(0.07,8), holeM); hole.position.set(0.25,0.65,0.05); hole.rotation.y=-0.3; g.add(hole);
+      // Bee decoration
+      const beeB = new THREE.Mesh(new THREE.SphereGeometry(0.07,6,6), new THREE.MeshStandardMaterial({color:0xffdd00,roughness:0.5})); beeB.position.set(0.38,0.8,0); g.add(beeB);
+      add(new THREE.SphereGeometry(0.05,5,5), S(0x1a1a00), 0.8, 0.46);
+      break;
+    }
+    case 'pumpkin_twr': {
+      // Stem
+      add(new THREE.CylinderGeometry(0.06,0.08,0.25,6), S(0x4a7c20), 0.13);
+      // Pumpkin body (segmented look)
+      const pumpM = new THREE.MeshStandardMaterial({color:0xff7700, roughness:0.6, metalness:0.0});
+      for (let i = 0; i < 5; i++) {
+        const a = i/5*Math.PI*2;
+        const seg = new THREE.Mesh(new THREE.SphereGeometry(0.28,7,8), pumpM); seg.scale.set(0.55,0.7,0.55); seg.position.set(Math.cos(a)*0.14, 0.42, Math.sin(a)*0.14); seg.castShadow=true; g.add(seg);
+      }
+      // Pumpkin top cap
+      add(new THREE.SphereGeometry(0.16,7,5), S(0xcc5500), 0.74);
+      // Carved face - eyes
+      const fM = new THREE.MeshBasicMaterial({color:0xffaa00, emissive:0xffaa00});
+      [-0.1,0.1].forEach(x => { const ey = new THREE.Mesh(new THREE.SphereGeometry(0.05,5,5), fM); ey.position.set(x,0.48,0.25); g.add(ey); });
+      // Cannon barrel
+      add(new THREE.CylinderGeometry(0.09,0.12,0.55,8), S(0x333333), 0.75, 0, 0, Math.PI/2, 0, 0);
+      add(new THREE.CylinderGeometry(0.11,0.09,0.08,8), S(0x222222), 0.75, 0.32);
+      break;
+    }
+    case 'frostbulb': {
+      // Icy stem
+      add(new THREE.CylinderGeometry(0.055,0.07,0.52,7), S(0x7ab8e0), 0.26);
+      // Bulb core
+      const frostM = new THREE.MeshStandardMaterial({color:0x88ccff, roughness:0.1, metalness:0.3, emissive:0x88ccff, emissiveIntensity:0.4});
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.3,10,10), frostM); bulb.position.y=0.78; bulb.castShadow=true; g.add(bulb);
+      // Inner glow core
+      add(new THREE.SphereGeometry(0.16,8,8), new THREE.MeshStandardMaterial({color:0xddeeff, emissive:0xffffff, emissiveIntensity:0.8, roughness:0.05}), 0.78);
+      // Ice crystal spikes around bulb
+      for (let i = 0; i < 6; i++) {
+        const a = i/6*Math.PI*2, r = 0.28;
+        add(new THREE.ConeGeometry(0.04,0.22,4), new THREE.MeshStandardMaterial({color:0xaaddff, roughness:0.08, metalness:0.5, emissive:0x88ccff, emissiveIntensity:0.3}), 0.78+Math.cos(i)*0.08, Math.cos(a)*r, Math.sin(a)*r, Math.PI/2*Math.sign(Math.sin(a+0.5)), a, 0);
+      }
+      // Top crystal spike
+      add(new THREE.ConeGeometry(0.05,0.3,4), new THREE.MeshStandardMaterial({color:0xccecff, roughness:0.05, metalness:0.6, emissive:0x88ccff, emissiveIntensity:0.5}), 1.06);
+      break;
+    }
     default: {
       add(new THREE.CylinderGeometry(0.1,0.15,0.8,8), S(0x228B22), 0.4);
       add(new THREE.SphereGeometry(0.38,10,10), S(data.color||0x00ff00), 0.9);
@@ -1823,7 +1963,12 @@ function updatePlacedPlants(dt) {
       if (gs.playerPos.distanceTo(p.pos) < p.data.range) gs.playerHP = Math.min(gs.playerMaxHP, gs.playerHP + (p.data.heal || 5) * dt);
     }
     if (p.data.kind === 'passive') {
-      gs.enemies.forEach(e => { if (e.pos.distanceTo(p.pos) < p.data.range) { e.hp -= p.data.dmg * dt; if (e.hp <= 0) killEnemy(e); } });
+      gs.enemies.forEach(e => {
+        if (e.pos.distanceTo(p.pos) < p.data.range) {
+          e.hp -= p.data.dmg * dt; if (e.hp <= 0) killEnemy(e);
+          if (p.data.slow) e.slowTimer = Math.max(e.slowTimer || 0, 0.35);
+        }
+      });
     }
     if (p.data.kind === 'mine') {
       const near = gs.enemies.find(e => e.pos.distanceTo(p.pos) < 1.5);
@@ -2225,6 +2370,7 @@ function resetGame() {
   gs.ownedWeapons = new Set(['carrot']); gs.ownedPlaceables = new Set();
   gs.hotbar = ['carrot', null, null, null, null]; gs.activeSlot = 0;
   gs.totalKills = 0; attackCd = 0;
+  gs.playerSlowTimer = 0;
   gs.eventTimer = 90; gs.activeEvents = {}; gs._strawRainTick = 0;
   _evCdEl.style.display = 'none';
   hideEventBanner();
