@@ -557,22 +557,22 @@ const WAVES = [
 
 // ─── JUNGLE BIOME ───────────────────────────────────────────
 const WEAPONS_JUNGLE = [
-  { id:'vine_whip',    name:'Vine Whip',       emoji:'🌿', cost:0,  desc:'Fast long-reach vine lash',              kind:'melee',    dmg:18, range:4.5, cd:0.45, color:0x228b22 },
-  { id:'banana_bomb',  name:'Banana Bomb',     emoji:'🍌', cost:30, desc:'Thrown AoE banana explosion',            kind:'throw',    dmg:42, range:12,  cd:1.5,  aoe:3.2, color:0xffe000 },
-  { id:'blowdart',     name:'Blowdart Gun',    emoji:'🎯', cost:20, desc:'Ultra-fast poison dart shot',            kind:'melee',    dmg:14, range:14,  cd:0.25, color:0x8b4513 },
-  { id:'coconut',      name:'Coconut Crusher', emoji:'🥥', cost:40, desc:'Heavy knockback slam',                   kind:'heavy',    dmg:70, range:2.5, cd:2.0,  color:0x7a5c3c },
-  { id:'thorn_burst',  name:'Thorn Burst',     emoji:'🌵', cost:35, desc:'Shotgun burst of thorns',               kind:'shotgun',  dmg:9,  range:6,   cd:1.0,  pellets:7, color:0x556b2f },
-  { id:'boomstick',    name:'Boomerang Stick', emoji:'🪃', cost:30, desc:'Boomerang hits twice on return',         kind:'boomerang',dmg:28, range:14,  cd:1.0,  color:0xa0522d },
-  { id:'web_launcher', name:'Web Launcher',    emoji:'🕸️', cost:20, desc:'Sticky web slows enemies in a splash',  kind:'slow',     dmg:10, range:12,  cd:1.0,  aoe:2.5, slow:0.6, slowDur:3, color:0xcccccc },
-  { id:'bamboo_staff', name:'Bamboo Staff',    emoji:'🎋', cost:25, desc:'Extra long melee reach',                kind:'melee',    dmg:24, range:7.0, cd:0.7,  color:0x5a8f2a },
-  { id:'poison_cloud', name:'Poison Cloud',    emoji:'☁️', cost:35, desc:'Lingering poison gas cloud',            kind:'cloud',    dmg:5,  range:4,   cd:1.2,  aoe:4, dur:5, color:0x88cc44 },
-  { id:'sunray',       name:'Sun Prism Beam',  emoji:'🔆', cost:50, desc:'Giant instant light beam',              kind:'beam',     dmg:85, range:18,  cd:2.5,  color:0xffe066 },
+  { id:'vine_whip',    name:'Vine Whip',       emoji:'🌿', cost:0,  desc:'Fast vine — PULLS enemies toward you',        kind:'melee',    dmg:18, range:4.5, cd:0.45, color:0x228b22, pull:true },
+  { id:'banana_bomb',  name:'Banana Bomb',     emoji:'🍌', cost:30, desc:'Thrown AoE banana explosion',                 kind:'throw',    dmg:42, range:12,  cd:1.5,  aoe:3.2, color:0xffe000 },
+  { id:'blowdart',     name:'Blowdart Gun',    emoji:'🎯', cost:20, desc:'Fast dart — POISONS enemies (DoT dmg)',       kind:'melee',    dmg:14, range:14,  cd:0.25, color:0x8b4513, poison:true },
+  { id:'coconut',      name:'Coconut Crusher', emoji:'🥥', cost:40, desc:'Heavy knockback slam',                        kind:'heavy',    dmg:70, range:2.5, cd:2.0,  color:0x7a5c3c },
+  { id:'thorn_burst',  name:'Thorn Burst',     emoji:'🌵', cost:35, desc:'Shotgun burst of thorns',                    kind:'shotgun',  dmg:9,  range:6,   cd:1.0,  pellets:7, color:0x556b2f },
+  { id:'boomstick',    name:'Boomerang Stick', emoji:'🪃', cost:30, desc:'Boomerang hits twice on return',              kind:'boomerang',dmg:28, range:14,  cd:1.0,  color:0xa0522d },
+  { id:'web_launcher', name:'Web Launcher',    emoji:'🕸️', cost:20, desc:'Web shot — ROOTS enemies (stops movement!)', kind:'slow',     dmg:10, range:12,  cd:1.0,  aoe:2.5, slow:0.6, slowDur:3, color:0xcccccc, root:true },
+  { id:'bamboo_staff', name:'Bamboo Staff',    emoji:'🎋', cost:25, desc:'Long melee — CHAINS to 2 nearby enemies',    kind:'melee',    dmg:24, range:7.0, cd:0.7,  color:0x5a8f2a, chainMelee:2 },
+  { id:'poison_cloud', name:'Poison Cloud',    emoji:'☁️', cost:35, desc:'Lingering poison gas cloud',                 kind:'cloud',    dmg:5,  range:4,   cd:1.2,  aoe:4, dur:5, color:0x88cc44 },
+  { id:'sunray',       name:'Sun Prism Beam',  emoji:'🔆', cost:50, desc:'Giant instant light beam',                   kind:'beam',     dmg:85, range:18,  cd:2.5,  color:0xffe066 },
 ];
 const PLACEABLES_JUNGLE = [
   { id:'pitcher',      name:'Pitcher Plant',   emoji:'🪴', cost:40, desc:'⚔️ Snaps shut on close enemies',        kind:'turret', dmg:32, range:2.5, cd:1.8, hp:80,  color:0x006400 },
   { id:'dart_fern',    name:'Dart Fern',       emoji:'🌿', cost:20, desc:'⚔️ Rapid fire poison darts',            kind:'turret', dmg:9,  range:9,   cd:0.3, hp:50,  color:0x3cb371 },
   { id:'fire_orchid',  name:'Fire Orchid',     emoji:'🌺', cost:35, desc:'⚔️ Fireballs that burn over time',      kind:'turret', dmg:16, range:8,   cd:1.0, hp:55,  color:0xff4500, burn:4 },
-  { id:'vine_trap',    name:'Vine Trap',       emoji:'🌱', cost:15, desc:'⚔️ Slows AND damages passing foes',     kind:'passive',dmg:16, range:1.8,        hp:60,  color:0x228b22, slow:true },
+  { id:'vine_trap',    name:'Vine Trap',       emoji:'🌱', cost:15, desc:'⚔️ ROOTS enemies — stops movement + dmg', kind:'passive',dmg:16, range:1.8,        hp:60,  color:0x228b22, root:true },
   { id:'jungle_mine',  name:'Spike Pit',       emoji:'💥', cost:15, desc:'⚔️ Explodes when stepped on',           kind:'mine',   dmg:55, range:3,   aoe:3,  hp:1,   color:0x8b6914 },
   { id:'heal_fern',    name:'Healing Fern',    emoji:'🍃', cost:30, desc:'💚 Heals YOU 5 HP/s when nearby',       kind:'heal',   heal:5, range:3,          hp:60,  color:0x00ff7f, support:true },
   { id:'spider_nest',  name:'Spider Nest',     emoji:'🕷️', cost:35, desc:'⚔️ Spiders chain to 6 nearby foes',    kind:'turret', dmg:10, range:8.5, cd:1.0, hp:55,  color:0x4b2e10, chains:6 },
@@ -636,20 +636,20 @@ const WAVES_JUNGLE = [
 
 // ─── SNOW BIOME ─────────────────────────────────────────────
 const WEAPONS_SNOW = [
-  { id:'ice_pick',      name:'Ice Pick',          emoji:'🧊', cost:0,  desc:'Fast sharp ice melee stab',            kind:'melee',    dmg:16, range:2.5, cd:0.38, color:0x88ccff },
-  { id:'snowball',      name:'Snowball Cannon',   emoji:'⛄', cost:30, desc:'Thrown AoE snowball blast',            kind:'throw',    dmg:38, range:12,  cd:1.5,  aoe:3.0, color:0xffffff },
-  { id:'icicle',        name:'Icicle Javelin',    emoji:'❄️', cost:40, desc:'Slow heavy piercing throw',            kind:'heavy',    dmg:72, range:2.5, cd:1.8,  color:0xaaddff },
-  { id:'blizzard_gun',  name:'Blizzard Burst',    emoji:'🌨️', cost:35, desc:'Shotgun burst of ice shards',         kind:'shotgun',  dmg:8,  range:6,   cd:0.9,  pellets:7, color:0xcceeee },
-  { id:'frost_chain',   name:'Frost Chain',       emoji:'🌀', cost:25, desc:'Extra long ice chain whip',            kind:'melee',    dmg:20, range:6.5, cd:0.7,  color:0x66aaff },
-  { id:'snowflake_c',   name:'Snowflake Chakram', emoji:'🔷', cost:30, desc:'Returns and hits twice',               kind:'boomerang',dmg:26, range:14,  cd:1.0,  color:0x99ddff },
-  { id:'cocoa',         name:'Hot Cocoa Splash',  emoji:'☕', cost:20, desc:'Slows enemies in a hot splash',        kind:'slow',     dmg:14, range:12,  cd:1.0,  aoe:2.5, slow:0.65, slowDur:3, color:0xa0522d },
-  { id:'ice_fog',       name:'Ice Fog',           emoji:'🌫️', cost:35, desc:'Lingering freeze cloud AoE',           kind:'cloud',    dmg:4,  range:4,   cd:1.2,  aoe:4, dur:5, color:0xaaccee },
-  { id:'frost_beam',    name:'Frost Beam',        emoji:'💎', cost:50, desc:'Giant instant freeze beam',            kind:'beam',     dmg:78, range:18,  cd:2.5,  color:0x88ddff },
-  { id:'avalanche',     name:'Avalanche Bomb',    emoji:'🏔️', cost:30, desc:'Bounces between 3 enemies',            kind:'bounce',   dmg:22, range:14,  cd:0.6,  bounces:3, color:0xddddff },
+  { id:'ice_pick',      name:'Ice Pick',          emoji:'🧊', cost:0,  desc:'Fast stab — +50% dmg on frozen enemies!',     kind:'melee',    dmg:16, range:2.5, cd:0.38, color:0x88ccff, shatter:true },
+  { id:'snowball',      name:'Snowball Cannon',   emoji:'⛄', cost:30, desc:'Thrown AoE snowball blast',                    kind:'throw',    dmg:38, range:12,  cd:1.5,  aoe:3.0, color:0xffffff },
+  { id:'icicle',        name:'Icicle Javelin',    emoji:'❄️', cost:40, desc:'Heavy javelin — PIERCES through all enemies!', kind:'heavy',    dmg:72, range:2.5, cd:1.8,  color:0xaaddff, pierce:true },
+  { id:'blizzard_gun',  name:'Blizzard Burst',    emoji:'🌨️', cost:35, desc:'Shotgun burst of ice shards',                  kind:'shotgun',  dmg:8,  range:6,   cd:0.9,  pellets:7, color:0xcceeee },
+  { id:'frost_chain',   name:'Frost Chain',       emoji:'🌀', cost:25, desc:'Chain whip — CHAINS to 3 nearby enemies',      kind:'melee',    dmg:20, range:6.5, cd:0.7,  color:0x66aaff, chainMelee:3 },
+  { id:'snowflake_c',   name:'Snowflake Chakram', emoji:'🔷', cost:30, desc:'Returns and hits twice',                        kind:'boomerang',dmg:26, range:14,  cd:1.0,  color:0x99ddff },
+  { id:'cocoa',         name:'Hot Cocoa Splash',  emoji:'☕', cost:20, desc:'Hot splash — DEEP FREEZES enemies (stops them)',kind:'slow',     dmg:14, range:12,  cd:1.0,  aoe:2.5, slow:0.65, slowDur:3, color:0xa0522d, hardFreeze:true },
+  { id:'ice_fog',       name:'Ice Fog',           emoji:'🌫️', cost:35, desc:'Lingering freeze cloud AoE',                   kind:'cloud',    dmg:4,  range:4,   cd:1.2,  aoe:4, dur:5, color:0xaaccee },
+  { id:'frost_beam',    name:'Frost Beam',        emoji:'💎', cost:50, desc:'Giant instant freeze beam',                     kind:'beam',     dmg:78, range:18,  cd:2.5,  color:0x88ddff },
+  { id:'avalanche',     name:'Avalanche Bomb',    emoji:'🏔️', cost:30, desc:'Bounces between 3 enemies',                    kind:'bounce',   dmg:22, range:14,  cd:0.6,  bounces:3, color:0xddddff },
 ];
 const PLACEABLES_SNOW = [
   { id:'snow_turret',   name:'Snowball Turret',   emoji:'⛄', cost:30, desc:'⚔️ Auto-fires snowballs at enemies',  kind:'turret', dmg:14, range:5.5, cd:0.5, hp:60,  color:0xffffff },
-  { id:'freeze_tower',  name:'Freeze Tower',      emoji:'🧊', cost:40, desc:'⚔️ Freezes enemies solid',           kind:'turret', dmg:0,  range:6,   cd:3.0, hp:70,  color:0x88ccff },
+  { id:'freeze_tower',  name:'Freeze Tower',      emoji:'🧊', cost:40, desc:'⚔️ HARD FREEZES enemy — stops it solid!', kind:'turret', dmg:0,  range:6,   cd:3.0, hp:70,  color:0x88ccff, hardFreeze:true },
   { id:'campfire_plt',  name:'Campfire',          emoji:'🔥', cost:25, desc:'⚔️ Flames melt nearby snowmen fast', kind:'passive',dmg:25, range:2.0,        hp:55,  color:0xff6600 },
   { id:'icicle_mine',   name:'Icicle Mine',       emoji:'💥', cost:15, desc:'⚔️ Ice spike eruption when stepped on',kind:'mine',  dmg:55, range:3,   aoe:3,  hp:1,   color:0xaaddff },
   { id:'hot_spring',    name:'Hot Spring',        emoji:'♨️', cost:30, desc:'💚 Heals YOU 6 HP/s when nearby',    kind:'heal',   heal:6, range:3,          hp:65,  color:0xff8844, support:true },
@@ -760,6 +760,7 @@ const gs = {
   waveEnemiesLeft: 0,
   totalKills: 0,
   playerSlowTimer: 0,
+  playerPoisonTimer: 0,
   placeMode: false,
   placeId: null,
   eventTimer: 300,
@@ -971,6 +972,11 @@ function setSlot(i) {
 // ═══════════════════════════════════════
 function updatePlayer(dt) {
   gs.playerSlowTimer = Math.max(0, gs.playerSlowTimer - dt);
+  if (gs.playerPoisonTimer > 0) {
+    gs.playerPoisonTimer = Math.max(0, gs.playerPoisonTimer - dt);
+    gs.playerHP -= 4 * dt;
+    if (gs.playerHP <= 0) { gs.playerHP = 0; endGame(); }
+  }
   const spd = 7 * (gs.playerSlowTimer > 0 ? 0.25 : 1);
   if (keys['KeyW'] || keys['ArrowUp'])    gs.playerVel.z -= spd * dt;
   if (keys['KeyS'] || keys['ArrowDown'])  gs.playerVel.z += spd * dt;
@@ -1130,10 +1136,24 @@ function doAttack() {
       }
     });
     hits.forEach(e => {
-      dmgEnemy(e, wd.dmg);
+      let dmg = wd.dmg;
+      if (wd.shatter && e.slowTimer > 0) { dmg = Math.floor(dmg * 1.5); spawnFX(e.pos.clone().add(new THREE.Vector3(0,1.2,0)), 0xaaddff, 0.35, 1.2); }
+      dmgEnemy(e, dmg);
       spawnImpact(e.pos.clone().add(new THREE.Vector3(0, 1, 0)), wd.color);
       if (wd.kind === 'heavy') e.vel.add(dir.clone().multiplyScalar(6));
+      if (wd.pull) { const pullDir = gs.playerPos.clone().sub(e.pos).setY(0).normalize(); e.vel.add(pullDir.multiplyScalar(10)); }
+      if (wd.poison) { e.poisonTimer = 5; spawnFX(e.pos.clone().add(new THREE.Vector3(0,1,0)), 0x44ff00, 0.3, 0.7); }
     });
+    // Bamboo staff / frost chain melee chaining
+    if (wd.chainMelee && hits.size > 0) {
+      const hitArr = [...hits];
+      gs.enemies.filter(e => !hits.has(e)).sort((a,b) => a.pos.distanceTo(gs.playerPos)-b.pos.distanceTo(gs.playerPos)).slice(0, wd.chainMelee).forEach(e => {
+        dmgEnemy(e, Math.floor(wd.dmg * 0.6));
+        spawnImpact(e.pos.clone().add(new THREE.Vector3(0,1,0)), wd.color);
+        if (wd.poison) e.poisonTimer = 4;
+        if (wd.shatter && e.slowTimer > 0) dmgEnemy(e, Math.floor(wd.dmg * 0.3));
+      });
+    }
   } else if (wd.kind === 'beam') {
     const beamStart = gs.playerPos.clone().add(new THREE.Vector3(0, 1.2, 0));
     spawnBeam(beamStart, dir, wd.range, wd.color);
@@ -1293,10 +1313,17 @@ function updateProjectiles(dt) {
           sfxImpact();
           if (p.data.slow) e.slowTimer = p.data.slowDur || 2;
           if (p.data.burn) e.burnTimer = p.data.burn;
-          // AoE on impact
+          if (p.data.poison) { e.poisonTimer = 5; spawnFX(p.pos.clone(), 0x44ff00, 0.3, 0.8); }
+          if (p.data.root) { e.rootTimer = 3.5; e.vel.set(0,0,0); spawnFX(e.pos.clone(), 0x228b22, 0.5, 1.5); showToast('🌿 Enemy rooted!', 1000); }
+          if (p.data.hardFreeze) { e.slowTimer = 8; e.vel.set(0,0,0); spawnFX(e.pos.clone(), 0xaaddff, 0.45, 1.5); }
+          // AoE on impact — hardFreeze applies to all in AoE
           if (p.data.aoe) {
             gs.enemies.forEach(e2 => {
-              if (!p.hitSet.has(e2) && p.pos.distanceTo(e2.pos) < p.data.aoe) { dmgEnemy(e2, p.data.dmg * 0.6); p.hitSet.add(e2); }
+              if (!p.hitSet.has(e2) && p.pos.distanceTo(e2.pos) < p.data.aoe) {
+                dmgEnemy(e2, p.data.dmg * 0.6); p.hitSet.add(e2);
+                if (p.data.hardFreeze) { e2.slowTimer = 8; e2.vel.set(0,0,0); }
+                if (p.data.root) e2.rootTimer = 3.5;
+              }
             });
             spawnFX(p.pos.clone(), p.data.color, 0.4, p.data.aoe * 0.55);
             sfxExplosion(0.5);
@@ -1307,6 +1334,8 @@ function updateProjectiles(dt) {
             const next = gs.enemies.filter(x => !p.hitSet.has(x)).sort((a, b) => a.pos.distanceTo(p.pos) - b.pos.distanceTo(p.pos))[0];
             if (next) { p.vel = next.pos.clone().sub(p.pos).normalize().multiplyScalar(10); break; }
           }
+          // pierce: icicle javelin passes through all enemies
+          if (p.data.pierce) { break; }
           if (p.data.kind !== 'melee') { scene.remove(p.mesh); return false; }
         }
       }
@@ -1403,7 +1432,7 @@ function _addEnemyToScene(g, pos, data, sz) {
   hpFill.rotation.x = -Math.PI/2; hpFill.position.y = 3.82*sz; g.add(hpFill);
   g.position.copy(pos); scene.add(g);
   const scaledHP = data.hp * (1 + (gs.wave - 1) * 0.1);
-  gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, _dead: false, _hpFill: hpFill, _hpSz: 1.2*sz, _phase: Math.random() * Math.PI * 2, _swayZ: 0, _leanX: 0, _bob: 0 });
+  gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, poisonTimer: 0, rootTimer: 0, _dead: false, _hpFill: hpFill, _hpSz: 1.2*sz, _phase: Math.random() * Math.PI * 2, _swayZ: 0, _leanX: 0, _bob: 0, _poisonFxT: 0 });
 }
 
 function spawnMonkey(data, pos) {
@@ -1695,7 +1724,7 @@ function spawnEnemy(typeId) {
   hpFill.rotation.x = -Math.PI/2; hpFill.position.y = 3.82*sz; g.add(hpFill);
   g.position.copy(pos); scene.add(g);
   const scaledHP = data.hp * (1 + (gs.wave - 1) * 0.1);
-  gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, _dead: false, _hpFill: hpFill, _hpSz: 1.2*sz, _phase: Math.random() * Math.PI * 2, _swayZ: 0, _leanX: 0, _bob: 0 });
+  gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, poisonTimer: 0, rootTimer: 0, _dead: false, _hpFill: hpFill, _hpSz: 1.2*sz, _phase: Math.random() * Math.PI * 2, _swayZ: 0, _leanX: 0, _bob: 0, _poisonFxT: 0 });
 }
 
 function updateEnemies(dt) {
@@ -1713,14 +1742,52 @@ function updateEnemies(dt) {
     const attackRange = e.data.ranged ? 6.5 : (1.8 * (e.data.sz || 1));
     const rageMult = gs.activeEvents.enemyRage ? 1.7 : 1;
     const frozenMult = gs.activeEvents.freezeWave ? 0.05 : 1;
-    const spd = e.data.spd * rageMult * frozenMult * (e.slowTimer > 0 ? 0.3 : 1);
-    if (dist > attackRange) {
-      // Walk toward target
-      e.vel.lerp(dir.multiplyScalar(spd), 0.12);
-      e.pos.add(e.vel.clone().multiplyScalar(dt));
-    } else {
-      // Stop and stand still while attacking
+
+    // Root: completely stops movement
+    e.rootTimer = Math.max(0, e.rootTimer - dt);
+    if (e.rootTimer > 0) {
       e.vel.set(0, 0, 0);
+      e.mesh.position.copy(e.pos);
+      // Green root ring pulse around enemy
+      e._rootFxT = (e._rootFxT || 0) - dt;
+      if (e._rootFxT <= 0) { e._rootFxT = 0.4; spawnFX(e.pos.clone(), 0x228b22, 0.22, (e.data.sz||1) * 1.2); }
+    } else {
+      // Poison: green DoT
+      if (e.poisonTimer > 0) {
+        e.poisonTimer -= dt;
+        e.hp -= 6 * dt;
+        e._poisonFxT -= dt;
+        if (e._poisonFxT <= 0) { e._poisonFxT = 0.5; spawnFX(e.pos.clone().add(new THREE.Vector3(0, 1, 0)), 0x44ff00, 0.2, 0.5); }
+        if (e.hp <= 0) { killEnemy(e); return; }
+      }
+      // Glacier regenerates HP slowly
+      if (e.data.id === 'glacier' || e.data.id === 'snow_giant') {
+        e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.003 * dt);
+      }
+      const spd = e.data.spd * rageMult * frozenMult * (e.slowTimer > 0 ? 0.3 : 1);
+      if (dist > attackRange) {
+        e.vel.lerp(dir.multiplyScalar(spd), 0.12);
+        e.pos.add(e.vel.clone().multiplyScalar(dt));
+      } else {
+        e.vel.set(0, 0, 0);
+      }
+    }
+    // Stealth monkey: fade out when far from player
+    if (e.data.id === 'stealth_monk') {
+      const targetOpacity = e.pos.distanceTo(gs.playerPos) > 6 ? 0.22 : 1.0;
+      e.mesh.traverse(c => { if (c.isMesh && c.material) { c.material.transparent = true; c.material.opacity = THREE.MathUtils.lerp(c.material.opacity || 1, targetOpacity, 0.08); } });
+    }
+    // Yeti periodic roar — pushes player back
+    if (e.data.id === 'yeti') {
+      e._roarTimer = (e._roarTimer || 5) - dt;
+      if (e._roarTimer <= 0 && dist < 8) {
+        e._roarTimer = 6 + Math.random() * 3;
+        const pushDir = gs.playerPos.clone().sub(e.pos).setY(0).normalize();
+        gs.playerPos.add(pushDir.multiplyScalar(5));
+        gs.playerVel = gs.playerVel || new THREE.Vector3();
+        spawnFX(e.pos.clone().add(new THREE.Vector3(0,1,0)), 0xeeeedd, 0.6, 4.0);
+        showToast('🏔️ Yeti ROARS! Pushed back!', 1500);
+      }
     }
     const walking = e.vel.length() > 0.01;
     const et = Date.now() * 0.001;
@@ -1768,6 +1835,10 @@ function updateEnemies(dt) {
           gs.playerHP -= e.data.dmg;
           sfxPlayerHurt();
           if (gs.playerHP <= 0) { gs.playerHP = 0; endGame(); }
+          // Howler screech: slow the player
+          if (e.data.id === 'howler') { gs.playerSlowTimer = 3; showToast('🐒 Howler screech! You\'re slowed!', 1500); }
+          // Poison monkey: poison the player (DoT via playerSlowTimer overload — use poison flag)
+          if (e.data.id === 'poison_monk') { gs.playerPoisonTimer = (gs.playerPoisonTimer || 0) + 4; }
         } else if (tgt.length() < 2.5) {
           if (!gs.activeEvents.barnShield) {
             gs.barnHP -= e.data.dmg;
@@ -2451,8 +2522,15 @@ function updatePlacedPlants(dt) {
     if (p.data.kind === 'passive') {
       gs.enemies.forEach(e => {
         if (e.pos.distanceTo(p.pos) < p.data.range) {
-          e.hp -= p.data.dmg * dt; if (e.hp <= 0) killEnemy(e);
-          if (p.data.slow) e.slowTimer = Math.max(e.slowTimer || 0, 0.35);
+          let dmg = p.data.dmg;
+          // campfire_plt in snow biome: 3x damage to snowmen (they melt fast)
+          if (p.data.id === 'campfire_plt') dmg *= 3;
+          e.hp -= dmg * dt; if (e.hp <= 0) killEnemy(e);
+          if (p.data.root) {
+            e.rootTimer = Math.max(e.rootTimer || 0, 0.5);
+          } else if (p.data.slow) {
+            e.slowTimer = Math.max(e.slowTimer || 0, 0.35);
+          }
         }
       });
     }
@@ -2470,8 +2548,15 @@ function updatePlacedPlants(dt) {
       const nearest = gs.enemies.slice().sort((a, b) => a.pos.distanceTo(p.pos) - b.pos.distanceTo(p.pos))[0];
       if (nearest && nearest.pos.distanceTo(p.pos) < p.data.range) {
         p.timer = p.data.cd || 1;
-        const dir = nearest.pos.clone().sub(p.pos).normalize();
-        spawnProj(p.pos.clone().add(new THREE.Vector3(0, 1, 0)), dir, 9, p.data, 'plant', p.data.range / 9);
+        if (p.data.hardFreeze) {
+          // Freeze tower: instantly hard-freezes the nearest enemy (no projectile)
+          nearest.slowTimer = 8; nearest.vel.set(0,0,0);
+          spawnFX(nearest.pos.clone(), 0xaaddff, 0.55, 2.0);
+          showToast('🧊 Enemy hard-frozen!', 800);
+        } else {
+          const dir = nearest.pos.clone().sub(p.pos).normalize();
+          spawnProj(p.pos.clone().add(new THREE.Vector3(0, 1, 0)), dir, 9, p.data, 'plant', p.data.range / 9);
+        }
       }
     }
   });
