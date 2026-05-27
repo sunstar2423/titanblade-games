@@ -463,6 +463,8 @@ const WEAPONS = [
   { id:'bean',    name:'Beanstalk Whip',        emoji:'🌱', cost:25, desc:'Extra long melee reach',        kind:'melee',    dmg:22, range:6.5, cd:0.7,  color:0x32cd32 },
   { id:'mush',    name:'Mushroom Cloud',        emoji:'🍄', cost:35, desc:'Lingering poison cloud AoE',    kind:'cloud',    dmg:4,  range:4,   cd:1.2,  aoe:4, dur:5, color:0x9b59b6 },
   { id:'sun',     name:'Sunflower Ray',         emoji:'🌻', cost:50, desc:'Giant instant light beam',      kind:'beam',     dmg:80, range:18,  cd:2.5,  color:0xffd700 },
+  { id:'acorn',   name:'Acorn Star',            emoji:'🌰', cost:30, desc:'Spinning 4-point star projectile',kind:'star',    dmg:22, range:10,  cd:0.5,  color:0xa0522d },
+  { id:'beet_orb',name:'Beet Orb',              emoji:'🫒', cost:40, desc:'Orb with rings — explodes at end', kind:'orb',    dmg:30, range:12,  cd:1.1,  color:0x990055, aoe:2.8 },
 ];
 
 const PLACEABLES = [
@@ -567,6 +569,8 @@ const WEAPONS_JUNGLE = [
   { id:'bamboo_staff', name:'Bamboo Staff',    emoji:'🎋', cost:25, desc:'Long melee — CHAINS to 2 nearby enemies',    kind:'melee',    dmg:24, range:7.0, cd:0.7,  color:0x5a8f2a, chainMelee:2 },
   { id:'poison_cloud', name:'Poison Cloud',    emoji:'☁️', cost:35, desc:'Lingering poison gas cloud',                 kind:'cloud',    dmg:5,  range:4,   cd:1.2,  aoe:4, dur:5, color:0x88cc44 },
   { id:'sunray',       name:'Sun Prism Beam',  emoji:'🔆', cost:50, desc:'Giant instant light beam',                   kind:'beam',     dmg:85, range:18,  cd:2.5,  color:0xffe066 },
+  { id:'needle_shot',  name:'Thorn Needle',    emoji:'🪡', cost:25, desc:'Ultra-fast poison needle spam',               kind:'needle',   dmg:7,  range:12,  cd:0.18, color:0x44cc00, poison:true },
+  { id:'jungle_orb',   name:'Jungle Orb',      emoji:'🌐', cost:40, desc:'Toxic spinning orb — explodes at end',       kind:'orb',      dmg:26, range:12,  cd:1.1,  color:0x33aa00, aoe:3.0, burn:4 },
 ];
 const PLACEABLES_JUNGLE = [
   { id:'pitcher',      name:'Pitcher Plant',   emoji:'🪴', cost:40, desc:'⚔️ Snaps shut on close enemies',        kind:'turret', dmg:32, range:2.5, cd:1.8, hp:80,  color:0x006400 },
@@ -646,6 +650,8 @@ const WEAPONS_SNOW = [
   { id:'ice_fog',       name:'Ice Fog',           emoji:'🌫️', cost:35, desc:'Lingering freeze cloud AoE',                   kind:'cloud',    dmg:4,  range:4,   cd:1.2,  aoe:4, dur:5, color:0xaaccee },
   { id:'frost_beam',    name:'Frost Beam',        emoji:'💎', cost:50, desc:'Giant instant freeze beam',                     kind:'beam',     dmg:78, range:18,  cd:2.5,  color:0x88ddff },
   { id:'avalanche',     name:'Avalanche Bomb',    emoji:'🏔️', cost:30, desc:'Bounces between 3 enemies',                    kind:'bounce',   dmg:22, range:14,  cd:0.6,  bounces:3, color:0xddddff },
+  { id:'ice_shard',     name:'Ice Crystal',       emoji:'💠', cost:25, desc:'Spinning crystal — slows on hit',              kind:'crystal',  dmg:20, range:10,  cd:0.55, color:0x66ccff, slow:0.7, slowDur:3 },
+  { id:'bliz_orb',      name:'Blizzard Orb',      emoji:'🔵', cost:40, desc:'Freeze orb with rings — explodes frozen AoE',  kind:'orb',      dmg:22, range:12,  cd:1.1,  color:0x7788ff, aoe:3.0, hardFreeze:true },
 ];
 const PLACEABLES_SNOW = [
   { id:'snow_turret',   name:'Snowball Turret',   emoji:'⛄', cost:30, desc:'⚔️ Auto-fires snowballs at enemies',  kind:'turret', dmg:14, range:5.5, cd:0.5, hp:60,  color:0xffffff },
@@ -1213,6 +1219,55 @@ function spawnProj(pos, dir, spd, data, owner, life) {
       const sl = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), em(col));
       sl.scale.y = 0.65; m = sl; break;
     }
+    case 'dart':
+    case 'needle': {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.01, 0.46, 5), em(col)));
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.032, 0.14, 5), em(col, 1.2));
+      tip.position.y = 0.3; g.add(tip);
+      g.lookAt(pos.clone().add(dir)); g.rotateX(-Math.PI/2);
+      m = g; break;
+    }
+    case 'javelin': {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.025, 0.9, 6), em(col, 0.65)));
+      const jhead = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.26, 6), em(col, 1.1));
+      jhead.position.y = 0.58; g.add(jhead);
+      const jbutt = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.13, 4), em(0x888899, 0.5));
+      jbutt.position.y = -0.515; jbutt.rotation.z = Math.PI; g.add(jbutt);
+      g.lookAt(pos.clone().add(dir)); g.rotateX(-Math.PI/2);
+      m = g; break;
+    }
+    case 'orb': {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 10), em(col, 1.2)));
+      const or1 = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.04, 6, 16), em(col, 0.7));
+      or1.rotation.x = Math.PI/2; g.add(or1);
+      const or2 = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.04, 6, 16), em(col, 0.7));
+      or2.rotation.x = Math.PI/3; g.add(or2);
+      m = g; break;
+    }
+    case 'star': {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(new THREE.OctahedronGeometry(0.19, 0), em(col, 1.1)));
+      for (let i = 0; i < 4; i++) {
+        const sp = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.28, 4), em(col, 0.9));
+        const ang = i * Math.PI / 2;
+        sp.rotation.z = ang + Math.PI/2;
+        sp.position.set(Math.cos(ang)*0.24, Math.sin(ang)*0.24, 0);
+        g.add(sp);
+      }
+      m = g; break;
+    }
+    case 'crystal': {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), em(col, 1.0)));
+      const cs1 = new THREE.Mesh(new THREE.OctahedronGeometry(0.1, 0), em(col, 0.75));
+      cs1.position.set(0.26, 0.12, 0); cs1.scale.y = 1.9; g.add(cs1);
+      const cs2 = new THREE.Mesh(new THREE.OctahedronGeometry(0.08, 0), em(col, 0.75));
+      cs2.position.set(-0.2, -0.18, 0.1); cs2.scale.y = 1.7; g.add(cs2);
+      m = g; break;
+    }
     default:
       m = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 8), em(col));
   }
@@ -1266,9 +1321,13 @@ function updateProjectiles(dt) {
     p.pos.add(p.vel.clone().multiplyScalar(dt));
     p.mesh.position.copy(p.pos);
 
-    // Spin boomerang and heavy projectiles
+    // Spin projectiles
     if (p.data.kind === 'boomerang') p.mesh.rotation.z += dt * 8;
     if (p.data.kind === 'heavy')     p.mesh.rotation.y += dt * 5;
+    if (p.data.kind === 'star')      p.mesh.rotation.z += dt * 9;
+    if (p.data.kind === 'orb')     { p.mesh.rotation.y += dt * 2.8; p.mesh.rotation.x += dt * 1.7; }
+    if (p.data.kind === 'crystal') { p.mesh.rotation.y += dt * 4.5; p.mesh.rotation.x += dt * 2.2; }
+    if (p.data.kind === 'throw')     p.mesh.rotation.x += dt * 4;
 
     // Trail afterimage
     p._trailT -= dt;
