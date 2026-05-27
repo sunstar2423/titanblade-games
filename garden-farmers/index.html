@@ -102,7 +102,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div id="hud">
     <div class="hud-block">❤️ <div id="hp-bar-wrap"><div id="hp-bar"></div></div> <span id="hp-txt">100/100</span></div>
     <div class="hud-block" id="wave-info">Press SPACE to start!</div>
-    <div class="hud-block">🌾 <span id="straw-txt">0</span></div>
+    <div class="hud-block"><span id="straw-emoji">🌾</span> <span id="straw-txt">0</span></div>
     <div class="hud-block" id="event-countdown" style="display:none">🎲 Next event: <span id="event-cd-txt">5:00</span></div>
   </div>
   <div id="hotbar"></div>
@@ -122,8 +122,8 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div id="shop-overlay">
     <div id="shop-box">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h2 style="color:#4CAF50;font-size:22px">🛒 Farm Shop</h2>
-        <div style="color:#FFD700;font-size:17px">🌾 <span id="shop-straw">0</span></div>
+        <h2 style="color:#4CAF50;font-size:22px" id="shop-title">🛒 Farm Shop</h2>
+        <div style="color:#FFD700;font-size:17px"><span id="shop-straw-emoji">🌾</span> <span id="shop-straw">0</span></div>
         <button onclick="toggleShop()" style="background:#c33;color:#fff;border:none;padding:5px 13px;border-radius:7px;cursor:pointer;font-size:15px">✕</button>
       </div>
       <div class="shop-tabs">
@@ -175,6 +175,7 @@ scene.fog = new THREE.FogExp2(0x3a5a78, 0.01);
     new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide })
   );
   scene.add(sky);
+  window._skyMesh = sky; window._skyCanvas = c; window._skyCtx = ctx;
 })();
 
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 120);
@@ -189,7 +190,8 @@ window.addEventListener('resize', () => {
 });
 
 // Lighting
-scene.add(new THREE.HemisphereLight(0x6688bb, 0x336611, 0.35));
+const hemiLight = new THREE.HemisphereLight(0x6688bb, 0x336611, 0.35);
+scene.add(hemiLight);
 const sun = new THREE.DirectionalLight(0xfff0cc, 0.75);
 sun.position.set(15, 25, 10);
 sun.castShadow = true;
@@ -553,6 +555,182 @@ const WAVES = [
   [{t:'giant',n:2},{t:'shadow',n:6},{t:'boss',n:3},{t:'bomb',n:5},{t:'ice',n:4}],
 ];
 
+// ─── JUNGLE BIOME ───────────────────────────────────────────
+const WEAPONS_JUNGLE = [
+  { id:'vine_whip',    name:'Vine Whip',       emoji:'🌿', cost:0,  desc:'Fast long-reach vine lash',              kind:'melee',    dmg:18, range:4.5, cd:0.45, color:0x228b22 },
+  { id:'banana_bomb',  name:'Banana Bomb',     emoji:'🍌', cost:30, desc:'Thrown AoE banana explosion',            kind:'throw',    dmg:42, range:12,  cd:1.5,  aoe:3.2, color:0xffe000 },
+  { id:'blowdart',     name:'Blowdart Gun',    emoji:'🎯', cost:20, desc:'Ultra-fast poison dart shot',            kind:'melee',    dmg:14, range:14,  cd:0.25, color:0x8b4513 },
+  { id:'coconut',      name:'Coconut Crusher', emoji:'🥥', cost:40, desc:'Heavy knockback slam',                   kind:'heavy',    dmg:70, range:2.5, cd:2.0,  color:0x7a5c3c },
+  { id:'thorn_burst',  name:'Thorn Burst',     emoji:'🌵', cost:35, desc:'Shotgun burst of thorns',               kind:'shotgun',  dmg:9,  range:6,   cd:1.0,  pellets:7, color:0x556b2f },
+  { id:'boomstick',    name:'Boomerang Stick', emoji:'🪃', cost:30, desc:'Boomerang hits twice on return',         kind:'boomerang',dmg:28, range:14,  cd:1.0,  color:0xa0522d },
+  { id:'web_launcher', name:'Web Launcher',    emoji:'🕸️', cost:20, desc:'Sticky web slows enemies in a splash',  kind:'slow',     dmg:10, range:12,  cd:1.0,  aoe:2.5, slow:0.6, slowDur:3, color:0xcccccc },
+  { id:'bamboo_staff', name:'Bamboo Staff',    emoji:'🎋', cost:25, desc:'Extra long melee reach',                kind:'melee',    dmg:24, range:7.0, cd:0.7,  color:0x5a8f2a },
+  { id:'poison_cloud', name:'Poison Cloud',    emoji:'☁️', cost:35, desc:'Lingering poison gas cloud',            kind:'cloud',    dmg:5,  range:4,   cd:1.2,  aoe:4, dur:5, color:0x88cc44 },
+  { id:'sunray',       name:'Sun Prism Beam',  emoji:'🔆', cost:50, desc:'Giant instant light beam',              kind:'beam',     dmg:85, range:18,  cd:2.5,  color:0xffe066 },
+];
+const PLACEABLES_JUNGLE = [
+  { id:'pitcher',      name:'Pitcher Plant',   emoji:'🪴', cost:40, desc:'⚔️ Snaps shut on close enemies',        kind:'turret', dmg:32, range:2.5, cd:1.8, hp:80,  color:0x006400 },
+  { id:'dart_fern',    name:'Dart Fern',       emoji:'🌿', cost:20, desc:'⚔️ Rapid fire poison darts',            kind:'turret', dmg:9,  range:9,   cd:0.3, hp:50,  color:0x3cb371 },
+  { id:'fire_orchid',  name:'Fire Orchid',     emoji:'🌺', cost:35, desc:'⚔️ Fireballs that burn over time',      kind:'turret', dmg:16, range:8,   cd:1.0, hp:55,  color:0xff4500, burn:4 },
+  { id:'vine_trap',    name:'Vine Trap',       emoji:'🌱', cost:15, desc:'⚔️ Slows AND damages passing foes',     kind:'passive',dmg:16, range:1.8,        hp:60,  color:0x228b22, slow:true },
+  { id:'jungle_mine',  name:'Spike Pit',       emoji:'💥', cost:15, desc:'⚔️ Explodes when stepped on',           kind:'mine',   dmg:55, range:3,   aoe:3,  hp:1,   color:0x8b6914 },
+  { id:'heal_fern',    name:'Healing Fern',    emoji:'🍃', cost:30, desc:'💚 Heals YOU 5 HP/s when nearby',       kind:'heal',   heal:5, range:3,          hp:60,  color:0x00ff7f, support:true },
+  { id:'spider_nest',  name:'Spider Nest',     emoji:'🕷️', cost:35, desc:'⚔️ Spiders chain to 6 nearby foes',    kind:'turret', dmg:10, range:8.5, cd:1.0, hp:55,  color:0x4b2e10, chains:6 },
+  { id:'freeze_bloom', name:'Freeze Bloom',    emoji:'🌸', cost:25, desc:'💚 Slows all nearby enemies',           kind:'freeze', dmg:0,  range:4,          hp:45,  color:0x88bbff, support:true },
+  { id:'lightning_tree',name:'Lightning Tree', emoji:'⚡', cost:45, desc:'⚔️ Zaps enemies, chains to foes',       kind:'turret', dmg:26, range:6.5, cd:1.5, hp:50,  color:0xffff00, chains:3 },
+  { id:'giant_blossom',name:'Giant Blossom',   emoji:'🌻', cost:50, desc:'⚔️ Long-range powerful pollen shot',   kind:'turret', dmg:48, range:13,  cd:2.2, hp:90,  color:0xffcc00 },
+  { id:'thorn_wall',   name:'Thorn Wall',      emoji:'🌾', cost:18, desc:'⚔️ Damages + slows enemies passing',   kind:'passive',dmg:18, range:1.8,        hp:100, color:0x3a5a20, slow:true },
+  { id:'toxic_pool',   name:'Toxic Pool',      emoji:'☠️', cost:40, desc:'⚔️ Poison gas clouds burn enemies',    kind:'turret', dmg:18, range:7,   cd:0.9, hp:60,  color:0x44aa00, burn:6 },
+  { id:'drum_totem',   name:'Drum Totem',      emoji:'🥁', cost:35, desc:'💚 Drum pulses slow nearby enemies',   kind:'freeze', dmg:0,  range:5,          hp:70,  color:0xa0522d, support:true },
+  { id:'kong_cannon',  name:'Kong Cannon',     emoji:'🦍', cost:55, desc:'⚔️ Massive AoE coconut shockwave',     kind:'turret', dmg:52, range:11,  cd:4.0, hp:110, color:0x3a2010, aoe:4 },
+  { id:'mist_cloud',   name:'Mist Sprayer',    emoji:'🌫️', cost:30, desc:'⚔️ Slow mist blasts chill enemies',   kind:'turret', dmg:8,  range:6.5, cd:1.8, hp:50,  color:0xaaddcc, slow:0.8, slowDur:4 },
+];
+const DEFENSES_JUNGLE = [
+  { id:'bamboo_wall',  name:'Bamboo Wall',    emoji:'🎋', cost:10, desc:'Blocks and slows enemy path',           type:'fence',    hp:60,  color:0x5a8f2a },
+  { id:'tar_pit',      name:'Tar Pit',        emoji:'🟫', cost:20, desc:'Heavily slows enemies crossing it',     type:'moat',     hp:999, slow:0.85, color:0x2a1a00 },
+  { id:'fire_pit',     name:'Fire Pit',       emoji:'🔥', cost:15, desc:'Burns nearby enemies 4/s',              type:'campfire', hp:999, dmg:4,  range:2.5, color:0xff6600 },
+  { id:'dart_tower',   name:'Dart Tower',     emoji:'🎯', cost:25, desc:'Fires poison darts at enemies (rng 8)', type:'arrowtwr', hp:100, dmg:30, range:8,  cd:1.2 },
+  { id:'bomb_trap',    name:'Bomb Trap',      emoji:'💣', cost:40, desc:'AoE bamboo bomb every 3s (range 5)',    type:'bombtwr',  hp:80,  dmg:65, range:5,  cd:3.0, aoe:3 },
+  { id:'spike_pit',    name:'Spike Pit',      emoji:'🗡️', cost:15, desc:'Damages enemies walking over it',       type:'spike',    hp:80,  dmg:20, range:1.6 },
+  { id:'net_tower',    name:'Net Tower',      emoji:'🕸️', cost:35, desc:'Zaps up to 4 enemies every 2s',        type:'tesla',    hp:70,  dmg:24, range:5.5, cd:2.0, chains:4 },
+];
+const ENEMY_TYPES_JUNGLE = [
+  { id:'chimp',      name:'Jungle Chimp',      hp:45,  spd:2.2, dmg:6,  straw:5,   sz:1,    color:0x7b4f2e },
+  { id:'howler',     name:'Howler Monkey',      hp:55,  spd:2.0, dmg:7,  straw:8,   sz:1,    color:0x5c3310, ranged:true },
+  { id:'thrower',    name:'Coconut Thrower',    hp:70,  spd:1.8, dmg:12, straw:12,  sz:1,    color:0x8b5e3c, ranged:true },
+  { id:'alpha',      name:'Alpha Ape',           hp:130, spd:1.4, dmg:16, straw:28,  sz:1.15, color:0x3a1e08, armor:0.25 },
+  { id:'stealth_monk',name:'Stealth Monkey',    hp:60,  spd:3.2, dmg:12, straw:18,  sz:0.9,  color:0x2a3a10 },
+  { id:'chimp_boss', name:'Gorilla Boss',        hp:380, spd:1.1, dmg:20, straw:100, sz:1.9,  color:0x1a0e00 },
+  { id:'bomb_monk',  name:'Bomb Monkey',         hp:85,  spd:1.7, dmg:15, straw:22,  sz:1.1,  color:0x2a1a00 },
+  { id:'spider_monk',name:'Spider Monkey',       hp:35,  spd:5.0, dmg:5,  straw:8,   sz:0.85, color:0x8b4513 },
+  { id:'poison_monk',name:'Poison Monkey',       hp:70,  spd:1.6, dmg:10, straw:16,  sz:1,    color:0x4a7c20, ranged:true },
+  { id:'troop',      name:'Monkey Troop',         hp:28,  spd:3.5, dmg:4,  straw:6,   sz:0.8,  color:0x9b6a3c },
+  { id:'kong',       name:'Mega Kong',             hp:750, spd:0.6, dmg:30, straw:120, sz:2.8,  color:0x0f0a05 },
+];
+const WAVES_JUNGLE = [
+  [{t:'chimp',n:5}],
+  [{t:'chimp',n:4},{t:'thrower',n:2}],
+  [{t:'chimp',n:3},{t:'howler',n:3}],
+  [{t:'thrower',n:4},{t:'poison_monk',n:2}],
+  [{t:'howler',n:3},{t:'alpha',n:2},{t:'chimp_boss',n:1}],
+  [{t:'chimp',n:6},{t:'thrower',n:3},{t:'howler',n:2}],
+  [{t:'alpha',n:3},{t:'poison_monk',n:3}],
+  [{t:'chimp_boss',n:1},{t:'alpha',n:2},{t:'thrower',n:4}],
+  [{t:'chimp',n:8},{t:'howler',n:4}],
+  [{t:'alpha',n:4},{t:'poison_monk',n:4},{t:'chimp_boss',n:1}],
+  [{t:'thrower',n:6},{t:'howler',n:4},{t:'alpha',n:2}],
+  [{t:'chimp_boss',n:2},{t:'alpha',n:3},{t:'poison_monk',n:2}],
+  [{t:'chimp',n:10},{t:'poison_monk',n:4},{t:'thrower',n:4}],
+  [{t:'howler',n:5},{t:'alpha',n:4},{t:'poison_monk',n:3}],
+  [{t:'chimp_boss',n:2},{t:'alpha',n:4},{t:'poison_monk',n:2}],
+  [{t:'chimp',n:8},{t:'thrower',n:6},{t:'poison_monk',n:4},{t:'howler',n:3}],
+  [{t:'alpha',n:5},{t:'howler',n:5},{t:'chimp_boss',n:2},{t:'poison_monk',n:3}],
+  [{t:'chimp_boss',n:3},{t:'alpha',n:5},{t:'poison_monk',n:4}],
+  [{t:'alpha',n:6},{t:'howler',n:6},{t:'poison_monk',n:5},{t:'chimp_boss',n:2}],
+  [{t:'chimp_boss',n:5},{t:'alpha',n:6},{t:'poison_monk',n:6},{t:'howler',n:4}],
+  [{t:'spider_monk',n:12},{t:'bomb_monk',n:4},{t:'chimp',n:6}],
+  [{t:'kong',n:1},{t:'stealth_monk',n:5},{t:'alpha',n:4}],
+  [{t:'troop',n:15},{t:'spider_monk',n:8},{t:'bomb_monk',n:4},{t:'howler',n:4}],
+  [{t:'kong',n:2},{t:'stealth_monk',n:6},{t:'chimp_boss',n:3},{t:'bomb_monk',n:5},{t:'troop',n:8}],
+];
+
+// ─── SNOW BIOME ─────────────────────────────────────────────
+const WEAPONS_SNOW = [
+  { id:'ice_pick',      name:'Ice Pick',          emoji:'🧊', cost:0,  desc:'Fast sharp ice melee stab',            kind:'melee',    dmg:16, range:2.5, cd:0.38, color:0x88ccff },
+  { id:'snowball',      name:'Snowball Cannon',   emoji:'⛄', cost:30, desc:'Thrown AoE snowball blast',            kind:'throw',    dmg:38, range:12,  cd:1.5,  aoe:3.0, color:0xffffff },
+  { id:'icicle',        name:'Icicle Javelin',    emoji:'❄️', cost:40, desc:'Slow heavy piercing throw',            kind:'heavy',    dmg:72, range:2.5, cd:1.8,  color:0xaaddff },
+  { id:'blizzard_gun',  name:'Blizzard Burst',    emoji:'🌨️', cost:35, desc:'Shotgun burst of ice shards',         kind:'shotgun',  dmg:8,  range:6,   cd:0.9,  pellets:7, color:0xcceeee },
+  { id:'frost_chain',   name:'Frost Chain',       emoji:'🌀', cost:25, desc:'Extra long ice chain whip',            kind:'melee',    dmg:20, range:6.5, cd:0.7,  color:0x66aaff },
+  { id:'snowflake_c',   name:'Snowflake Chakram', emoji:'🔷', cost:30, desc:'Returns and hits twice',               kind:'boomerang',dmg:26, range:14,  cd:1.0,  color:0x99ddff },
+  { id:'cocoa',         name:'Hot Cocoa Splash',  emoji:'☕', cost:20, desc:'Slows enemies in a hot splash',        kind:'slow',     dmg:14, range:12,  cd:1.0,  aoe:2.5, slow:0.65, slowDur:3, color:0xa0522d },
+  { id:'ice_fog',       name:'Ice Fog',           emoji:'🌫️', cost:35, desc:'Lingering freeze cloud AoE',           kind:'cloud',    dmg:4,  range:4,   cd:1.2,  aoe:4, dur:5, color:0xaaccee },
+  { id:'frost_beam',    name:'Frost Beam',        emoji:'💎', cost:50, desc:'Giant instant freeze beam',            kind:'beam',     dmg:78, range:18,  cd:2.5,  color:0x88ddff },
+  { id:'avalanche',     name:'Avalanche Bomb',    emoji:'🏔️', cost:30, desc:'Bounces between 3 enemies',            kind:'bounce',   dmg:22, range:14,  cd:0.6,  bounces:3, color:0xddddff },
+];
+const PLACEABLES_SNOW = [
+  { id:'snow_turret',   name:'Snowball Turret',   emoji:'⛄', cost:30, desc:'⚔️ Auto-fires snowballs at enemies',  kind:'turret', dmg:14, range:5.5, cd:0.5, hp:60,  color:0xffffff },
+  { id:'freeze_tower',  name:'Freeze Tower',      emoji:'🧊', cost:40, desc:'⚔️ Freezes enemies solid',           kind:'turret', dmg:0,  range:6,   cd:3.0, hp:70,  color:0x88ccff },
+  { id:'campfire_plt',  name:'Campfire',          emoji:'🔥', cost:25, desc:'⚔️ Flames melt nearby snowmen fast', kind:'passive',dmg:25, range:2.0,        hp:55,  color:0xff6600 },
+  { id:'icicle_mine',   name:'Icicle Mine',       emoji:'💥', cost:15, desc:'⚔️ Ice spike eruption when stepped on',kind:'mine',  dmg:55, range:3,   aoe:3,  hp:1,   color:0xaaddff },
+  { id:'hot_spring',    name:'Hot Spring',        emoji:'♨️', cost:30, desc:'💚 Heals YOU 6 HP/s when nearby',    kind:'heal',   heal:6, range:3,          hp:65,  color:0xff8844, support:true },
+  { id:'ice_wall',      name:'Ice Wall',          emoji:'🧱', cost:15, desc:'⚔️ Blocks + damages on contact',     kind:'passive',dmg:20, range:1.5,        hp:140, color:0x99ccee },
+  { id:'penguin',       name:'Penguin Turret',    emoji:'🐧', cost:35, desc:'⚔️ Penguins chain to 6 nearby foes', kind:'turret', dmg:10, range:8.5, cd:1.0, hp:60,  color:0x111111, chains:6 },
+  { id:'frost_aura',    name:'Frost Aura Plant',  emoji:'❄️', cost:25, desc:'💚 Slows all nearby enemies way down',kind:'freeze', dmg:0,  range:4.5,        hp:50,  color:0xaaddff, support:true },
+  { id:'zap_crystal',   name:'Zap Crystal',       emoji:'💎', cost:45, desc:'⚔️ Lightning chains to nearby foes', kind:'turret', dmg:28, range:6,   cd:1.5, hp:55,  color:0xccffff, chains:3 },
+  { id:'ice_cannon',    name:'Ice Cannon',        emoji:'💙', cost:50, desc:'⚔️ Huge ice AoE cannonball shot',    kind:'turret', dmg:50, range:11,  cd:2.2, hp:95,  color:0x0077cc },
+  { id:'snow_barricade',name:'Snow Barricade',    emoji:'🌨️', cost:18, desc:'⚔️ Slows AND damages passing foes',  kind:'passive',dmg:12, range:1.8,        hp:130, color:0xddeeff, slow:true },
+  { id:'bliz_machine',  name:'Blizzard Machine',  emoji:'🌀', cost:40, desc:'⚔️ Chilling blasts freeze enemies', kind:'turret', dmg:18, range:7,   cd:0.9, hp:60,  color:0x88aaff, burn:5 },
+  { id:'yeti_totem',    name:'Yeti Totem',        emoji:'🏔️', cost:35, desc:'💚 Fear aura slows nearby enemies',  kind:'freeze', dmg:0,  range:5,          hp:75,  color:0xeeeecc, support:true },
+  { id:'ice_giant_plt', name:'Ice Giant Plant',   emoji:'🗿', cost:55, desc:'⚔️ Massive AoE ice shockwave',       kind:'turret', dmg:50, range:11,  cd:4.0, hp:100, color:0x6699cc, aoe:4 },
+  { id:'frost_crystal', name:'Frost Crystal',     emoji:'🔵', cost:30, desc:'⚔️ Slow frost blasts that freeze',  kind:'turret', dmg:8,  range:6.5, cd:1.8, hp:55,  color:0x55aadd, slow:0.85, slowDur:4 },
+];
+const DEFENSES_SNOW = [
+  { id:'ice_barrier',   name:'Ice Barrier',       emoji:'🧊', cost:10, desc:'Blocks and slows enemy path',         type:'fence',    hp:70,  color:0x99ccee },
+  { id:'frozen_moat',   name:'Frozen Moat',       emoji:'❄️', cost:20, desc:'Heavily slows enemies crossing it',   type:'moat',     hp:999, slow:0.85, color:0x88aaff },
+  { id:'heat_trap',     name:'Heat Trap',         emoji:'🔥', cost:15, desc:'Melts nearby snowmen 5 HP/s',         type:'campfire', hp:999, dmg:5,  range:2.5, color:0xff4400 },
+  { id:'snow_cannon_twr',name:'Snow Cannon Tower',emoji:'⛄', cost:25, desc:'Fires snowballs at enemies (rng 8)',  type:'arrowtwr', hp:100, dmg:30, range:8,  cd:1.2 },
+  { id:'frost_bomb_twr',name:'Frost Bomb Tower',  emoji:'💣', cost:40, desc:'AoE ice bomb every 3s (range 5)',     type:'bombtwr',  hp:85,  dmg:62, range:5,  cd:3.0, aoe:3 },
+  { id:'ice_spike',     name:'Ice Spike Trap',    emoji:'🗡️', cost:15, desc:'Damages enemies walking over it',     type:'spike',    hp:80,  dmg:20, range:1.6 },
+  { id:'bliz_coil',     name:'Blizzard Coil',     emoji:'🌀', cost:35, desc:'Zaps up to 4 enemies every 2s',      type:'tesla',    hp:70,  dmg:24, range:5.5, cd:2.0, chains:4 },
+];
+const ENEMY_TYPES_SNOW = [
+  { id:'snow_basic',    name:'Basic Snowman',     hp:45,  spd:1.8, dmg:5,  straw:5,   sz:1,    color:0xffffff },
+  { id:'snow_thrower',  name:'Snowball Thrower',  hp:55,  spd:2.0, dmg:9,  straw:10,  sz:1,    color:0xddddff, ranged:true },
+  { id:'snow_armor',    name:'Armored Frosty',    hp:140, spd:1.0, dmg:15, straw:30,  sz:1.1,  color:0x88aacc, armor:0.3 },
+  { id:'snow_speedy',   name:'Speedy Sleet',      hp:25,  spd:5.8, dmg:5,  straw:8,   sz:0.8,  color:0xaaccff },
+  { id:'snow_boss',     name:'Blizzard Boss',     hp:380, spd:1.0, dmg:20, straw:100, sz:1.9,  color:0x2244aa },
+  { id:'snow_bomb',     name:'Bomb Snowman',      hp:90,  spd:1.5, dmg:15, straw:22,  sz:1.1,  color:0x444466 },
+  { id:'snow_shadow',   name:'Shadow Frost',      hp:65,  spd:3.2, dmg:12, straw:20,  sz:0.9,  color:0x222244 },
+  { id:'snow_giant',    name:'Ice Golem',         hp:750, spd:0.55,dmg:30, straw:120, sz:2.7,  color:0x8899bb },
+  { id:'yeti',          name:'Yeti',              hp:320, spd:1.3, dmg:22, straw:85,  sz:1.7,  color:0xeeeedd },
+  { id:'snow_troop',    name:'Snow Troop',        hp:30,  spd:3.2, dmg:4,  straw:6,   sz:0.85, color:0xccddee },
+  { id:'glacier',       name:'Glacier Giant',     hp:800, spd:0.5, dmg:35, straw:130, sz:2.9,  color:0x6688aa },
+];
+const WAVES_SNOW = [
+  [{t:'snow_basic',n:5}],
+  [{t:'snow_basic',n:4},{t:'snow_thrower',n:2}],
+  [{t:'snow_basic',n:3},{t:'snow_thrower',n:3}],
+  [{t:'snow_thrower',n:4},{t:'snow_speedy',n:3}],
+  [{t:'snow_thrower',n:3},{t:'snow_armor',n:2},{t:'snow_boss',n:1}],
+  [{t:'snow_basic',n:6},{t:'snow_thrower',n:3},{t:'snow_speedy',n:2}],
+  [{t:'snow_armor',n:3},{t:'snow_thrower',n:3}],
+  [{t:'snow_boss',n:1},{t:'snow_armor',n:2},{t:'snow_thrower',n:4}],
+  [{t:'snow_basic',n:8},{t:'snow_thrower',n:4}],
+  [{t:'snow_armor',n:4},{t:'snow_speedy',n:6},{t:'snow_boss',n:1}],
+  [{t:'snow_thrower',n:6},{t:'snow_armor',n:4},{t:'yeti',n:1}],
+  [{t:'snow_boss',n:2},{t:'snow_armor',n:3},{t:'snow_speedy',n:4}],
+  [{t:'snow_basic',n:10},{t:'snow_speedy',n:5},{t:'snow_thrower',n:4}],
+  [{t:'snow_thrower',n:5},{t:'snow_armor',n:4},{t:'yeti',n:2}],
+  [{t:'snow_boss',n:2},{t:'snow_armor',n:4},{t:'snow_speedy',n:3}],
+  [{t:'snow_basic',n:8},{t:'snow_thrower',n:6},{t:'snow_speedy',n:5},{t:'snow_armor',n:3}],
+  [{t:'snow_armor',n:5},{t:'snow_thrower',n:5},{t:'snow_boss',n:2},{t:'yeti',n:1}],
+  [{t:'snow_boss',n:3},{t:'snow_armor',n:5},{t:'snow_thrower',n:4}],
+  [{t:'snow_armor',n:6},{t:'snow_thrower',n:6},{t:'snow_speedy',n:5},{t:'snow_boss',n:2}],
+  [{t:'snow_boss',n:5},{t:'snow_armor',n:6},{t:'yeti',n:2},{t:'snow_thrower',n:4}],
+  [{t:'snow_speedy',n:12},{t:'snow_bomb',n:4},{t:'snow_basic',n:6}],
+  [{t:'snow_giant',n:1},{t:'snow_shadow',n:5},{t:'snow_armor',n:4}],
+  [{t:'snow_troop',n:14},{t:'snow_bomb',n:4},{t:'snow_thrower',n:5},{t:'yeti',n:1}],
+  [{t:'glacier',n:1},{t:'snow_shadow',n:6},{t:'snow_boss',n:3},{t:'snow_bomb',n:5},{t:'yeti',n:2}],
+];
+
+function getActiveData() {
+  if (gs.biome === 'jungle') return {
+    weapons: WEAPONS_JUNGLE, placeables: PLACEABLES_JUNGLE, defenses: DEFENSES_JUNGLE,
+    enemies: ENEMY_TYPES_JUNGLE, waves: WAVES_JUNGLE,
+    starter: 'vine_whip', resourceEmoji: '🍌', enemyName: 'monkeys',
+  };
+  if (gs.biome === 'snow') return {
+    weapons: WEAPONS_SNOW, placeables: PLACEABLES_SNOW, defenses: DEFENSES_SNOW,
+    enemies: ENEMY_TYPES_SNOW, waves: WAVES_SNOW,
+    starter: 'ice_pick', resourceEmoji: '❄️', enemyName: 'snowmen',
+  };
+  return {
+    weapons: WEAPONS, placeables: PLACEABLES, defenses: DEFENSE_ITEMS,
+    enemies: ENEMY_TYPES, waves: WAVES,
+    starter: 'carrot', resourceEmoji: '🌾', enemyName: 'scarecrows',
+  };
+}
+
 // ═══════════════════════════════════════
 //  GAME STATE
 // ═══════════════════════════════════════
@@ -561,6 +739,7 @@ const gs = {
   playerPos: new THREE.Vector3(5, 0.75, 0),
   playerVel: new THREE.Vector3(),
   skin: 'classic',
+  biome: 'garden',
   straw: 25,
   ownedWeapons: new Set(['carrot']),
   ownedPlaceables: new Set(),
@@ -677,7 +856,7 @@ function buildPlayerMesh() {
   // Weapon
   const wid = gs.hotbar[gs.activeSlot];
   if (wid) {
-    const wd = WEAPONS.find(w => w.id === wid);
+    const wd = getActiveData().weapons.find(w => w.id === wid);
     if (wd) { const wm = buildWeaponMesh(wd); wm.position.set(0.52,0.68,0.32); wm.scale.setScalar(0.72); g.add(wm); }
   }
   g._legL = legL; g._legR = legR; g._armL = armL; g._armR = armR;
@@ -928,7 +1107,7 @@ function doAttack() {
   if (!gameStarted || gs.betweenWaves || attackCd > 0) return;
   const wid = gs.hotbar[gs.activeSlot];
   if (!wid) return;
-  const wd = WEAPONS.find(w => w.id === wid);
+  const wd = getActiveData().weapons.find(w => w.id === wid);
   if (!wd) return;
   attackCd = wd.cd;
 
@@ -1032,12 +1211,13 @@ function dmgEnemy(e, dmg) {
 
 function killEnemy(e) {
   if (e._dead) return; e._dead = true;
-  sfxKill(e.data.id === 'boss' || e.data.id === 'giant' ? 0.65 : 0.38);
-  if (e.data.id === 'bomb') {
+  sfxKill(e.data.id === 'boss' || e.data.id === 'giant' || e.data.id === 'chimp_boss' || e.data.id === 'kong' || e.data.id === 'snow_boss' || e.data.id === 'snow_giant' || e.data.id === 'glacier' ? 0.65 : 0.38);
+  if (e.data.id === 'bomb' || e.data.id === 'bomb_monk' || e.data.id === 'snow_bomb') {
     const br = 3.5;
+    const fxCol = e.data.id === 'bomb_monk' ? 0x88ff00 : e.data.id === 'snow_bomb' ? 0x88ccff : 0xff6600;
     gs.enemies.forEach(e2 => { if (e2 !== e && e2.pos.distanceTo(e.pos) < br) dmgEnemy(e2, 45); });
     if (gs.playerPos.distanceTo(e.pos) < br) { gs.playerHP -= 32; if (gs.playerHP <= 0) { gs.playerHP = 0; endGame(); } sfxPlayerHurt(); }
-    spawnFX(e.pos.clone(), 0xff6600, 0.7, br * 0.55); sfxExplosion(0.65);
+    spawnFX(e.pos.clone(), fxCol, 0.7, br * 0.55); sfxExplosion(0.65);
   }
   scene.remove(e.mesh);
   gs.enemies = gs.enemies.filter(x => x !== e);
@@ -1045,7 +1225,7 @@ function killEnemy(e) {
   gs.straw += straw;
   gs.totalKills++;
   gs.waveEnemiesLeft = Math.max(0, gs.waveEnemiesLeft - 1);
-  floatText(e.pos.clone(), '+' + straw + '🌾', 0xFFD700);
+  floatText(e.pos.clone(), '+' + straw + getActiveData().resourceEmoji, 0xFFD700);
 }
 
 // ═══════════════════════════════════════
@@ -1181,20 +1361,28 @@ function spawnEnemyAttackFX(e, hitPos, dir) {
 
 function spawnEnemyFireball(pos, dir, enemyData) {
   sfxFireball();
-  const isIce = enemyData.id === 'ice';
-  const col = isIce ? 0x88ccff : 0xff4500;
+  const isIce = enemyData.id === 'ice' || enemyData.id === 'snow_thrower' || enemyData.id === 'snow_boss';
+  const isMonkey = ['howler','thrower','poison_monk'].includes(enemyData.id);
+  const col = isIce ? 0x88ccff : isMonkey ? 0xffe000 : 0xff4500;
   const g = new THREE.Group();
   if (isIce) {
-    // Blue ice crystal projectile
     const crystalM = new THREE.MeshStandardMaterial({ color: 0x88ccff, emissive: 0x88ccff, emissiveIntensity: 0.8, roughness: 0.05, metalness: 0.4 });
     const outer = new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 0), crystalM); g.add(outer);
     const inner = new THREE.Mesh(new THREE.OctahedronGeometry(0.15, 0), new THREE.MeshBasicMaterial({ color: 0xddeeff })); g.add(inner);
-    // Small side shards
     for (let i = 0; i < 4; i++) {
       const a = i/4*Math.PI*2;
       const shard = new THREE.Mesh(new THREE.OctahedronGeometry(0.09, 0), crystalM);
       shard.position.set(Math.cos(a)*0.2, 0, Math.sin(a)*0.2); g.add(shard);
     }
+  } else if (isMonkey) {
+    // Coconut / banana projectile
+    const outer = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8),
+      new THREE.MeshStandardMaterial({ color: col, roughness: 0.8 }));
+    g.add(outer);
+    // Little leaves on top
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.04),
+      new THREE.MeshStandardMaterial({ color: 0x228b22, roughness: 0.7 }));
+    leaf.position.y = 0.18; g.add(leaf);
   } else {
     const outer = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8),
       new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.95, roughness: 0.2 }));
@@ -1204,16 +1392,165 @@ function spawnEnemyFireball(pos, dir, enemyData) {
   }
   g.position.copy(pos); scene.add(g);
   gs.projectiles.push({ mesh: g, pos: pos.clone(), vel: dir.clone().multiplyScalar(7),
-    data: { color: col, dmg: enemyData.dmg, kind: 'fireball', freeze: isIce },
+    data: { color: col, dmg: enemyData.dmg, kind: 'fireball', freeze: isIce, poison: isMonkey && enemyData.id === 'poison_monk' },
     owner: 'enemy', timer: 3.0, hitSet: new Set(), bounceLeft: 0, _trailT: 0 });
 }
 
+function _addEnemyToScene(g, pos, data, sz) {
+  const hpBg = new THREE.Mesh(new THREE.PlaneGeometry(1.2*sz, 0.22), new THREE.MeshBasicMaterial({ color: 0x222222 }));
+  hpBg.rotation.x = -Math.PI/2; hpBg.position.y = 3.8*sz; g.add(hpBg);
+  const hpFill = new THREE.Mesh(new THREE.PlaneGeometry(1.2*sz, 0.2), new THREE.MeshBasicMaterial({ color: 0x44ff44 }));
+  hpFill.rotation.x = -Math.PI/2; hpFill.position.y = 3.82*sz; g.add(hpFill);
+  g.position.copy(pos); scene.add(g);
+  const scaledHP = data.hp * (1 + (gs.wave - 1) * 0.1);
+  gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, _dead: false, _hpFill: hpFill, _hpSz: 1.2*sz, _phase: Math.random() * Math.PI * 2, _swayZ: 0, _leanX: 0, _bob: 0 });
+}
+
+function spawnMonkey(data, pos) {
+  const sz = data.sz || 1;
+  const g = new THREE.Group();
+  const isBoss = data.id === 'chimp_boss' || data.id === 'kong';
+  const isArmor = data.id === 'alpha';
+  const bodyCol = data.color;
+  const darkCol = Math.max(0, bodyCol - 0x222222);
+  const S = (col, rough=0.8, met=0) => new THREE.MeshStandardMaterial({color:col, roughness:rough, metalness:met});
+  const mk = (geo, col, py=0, px=0, pz=0, rx=0, ry=0, rz=0) => {
+    const m = new THREE.Mesh(geo, S(col)); m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
+  };
+  // Legs
+  [-0.18*sz, 0.18*sz].forEach(x => mk(new THREE.CylinderGeometry(0.1*sz, 0.12*sz, 0.7*sz, 7), bodyCol, 0.35*sz, x));
+  // Feet
+  [-0.18*sz, 0.18*sz].forEach(x => mk(new THREE.SphereGeometry(0.14*sz, 6, 6), darkCol, 0.05*sz, x, 0.06*sz));
+  // Body
+  mk(new THREE.SphereGeometry(0.42*sz, 9, 8), bodyCol, 1.0*sz);
+  mk(new THREE.SphereGeometry(0.3*sz, 7, 7), 0xc8a070, 1.0*sz, 0, 0.32*sz); // belly patch
+  // Long arms
+  [-0.55*sz, 0.55*sz].forEach((x, i) => {
+    const lean = i === 0 ? 0.18 : -0.18;
+    mk(new THREE.CylinderGeometry(0.1*sz, 0.12*sz, 0.82*sz, 7), bodyCol, 0.82*sz, x, 0, lean, 0, i===0?0.55:-0.55);
+    mk(new THREE.SphereGeometry(0.12*sz, 6, 6), darkCol, 0.35*sz, x*1.12); // hand
+  });
+  // Tail
+  mk(new THREE.CylinderGeometry(0.04*sz, 0.07*sz, 0.7*sz, 6), bodyCol, 0.85*sz, 0, -0.38*sz, 0.6, 0, 0);
+  // Head — round
+  mk(new THREE.SphereGeometry(0.38*sz, 9, 9), bodyCol, 1.65*sz);
+  // Muzzle
+  mk(new THREE.SphereGeometry(0.22*sz, 7, 6), 0xc8a070, 1.58*sz, 0, 0.32*sz);
+  // Ears
+  [-0.34*sz, 0.34*sz].forEach(x => {
+    mk(new THREE.SphereGeometry(0.14*sz, 6, 6), bodyCol, 1.7*sz, x, 0.02*sz);
+    mk(new THREE.SphereGeometry(0.09*sz, 5, 5), 0xd4a080, 1.7*sz, x, 0.1*sz);
+  });
+  // Eyes
+  [-0.12*sz, 0.12*sz].forEach(x => mk(new THREE.SphereGeometry(0.06*sz, 5, 5), 0x111111, 1.72*sz, x, 0.35*sz));
+  // Nostrils
+  [-0.06*sz, 0.06*sz].forEach(x => mk(new THREE.SphereGeometry(0.035*sz, 4, 4), 0x553322, 1.56*sz, x, 0.42*sz));
+  if (isBoss) {
+    // Boss has a crown + bigger shoulders
+    mk(new THREE.TorusGeometry(0.44*sz, 0.07*sz, 5, 14), 0xffcc00, 1.98*sz, 0, 0, Math.PI/2);
+    mk(new THREE.SphereGeometry(0.1*sz, 5, 5), 0xff2222, 2.1*sz, 0, 0, 0, 0, 0);
+    // Aura rings
+    const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.75*sz, 0.07*sz, 6, 18), new THREE.MeshStandardMaterial({color:0x44ff44, emissive:0x44ff44, emissiveIntensity:1.2}));
+    ring1.rotation.x = Math.PI/2; ring1.position.y = 0.12; g.add(ring1);
+  }
+  if (isArmor) {
+    mk(new THREE.BoxGeometry(0.88*sz, 0.55*sz, 0.15*sz), 0x4a4a4a, 1.02*sz, 0, 0.4*sz, 0, 0, 0, 0.4, 0.75);
+  }
+  _addEnemyToScene(g, pos, data, sz);
+}
+
+function spawnSnowman(data, pos) {
+  const sz = data.sz || 1;
+  const g = new THREE.Group();
+  const isBoss = data.id === 'snow_boss' || data.id === 'snow_giant' || data.id === 'glacier';
+  const isYeti = data.id === 'yeti';
+  const isArmor = data.id === 'snow_armor';
+  const bodyCol = data.color;
+  const S = (col, rough=0.7, met=0, emCol=0, emInt=0) => {
+    const m = new THREE.MeshStandardMaterial({color:col, roughness:rough, metalness:met});
+    if (emInt>0) { m.emissive.setHex(emCol); m.emissiveIntensity=emInt; }
+    return m;
+  };
+  const mk = (geo, col, py=0, px=0, pz=0, rx=0, ry=0, rz=0, rough=0.7, met=0, emCol=0, emInt=0) => {
+    const m = new THREE.Mesh(geo, S(col, rough, met, emCol, emInt));
+    m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
+  };
+
+  if (isYeti) {
+    // Yeti is big and furry-white
+    mk(new THREE.CylinderGeometry(0.28*sz, 0.34*sz, 0.85*sz, 8), 0xeeeedd, 0.42*sz, -0.22*sz);
+    mk(new THREE.CylinderGeometry(0.28*sz, 0.34*sz, 0.85*sz, 8), 0xeeeedd, 0.42*sz,  0.22*sz);
+    mk(new THREE.SphereGeometry(0.55*sz, 9, 9), 0xeeeedd, 1.18*sz);
+    mk(new THREE.SphereGeometry(0.4*sz, 8, 8), 0xeeeedd, 2.0*sz);
+    // Arms
+    [-0.6*sz, 0.6*sz].forEach((x,i) => {
+      mk(new THREE.CylinderGeometry(0.12*sz,0.15*sz,0.9*sz,7), 0xeeeedd, 1.1*sz, x, 0, 0, 0, i===0?0.7:-0.7);
+    });
+    // Eyes
+    [-0.14*sz, 0.14*sz].forEach(x => mk(new THREE.SphereGeometry(0.07*sz, 5, 5), 0xff2200, 2.08*sz, x, 0.36*sz, 0,0,0, 0.5, 0, 0xff0000, 1.5));
+    // Mouth
+    mk(new THREE.BoxGeometry(0.3*sz, 0.07*sz, 0.06*sz), 0x111111, 1.9*sz, 0, 0.38*sz);
+    // Horns
+    mk(new THREE.ConeGeometry(0.06*sz, 0.3*sz, 6), 0xcc9900, 2.36*sz, -0.18*sz, 0.1*sz, 0.3, 0, -0.4);
+    mk(new THREE.ConeGeometry(0.06*sz, 0.3*sz, 6), 0xcc9900, 2.36*sz,  0.18*sz, 0.1*sz, 0.3, 0,  0.4);
+    _addEnemyToScene(g, pos, data, sz);
+    return;
+  }
+
+  // Standard snowman: 3 stacked spheres
+  mk(new THREE.SphereGeometry(0.52*sz, 10, 10), bodyCol, 0.52*sz); // bottom
+  if (isArmor) {
+    // Ice armor plate on bottom
+    mk(new THREE.SphereGeometry(0.54*sz, 10, 8), 0x88aacc, 0.52*sz, 0, 0, 0, 0, 0, 0.2, 0.7);
+  }
+  mk(new THREE.SphereGeometry(0.38*sz, 9, 9), bodyCol, 1.26*sz); // middle
+  // Stick arms
+  [-0.6*sz, 0.6*sz].forEach((x, i) => {
+    mk(new THREE.CylinderGeometry(0.04*sz, 0.06*sz, 0.72*sz, 6), 0x4a2800, 1.18*sz, x, 0, 0, 0, i===0?0.45:-0.45);
+    // Branch tips
+    mk(new THREE.CylinderGeometry(0.025*sz, 0.04*sz, 0.28*sz, 5), 0x3a1a00, 1.0*sz, x*1.2, 0, 0.25, 0, i===0?0.8:-0.8);
+  });
+  // Coal buttons on middle
+  [-0.1*sz, 0, 0.1*sz].forEach(y => mk(new THREE.SphereGeometry(0.04*sz, 4, 4), 0x111111, 1.26*sz + y, 0, 0.37*sz));
+  // Head
+  mk(new THREE.SphereGeometry(0.28*sz, 9, 9), bodyCol, 1.88*sz);
+  // Eyes (coal)
+  [-0.1*sz, 0.1*sz].forEach(x => mk(new THREE.SphereGeometry(0.05*sz, 5, 5), 0x111111, 1.92*sz, x, 0.26*sz));
+  // Carrot nose
+  mk(new THREE.ConeGeometry(0.04*sz, 0.22*sz, 7), 0xff6600, 1.88*sz, 0, 0.28*sz, -Math.PI/2, 0, 0);
+  // Mouth (3 small coal dots)
+  [-0.08*sz, 0, 0.08*sz].forEach(x => mk(new THREE.SphereGeometry(0.03*sz, 4, 4), 0x111111, 1.76*sz, x, 0.27*sz));
+  // Scarf
+  mk(new THREE.TorusGeometry(0.28*sz, 0.07*sz, 5, 14), 0xdd2222, 1.62*sz, 0, 0, Math.PI/2);
+
+  if (isBoss) {
+    // Boss has a tall top hat + glow ring
+    mk(new THREE.CylinderGeometry(0.38*sz, 0.38*sz, 0.07*sz, 10), 0x111111, 2.14*sz);
+    mk(new THREE.CylinderGeometry(0.22*sz, 0.28*sz, 0.52*sz, 8), 0x111111, 2.42*sz);
+    mk(new THREE.CylinderGeometry(0.28*sz, 0.28*sz, 0.06*sz, 8), 0x2244aa, 2.16*sz, 0, 0, 0, 0, 0, 0.3, 0.7);
+    // Glowing blue eyes
+    [-0.1*sz, 0.1*sz].forEach(x => {
+      const eye = g.children.find(c => c.position.x === x && Math.abs(c.position.y - 1.92*sz) < 0.05);
+      if (eye) eye.material = new THREE.MeshStandardMaterial({color:0x4488ff, emissive:0x88ccff, emissiveIntensity:2.0});
+    });
+    const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.8*sz, 0.07*sz, 6, 18), new THREE.MeshStandardMaterial({color:0x88ccff, emissive:0x88ccff, emissiveIntensity:1.2}));
+    ring1.rotation.x = Math.PI/2; ring1.position.y = 0.12; g.add(ring1);
+  } else {
+    // Regular hat
+    mk(new THREE.CylinderGeometry(0.34*sz, 0.34*sz, 0.06*sz, 10), 0x1a1a1a, 2.14*sz);
+    mk(new THREE.CylinderGeometry(0.2*sz, 0.24*sz, 0.36*sz, 8), 0x1a1a1a, 2.34*sz);
+  }
+  _addEnemyToScene(g, pos, data, sz);
+}
+
 function spawnEnemy(typeId) {
-  const data = ENEMY_TYPES.find(e => e.id === typeId);
+  const data = getActiveData().enemies.find(e => e.id === typeId);
   if (!data) return;
   const angle = Math.random() * Math.PI * 2;
   const r = FARM_R + 2 + Math.random() * 3;
   const pos = new THREE.Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+  if (gs.biome === 'jungle') { spawnMonkey(data, pos); return; }
+  if (gs.biome === 'snow')   { spawnSnowman(data, pos); return; }
   const sz = data.sz || 1;
   const g = new THREE.Group();
   const smat = (col, rough=0.85, met=0, emCol=0, emInt=0) => {
@@ -1404,14 +1741,15 @@ function updateEnemies(dt) {
       e._hpFill.material.color.setHex(pct > 0.5 ? 0x44ff44 : pct > 0.25 ? 0xff8800 : 0xff2222);
     }
 
-    // Shadow teleport
-    if (e.data.id === 'shadow') {
+    // Shadow / Stealth teleport
+    if (e.data.id === 'shadow' || e.data.id === 'stealth_monk' || e.data.id === 'snow_shadow') {
       e._teleportTimer = (e._teleportTimer || 3.5) - dt;
       if (e._teleportTimer <= 0 && dist > 3) {
         e._teleportTimer = 3.2 + Math.random() * 1.5;
         e.pos.add(dir.clone().multiplyScalar(Math.min(9, dist * 0.55)));
         e.mesh.position.copy(e.pos);
-        spawnFX(e.pos.clone(), 0x8800ff, 0.4, 0.9);
+        const fxCol = e.data.id === 'stealth_monk' ? 0x44ff00 : e.data.id === 'snow_shadow' ? 0x88ccff : 0x8800ff;
+        spawnFX(e.pos.clone(), fxCol, 0.4, 0.9);
       }
     }
     e.attackCd = Math.max(0, e.attackCd - dt);
@@ -1482,7 +1820,8 @@ function triggerRandomEvent() {
     gs.straw += 100;
     floatText(gs.playerPos.clone().add(new THREE.Vector3(0,2,0)), '+100🌾', 0xFFD700);
   } else if (ev.id === 'stampede') {
-    for (let i = 0; i < 12; i++) spawnEnemy('basic');
+    const starterId = getActiveData().enemies[0].id;
+    for (let i = 0; i < 12; i++) spawnEnemy(starterId);
     gs.waveEnemiesLeft += 12;
   } else if (ev.dur) {
     gs.activeEvents[ev.id] = ev.dur;
@@ -1554,7 +1893,7 @@ function updateEventSystem(dt) {
 function startNextWave() {
   gs.betweenWaves = false; gs.waveActive = true;
   gs.wave++;
-  const waveData = WAVES[(gs.wave - 1) % WAVES.length];
+  const waveData = getActiveData().waves[(gs.wave - 1) % getActiveData().waves.length];
   gs.spawnQueue = [];
   waveData.forEach(({ t, n }) => { for (let i = 0; i < n; i++) gs.spawnQueue.push(t); });
   gs.spawnQueue.sort(() => Math.random() - 0.5);
@@ -1572,7 +1911,7 @@ function checkWaveEnd() {
   const bonus = gs.wave * 10;
   gs.straw += bonus;
   showToast('Wave ' + gs.wave + ' cleared! +' + bonus + ' straw bonus! 🎉', 3000);
-  if (gs.wave >= WAVES.length) setTimeout(() => { stopBattleTheme(); showScreen('victory'); }, 2000);
+  if (gs.wave >= getActiveData().waves.length) setTimeout(() => { stopBattleTheme(); showScreen('victory'); }, 2000);
   saveGame();
 }
 
@@ -1841,6 +2180,152 @@ function buildPlantMesh(data) {
       add(new THREE.ConeGeometry(0.05,0.3,4), new THREE.MeshStandardMaterial({color:0xccecff, roughness:0.05, metalness:0.6, emissive:0x88ccff, emissiveIntensity:0.5}), 1.06);
       break;
     }
+    // ── Jungle plants ──────────────────────────────
+    case 'pitcher': {
+      add(new THREE.CylinderGeometry(0.06,0.08,0.5,7), S(0x228B22), 0.25);
+      // Pitcher body — green cup shape
+      const pitM = new THREE.MeshStandardMaterial({color:0x006400, roughness:0.55});
+      const pit = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.16,0.58,10), pitM); pit.position.y=0.82; pit.castShadow=true; g.add(pit);
+      // Lip at top
+      add(new THREE.TorusGeometry(0.22,0.05,5,12), S(0x228b22), 1.12, 0, 0, Math.PI/2);
+      // Inner glowing red mouth
+      add(new THREE.CylinderGeometry(0.18,0.14,0.08,10), new THREE.MeshStandardMaterial({color:0xff2200, emissive:0xff0000, emissiveIntensity:0.6}), 1.1);
+      // Lid (half open)
+      add(new THREE.BoxGeometry(0.46,0.06,0.3), S(0x006400), 1.18, 0, 0.16, 0.4);
+      break;
+    }
+    case 'dart_fern': {
+      add(new THREE.CylinderGeometry(0.05,0.07,0.52,7), S(0x3cb371), 0.26);
+      // Fan of fern leaves
+      for (let i = 0; i < 5; i++) {
+        const a = (i/5 - 0.5) * Math.PI * 1.1;
+        add(new THREE.BoxGeometry(0.08,0.48,0.05), S(0x3cb371), 0.64, Math.sin(a)*0.18, 0, -a, 0, 0);
+      }
+      add(new THREE.SphereGeometry(0.12,6,6), S(0xaaff44), 0.92);
+      break;
+    }
+    case 'fire_orchid': {
+      add(new THREE.CylinderGeometry(0.05,0.07,0.5,7), S(0x228B22), 0.25);
+      add(new THREE.SphereGeometry(0.14,6,6), S(0x228b22), 0.58);
+      // Petals
+      for (let i = 0; i < 5; i++) {
+        const a = i/5*Math.PI*2;
+        add(new THREE.BoxGeometry(0.1,0.38,0.06), new THREE.MeshStandardMaterial({color:0xff2200, emissive:0xff2200, emissiveIntensity:0.3}), 0.78, Math.cos(a)*0.18, Math.sin(a)*0.06, 0, a, 0.35);
+      }
+      add(new THREE.SphereGeometry(0.1,6,6), new THREE.MeshStandardMaterial({color:0xff8800, emissive:0xff6600, emissiveIntensity:0.8}), 0.92);
+      break;
+    }
+    case 'vine_trap': {
+      add(new THREE.SphereGeometry(0.38,8,8), S(0x228b22), 0.38);
+      for (let i = 0; i < 6; i++) {
+        const a = i/6*Math.PI*2, r = 0.32;
+        add(new THREE.CylinderGeometry(0.04,0.02,0.32,5), S(0x3a7a10), 0.38+Math.sin(i)*0.08, Math.cos(a)*r, Math.sin(a)*r, 0.6*Math.cos(a), a, 0);
+      }
+      add(new THREE.SphereGeometry(0.15,6,6), new THREE.MeshStandardMaterial({color:0x88ff44, emissive:0x44ff00, emissiveIntensity:0.3}), 0.78);
+      break;
+    }
+    case 'jungle_mine': {
+      add(new THREE.CylinderGeometry(0.28,0.32,0.12,8), S(0x8b6914), 0.06);
+      for (let ix=-1;ix<=1;ix++) for (let iz=-1;iz<=1;iz++) {
+        add(new THREE.ConeGeometry(0.04,0.28,5), S(0x5a4010), 0.2, ix*0.24, iz*0.24);
+      }
+      break;
+    }
+    case 'heal_fern': {
+      add(new THREE.CylinderGeometry(0.05,0.07,0.42,7), S(0x228B22), 0.21);
+      for (let i = 0; i < 4; i++) {
+        const a = i/4*Math.PI*2;
+        add(new THREE.BoxGeometry(0.06,0.42,0.06), S(0x00ff7f), 0.52, Math.cos(a)*0.12, Math.sin(a)*0.06, 0, a, 0.3);
+      }
+      add(new THREE.SphereGeometry(0.12,6,6), new THREE.MeshStandardMaterial({color:0x00ff88, emissive:0x00ff88, emissiveIntensity:0.5}), 0.82);
+      break;
+    }
+    case 'spider_nest': {
+      add(new THREE.SphereGeometry(0.35,8,8), S(0x4b2e10), 0.35);
+      // Web strands
+      for (let i = 0; i < 6; i++) {
+        const a = i/6*Math.PI*2;
+        add(new THREE.CylinderGeometry(0.02,0.02,0.46,4), S(0xcccccc), 0.35, Math.cos(a)*0.22, Math.sin(a)*0.22, Math.PI/2, a, 0);
+      }
+      // Spider on top
+      add(new THREE.SphereGeometry(0.1,6,6), S(0x111111), 0.66);
+      [-0.1,0.1].forEach(x => add(new THREE.SphereGeometry(0.04,4,4), S(0x111111), 0.66, x, 0.1));
+      break;
+    }
+    case 'freeze_bloom': case 'drum_totem': case 'kong_cannon': case 'mist_cloud':
+    case 'lightning_tree': case 'giant_blossom': case 'thorn_wall': case 'toxic_pool': {
+      add(new THREE.CylinderGeometry(0.08,0.1,0.7,8), S(0x228B22), 0.35);
+      add(new THREE.SphereGeometry(0.32,8,8), new THREE.MeshStandardMaterial({color:data.color||0x00ff00, roughness:0.55, emissive:data.color||0x00ff00, emissiveIntensity:0.2}), 0.85);
+      break;
+    }
+    // ── Snow plants ──────────────────────────────
+    case 'snow_turret': {
+      add(new THREE.CylinderGeometry(0.28,0.34,0.42,8), S(0xffffff), 0.21);
+      // Snowball body
+      add(new THREE.SphereGeometry(0.26,9,9), S(0xeeeeff), 0.66);
+      // Gun barrel
+      add(new THREE.CylinderGeometry(0.07,0.09,0.42,8), S(0xaabbcc), 0.66, 0, 0, Math.PI/2, 0, 0);
+      add(new THREE.CylinderGeometry(0.09,0.07,0.06,8), S(0x8899aa), 0.66, 0.24);
+      break;
+    }
+    case 'freeze_tower': {
+      add(new THREE.CylinderGeometry(0.24,0.3,0.45,8), S(0x99ccee), 0.22);
+      add(new THREE.CylinderGeometry(0.18,0.24,0.55,8), S(0x88bbdd), 0.7);
+      add(new THREE.SphereGeometry(0.22,8,8), new THREE.MeshStandardMaterial({color:0x88ccff, emissive:0x88ccff, emissiveIntensity:0.7}), 1.22);
+      for (let i=0;i<4;i++) { const a=i/4*Math.PI*2; add(new THREE.ConeGeometry(0.04,0.2,4), S(0xaaddff), 1.22+Math.sin(i)*0.04, Math.cos(a)*0.2, Math.sin(a)*0.2, Math.PI/2, a, 0); }
+      break;
+    }
+    case 'campfire_plt': {
+      add(new THREE.CylinderGeometry(0.36,0.42,0.12,8), S(0x555555), 0.06);
+      for (let i=0;i<5;i++) { const a=i/5*Math.PI*2; add(new THREE.CylinderGeometry(0.04,0.06,0.38,6), S(0x5c3317), 0.2, Math.cos(a)*0.2, Math.sin(a)*0.2, 0.35*Math.cos(a+1.5), 0, 0.35*Math.sin(a)); }
+      add(new THREE.ConeGeometry(0.12,0.32,7), new THREE.MeshStandardMaterial({color:0xff6600, emissive:0xff4400, emissiveIntensity:0.9}), 0.38);
+      add(new THREE.ConeGeometry(0.08,0.22,6), new THREE.MeshStandardMaterial({color:0xffdd00, emissive:0xffaa00, emissiveIntensity:1.0}), 0.44);
+      break;
+    }
+    case 'icicle_mine': {
+      add(new THREE.CylinderGeometry(0.26,0.3,0.1,8), S(0x99ccee), 0.05);
+      for (let ix=-1;ix<=1;ix++) for (let iz=-1;iz<=1;iz++) {
+        add(new THREE.ConeGeometry(0.04,0.3,4), new THREE.MeshStandardMaterial({color:0xaaddff, emissive:0x88ccff, emissiveIntensity:0.3}), 0.17, ix*0.22, iz*0.22);
+      }
+      break;
+    }
+    case 'hot_spring': {
+      const wsM = new THREE.MeshStandardMaterial({color:0xff8844, roughness:0.1, metalness:0.1, emissive:0xff6622, emissiveIntensity:0.3});
+      add(new THREE.CylinderGeometry(0.42,0.46,0.15,12), S(0x888878), 0.07);
+      const pool = new THREE.Mesh(new THREE.CircleGeometry(0.36,12), wsM); pool.rotation.x=-Math.PI/2; pool.position.y=0.16; g.add(pool);
+      // Steam wisps
+      add(new THREE.CylinderGeometry(0.04,0.08,0.3,6), new THREE.MeshStandardMaterial({color:0xffffff, transparent:true, opacity:0.5}), 0.36);
+      add(new THREE.CylinderGeometry(0.03,0.06,0.25,5), new THREE.MeshStandardMaterial({color:0xffffff, transparent:true, opacity:0.4}), 0.38, 0.12);
+      break;
+    }
+    case 'ice_wall': {
+      add(new THREE.BoxGeometry(1.0,1.1,0.18), new THREE.MeshStandardMaterial({color:0x99ccee, roughness:0.08, metalness:0.3, emissive:0x88bbdd, emissiveIntensity:0.2, transparent:true, opacity:0.88}), 0.55);
+      for (let x=-0.3;x<=0.3;x+=0.3) add(new THREE.ConeGeometry(0.06,0.22,4), S(0xaaddff), 1.18, x);
+      break;
+    }
+    case 'penguin': {
+      // Base
+      add(new THREE.CylinderGeometry(0.16,0.18,0.22,8), S(0x111111), 0.11);
+      // Body — round black
+      add(new THREE.SphereGeometry(0.28,8,8), S(0x111111), 0.52);
+      // White belly
+      add(new THREE.SphereGeometry(0.2,7,7), S(0xffffff), 0.52, 0, 0.2);
+      // Head
+      add(new THREE.SphereGeometry(0.2,7,7), S(0x111111), 0.9);
+      // Eyes
+      [-0.07,0.07].forEach(x => add(new THREE.SphereGeometry(0.04,4,4), S(0xffffff), 0.95, x, 0.18));
+      // Beak
+      add(new THREE.ConeGeometry(0.04,0.1,6), S(0xff8800), 0.9, 0, 0.2, -Math.PI/2, 0, 0);
+      break;
+    }
+    case 'frost_aura': case 'zap_crystal': case 'ice_cannon': case 'snow_barricade':
+    case 'bliz_machine': case 'yeti_totem': case 'ice_giant_plt': case 'frost_crystal': {
+      add(new THREE.CylinderGeometry(0.08,0.1,0.65,8), S(0x99ccee), 0.32);
+      const cM = new THREE.MeshStandardMaterial({color:data.color||0x88ccff, roughness:0.1, metalness:0.4, emissive:data.color||0x88ccff, emissiveIntensity:0.4});
+      add(new THREE.OctahedronGeometry(0.28,0), cM, 0.88);
+      for (let i=0;i<4;i++) { const a=i/4*Math.PI*2; add(new THREE.ConeGeometry(0.03,0.18,4), cM, 0.88, Math.cos(a)*0.22, Math.sin(a)*0.22, Math.PI/2, a, 0); }
+      break;
+    }
     default: {
       add(new THREE.CylinderGeometry(0.1,0.15,0.8,8), S(0x228B22), 0.4);
       add(new THREE.SphereGeometry(0.38,10,10), S(data.color||0x00ff00), 0.9);
@@ -1928,8 +2413,9 @@ function placeAtMouse() {
   const x = mouseWorld.x, z = mouseWorld.z;
   if (Math.hypot(x, z) > FARM_R - 0.5) { showToast('Place inside the farm!'); return; }
 
-  const pd = PLACEABLES.find(p => p.id === gs.placeId);
-  const dd = DEFENSE_ITEMS.find(d => d.id === gs.placeId);
+  const ad = getActiveData();
+  const pd = ad.placeables.find(p => p.id === gs.placeId);
+  const dd = ad.defenses.find(d => d.id === gs.placeId);
   const data = pd || dd;
   if (!data) return;
 
@@ -2085,7 +2571,7 @@ function buildHotbar() {
   const hb = document.getElementById('hotbar');
   hb.innerHTML = '';
   gs.hotbar.forEach((id, i) => {
-    const wd = id ? WEAPONS.find(w => w.id === id) : null;
+    const wd = id ? getActiveData().weapons.find(w => w.id === id) : null;
     const d = document.createElement('div');
     d.className = 'hotslot' + (gs.activeSlot === i ? ' active' : '');
     d.innerHTML = `<span class="sk">${i + 1}</span>${wd ? `<span class="se">${wd.emoji}</span><span class="sn">${wd.name.split(' ')[0]}</span>` : '<span style="color:#444;font-size:20px">—</span>'}`;
@@ -2100,10 +2586,13 @@ function updateHUD() {
   document.getElementById('hp-bar').style.background = pct > 0.5 ? '#4CAF50' : pct > 0.25 ? '#ff9800' : '#f44';
   document.getElementById('hp-txt').textContent = Math.ceil(gs.playerHP) + '/' + gs.playerMaxHP;
   document.getElementById('straw-txt').textContent = gs.straw;
+  const _semoji = document.getElementById('straw-emoji');
+  if (_semoji) _semoji.textContent = getActiveData().resourceEmoji;
   const wi = document.getElementById('wave-info');
+  const totalWaves = getActiveData().waves.length;
   wi.textContent = gs.betweenWaves
-    ? (gs.wave === 0 ? (isMobile ? 'Tap ▶ START WAVE' : 'Press SPACE to start!') : 'Wave ' + gs.wave + '/20 done!')
-    : 'Wave ' + gs.wave + '/20 — ' + (gs.enemies.length + gs.spawnQueue.length) + ' enemies left';
+    ? (gs.wave === 0 ? (isMobile ? 'Tap ▶ START WAVE' : 'Press SPACE to start!') : 'Wave ' + gs.wave + '/' + totalWaves + ' done!')
+    : 'Wave ' + gs.wave + '/' + totalWaves + ' — ' + (gs.enemies.length + gs.spawnQueue.length) + ' left';
   const wsb = document.getElementById('wave-start-btn');
   if (wsb) wsb.style.display = (isMobile && gameStarted && gs.betweenWaves) ? 'block' : 'none';
 }
@@ -2139,6 +2628,10 @@ function shopTab(tab) {
 
 function renderShop() {
   document.getElementById('shop-straw').textContent = gs.straw;
+  const _sse = document.getElementById('shop-straw-emoji');
+  if (_sse) _sse.textContent = getActiveData().resourceEmoji;
+  const _st = document.getElementById('shop-title');
+  if (_st) _st.textContent = gs.biome === 'jungle' ? '🌿 Jungle Shop' : gs.biome === 'snow' ? '❄️ Tundra Shop' : '🛒 Farm Shop';
   const c = document.getElementById('shop-content');
   c.innerHTML = '';
 
@@ -2161,7 +2654,8 @@ function renderShop() {
     return;
   }
 
-  const items = currentShopTab === 'weapons' ? WEAPONS : currentShopTab === 'plants' ? PLACEABLES : DEFENSE_ITEMS;
+  const _ad = getActiveData();
+  const items = currentShopTab === 'weapons' ? _ad.weapons : currentShopTab === 'plants' ? _ad.placeables : _ad.defenses;
   items.forEach(item => {
     const owned = currentShopTab === 'weapons' && gs.ownedWeapons.has(item.id);
     const afford = gs.straw >= item.cost;
@@ -2221,7 +2715,8 @@ function equipWeapon(id) {
 
 function startPlace(id) {
   gs.placeMode = true; gs.placeId = id;
-  const item = [...PLACEABLES, ...DEFENSE_ITEMS].find(x => x.id === id);
+  const _adb = getActiveData();
+  const item = [..._adb.placeables, ..._adb.defenses].find(x => x.id === id);
   const ab = document.getElementById('attack-btn');
   if (ab) ab.textContent = '🌱';
   showToast((isMobile ? 'Tap ▶ to place ' : 'Click to place ') + (item ? item.name : id) + '!', 3000);
@@ -2268,14 +2763,38 @@ function showScreen(id) {
   if (id === 'menu') {
     inn.innerHTML = `<div class="stitle">🌱 Garden Farmers</div>
       <div class="ssub">Grow plants. Arm yourself. Defend your farm!</div>
-      <button class="bbtn" onclick="showScreen('skins')">▶ New Game</button>
+      <button class="bbtn" onclick="showScreen('biome')">▶ New Game</button>
       ${hasSave() ? `<button class="bbtn" style="background:#1565c0" onclick="loadAndPlay()">📂 Continue</button>` : ''}
       <br><div style="color:#555;font-size:12px;margin-top:18px">A Titan Blade Games game • Made by Oliver</div>`;
+  } else if (id === 'biome') {
+    inn.innerHTML = `<div class="stitle" style="font-size:36px">Choose Your Biome</div>
+      <div class="ssub">Each biome has its own enemies, weapons and plants!</div>
+      <div style="display:flex;gap:18px;margin:18px 0;flex-wrap:wrap;justify-content:center">
+        <div class="skin-card" id="biome-garden" onclick="selectBiome('garden')" style="width:140px;padding:16px">
+          <div class="sc-e">🌱</div>
+          <div class="sc-n" style="font-size:13px;font-weight:bold;color:#4CAF50">Garden Farm</div>
+          <div style="font-size:10px;color:#aaa;margin-top:5px">Fight scarecrows!<br>Classic farm fun</div>
+        </div>
+        <div class="skin-card" id="biome-jungle" onclick="selectBiome('jungle')" style="width:140px;padding:16px">
+          <div class="sc-e">🌿</div>
+          <div class="sc-n" style="font-size:13px;font-weight:bold;color:#22cc55">Jungle Forest</div>
+          <div style="font-size:10px;color:#aaa;margin-top:5px">Fight monkeys!<br>Dense & dangerous</div>
+        </div>
+        <div class="skin-card" id="biome-snow" onclick="selectBiome('snow')" style="width:140px;padding:16px">
+          <div class="sc-e">❄️</div>
+          <div class="sc-n" style="font-size:13px;font-weight:bold;color:#88ccff">Snowy Tundra</div>
+          <div style="font-size:10px;color:#aaa;margin-top:5px">Fight snowmen!<br>Icy & treacherous</div>
+        </div>
+      </div>
+      <button class="bbtn gray" onclick="showScreen('menu')">Back</button>`;
+    // highlight current
+    const bc = document.getElementById('biome-' + gs.biome);
+    if (bc) bc.style.borderColor = '#FFD700';
   } else if (id === 'skins') {
     inn.innerHTML = `<div class="stitle" style="font-size:38px">Choose Your Farmer</div>
       <div class="skin-grid" id="skg"></div>
-      <button class="bbtn" onclick="startGame()">Start Farming! 🌾</button>
-      <button class="bbtn gray" onclick="showScreen('menu')">Back</button>`;
+      <button class="bbtn" onclick="startGame()">Let's Go! ▶</button>
+      <button class="bbtn gray" onclick="showScreen('biome')">Back</button>`;
     const g = document.getElementById('skg');
     SKINS.forEach(s => {
       const d = document.createElement('div');
@@ -2285,16 +2804,72 @@ function showScreen(id) {
       g.appendChild(d);
     });
   } else if (id === 'gameover') {
-    inn.innerHTML = `<div class="stitle" style="color:#f44">💀 Farm Destroyed!</div>
-      <div class="ssub">The scarecrows won this time...</div>
-      <div style="color:#FFD700;font-size:18px;margin:10px">Waves: ${gs.wave} | Kills: ${gs.totalKills} | Straw: ${gs.straw}</div>
-      <button class="bbtn" onclick="showScreen('skins')">🔄 Try Again</button>
+    const en = getActiveData().enemyName;
+    inn.innerHTML = `<div class="stitle" style="color:#f44">💀 ${gs.biome === 'snow' ? '🏔️' : gs.biome === 'jungle' ? '🌿' : '🌾'} Defeated!</div>
+      <div class="ssub">The ${en} won this time...</div>
+      <div style="color:#FFD700;font-size:18px;margin:10px">Waves: ${gs.wave} | Kills: ${gs.totalKills} | ${getActiveData().resourceEmoji} ${gs.straw}</div>
+      <button class="bbtn" onclick="showScreen('biome')">🔄 Try Again</button>
       <button class="bbtn gray" onclick="showScreen('menu')">Menu</button>`;
   } else if (id === 'victory') {
+    const totalW = getActiveData().waves.length;
     inn.innerHTML = `<div class="stitle">🏆 YOU WIN!</div>
-      <div class="ssub">You defended your farm through all 20 waves!</div>
-      <div style="color:#FFD700;font-size:20px;margin:10px">🌾 ${gs.straw} straw | 💀 ${gs.totalKills} scarecrows defeated</div>
+      <div class="ssub">You survived all ${totalW} waves in the ${gs.biome === 'snow' ? 'Snowy Tundra' : gs.biome === 'jungle' ? 'Jungle Forest' : 'Garden Farm'}!</div>
+      <div style="color:#FFD700;font-size:20px;margin:10px">${getActiveData().resourceEmoji} ${gs.straw} | 💀 ${gs.totalKills} ${getActiveData().enemyName} defeated</div>
       <button class="bbtn" onclick="showScreen('menu')">Main Menu</button>`;
+  }
+}
+
+function selectBiome(biome) {
+  gs.biome = biome;
+  showScreen('skins');
+}
+
+function applyBiomeTheme(biome) {
+  if (biome === 'jungle') {
+    scene.fog.color.setHex(0x1a5520);
+    hemiLight.color.setHex(0x44aa22);
+    hemiLight.groundColor.setHex(0x2d5e00);
+    sun.color.setHex(0xffee88);
+    if (window._skyCtx) {
+      const ctx = window._skyCtx, c = window._skyCanvas;
+      const g = ctx.createLinearGradient(0, 0, 0, 256);
+      g.addColorStop(0,    '#020e04');
+      g.addColorStop(0.45, '#0a2d10');
+      g.addColorStop(0.75, '#154020');
+      g.addColorStop(1,    '#225530');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
+      window._skyMesh.material.map.needsUpdate = true;
+    }
+  } else if (biome === 'snow') {
+    scene.fog.color.setHex(0x99bbdd);
+    hemiLight.color.setHex(0xaaccee);
+    hemiLight.groundColor.setHex(0x8899aa);
+    sun.color.setHex(0xeeeeff);
+    if (window._skyCtx) {
+      const ctx = window._skyCtx, c = window._skyCanvas;
+      const g = ctx.createLinearGradient(0, 0, 0, 256);
+      g.addColorStop(0,    '#1a2a40');
+      g.addColorStop(0.45, '#3a5575');
+      g.addColorStop(0.75, '#6688aa');
+      g.addColorStop(1,    '#99bbcc');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
+      window._skyMesh.material.map.needsUpdate = true;
+    }
+  } else {
+    scene.fog.color.setHex(0x3a5a78);
+    hemiLight.color.setHex(0x6688bb);
+    hemiLight.groundColor.setHex(0x336611);
+    sun.color.setHex(0xfff0cc);
+    if (window._skyCtx) {
+      const ctx = window._skyCtx, c = window._skyCanvas;
+      const g = ctx.createLinearGradient(0, 0, 0, 256);
+      g.addColorStop(0,    '#060e22');
+      g.addColorStop(0.45, '#0d2a55');
+      g.addColorStop(0.75, '#1a3d6e');
+      g.addColorStop(1,    '#2a5080');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
+      window._skyMesh.material.map.needsUpdate = true;
+    }
   }
 }
 
@@ -2302,10 +2877,12 @@ function startGame() {
   stopTheme();
   startBattleTheme();
   resetGame();
+  applyBiomeTheme(gs.biome);
   document.getElementById('screen').classList.add('hidden');
   gameStarted = true;
   buildPlayerMesh(); buildHotbar(); updateHUD();
-  showToast(isMobile ? 'Tap ▶ START WAVE to begin!' : 'Welcome! Press SPACE to start Wave 1!', 4000);
+  const biomeMsg = gs.biome === 'jungle' ? '🌿 Welcome to the Jungle! Watch out for monkeys!' : gs.biome === 'snow' ? '❄️ Brr! Defend against the snowmen!' : '🌾 Welcome! Press SPACE to start Wave 1!';
+  showToast(isMobile ? 'Tap ▶ START WAVE to begin!' : biomeMsg, 4000);
 }
 
 function loadAndPlay() {
@@ -2367,8 +2944,9 @@ function resetGame() {
   gs.playerPos.set(5, 0.75, 0); gs.playerVel.set(0, 0, 0);
   gs.wave = 0; gs.waveActive = false; gs.betweenWaves = true;
   gs.barnHP = 200; gs.barnMaxHP = 200;
-  gs.ownedWeapons = new Set(['carrot']); gs.ownedPlaceables = new Set();
-  gs.hotbar = ['carrot', null, null, null, null]; gs.activeSlot = 0;
+  const _starter = getActiveData().starter;
+  gs.ownedWeapons = new Set([_starter]); gs.ownedPlaceables = new Set();
+  gs.hotbar = [_starter, null, null, null, null]; gs.activeSlot = 0;
   gs.totalKills = 0; attackCd = 0;
   gs.playerSlowTimer = 0;
   gs.eventTimer = 90; gs.activeEvents = {}; gs._strawRainTick = 0;
