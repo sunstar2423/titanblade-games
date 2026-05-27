@@ -559,7 +559,7 @@ const WAVES = [
 const WEAPONS_JUNGLE = [
   { id:'vine_whip',    name:'Vine Whip',       emoji:'🌿', cost:0,  desc:'Fast vine — PULLS enemies toward you',        kind:'melee',    dmg:18, range:4.5, cd:0.45, color:0x228b22, pull:true },
   { id:'banana_bomb',  name:'Banana Bomb',     emoji:'🍌', cost:30, desc:'Thrown AoE banana explosion',                 kind:'throw',    dmg:42, range:12,  cd:1.5,  aoe:3.2, color:0xffe000 },
-  { id:'blowdart',     name:'Blowdart Gun',    emoji:'🎯', cost:20, desc:'Fast dart — POISONS enemies (DoT dmg)',       kind:'melee',    dmg:14, range:14,  cd:0.25, color:0x8b4513, poison:true },
+  { id:'blowdart',     name:'Blowdart Gun',    emoji:'🎯', cost:20, desc:'Fast dart — POISONS enemies (DoT dmg)',       kind:'dart',     dmg:14, range:14,  cd:0.25, color:0x8b4513, poison:true },
   { id:'coconut',      name:'Coconut Crusher', emoji:'🥥', cost:40, desc:'Heavy knockback slam',                        kind:'heavy',    dmg:70, range:2.5, cd:2.0,  color:0x7a5c3c },
   { id:'thorn_burst',  name:'Thorn Burst',     emoji:'🌵', cost:35, desc:'Shotgun burst of thorns',                    kind:'shotgun',  dmg:9,  range:6,   cd:1.0,  pellets:7, color:0x556b2f },
   { id:'boomstick',    name:'Boomerang Stick', emoji:'🪃', cost:30, desc:'Boomerang hits twice on return',              kind:'boomerang',dmg:28, range:14,  cd:1.0,  color:0xa0522d },
@@ -638,7 +638,7 @@ const WAVES_JUNGLE = [
 const WEAPONS_SNOW = [
   { id:'ice_pick',      name:'Ice Pick',          emoji:'🧊', cost:0,  desc:'Fast stab — +50% dmg on frozen enemies!',     kind:'melee',    dmg:16, range:2.5, cd:0.38, color:0x88ccff, shatter:true },
   { id:'snowball',      name:'Snowball Cannon',   emoji:'⛄', cost:30, desc:'Thrown AoE snowball blast',                    kind:'throw',    dmg:38, range:12,  cd:1.5,  aoe:3.0, color:0xffffff },
-  { id:'icicle',        name:'Icicle Javelin',    emoji:'❄️', cost:40, desc:'Heavy javelin — PIERCES through all enemies!', kind:'heavy',    dmg:72, range:2.5, cd:1.8,  color:0xaaddff, pierce:true },
+  { id:'icicle',        name:'Icicle Javelin',    emoji:'❄️', cost:40, desc:'Heavy javelin — PIERCES through all enemies!', kind:'javelin',  dmg:72, range:16,  cd:1.8,  color:0xaaddff, pierce:true },
   { id:'blizzard_gun',  name:'Blizzard Burst',    emoji:'🌨️', cost:35, desc:'Shotgun burst of ice shards',                  kind:'shotgun',  dmg:8,  range:6,   cd:0.9,  pellets:7, color:0xcceeee },
   { id:'frost_chain',   name:'Frost Chain',       emoji:'🌀', cost:25, desc:'Chain whip — CHAINS to 3 nearby enemies',      kind:'melee',    dmg:20, range:6.5, cd:0.7,  color:0x66aaff, chainMelee:3 },
   { id:'snowflake_c',   name:'Snowflake Chakram', emoji:'🔷', cost:30, desc:'Returns and hits twice',                        kind:'boomerang',dmg:26, range:14,  cd:1.0,  color:0x99ddff },
