@@ -1311,7 +1311,7 @@ function updateProjectiles(dt) {
     p.timer -= dt;
     if (p.timer <= 0) {
       if (p.data.aoe && p.owner === 'weapon') {
-        gs.enemies.forEach(e => { if (p.pos.distanceTo(e.pos) < p.data.aoe) dmgEnemy(e, p.data.dmg * 0.6); });
+        gs.enemies.forEach(e => { if (Math.hypot(p.pos.x-e.pos.x, p.pos.z-e.pos.z) < p.data.aoe) dmgEnemy(e, p.data.dmg * 0.6); });
         spawnFX(p.pos.clone(), p.data.color, 0.4, p.data.aoe * 0.55);
         spawnImpact(p.pos.clone().add(new THREE.Vector3(0,0.5,0)), p.data.color || 0xff8800);
         sfxExplosion();
@@ -1365,7 +1365,7 @@ function updateProjectiles(dt) {
     if (p.owner === 'weapon' || p.owner === 'plant') {
       for (const e of gs.enemies) {
         if (p.hitSet.has(e)) continue;
-        if (p.pos.distanceTo(e.pos) < 0.5 + e.data.sz) {
+        if (Math.hypot(p.pos.x - e.pos.x, p.pos.z - e.pos.z) < 0.5 + e.data.sz) {
           p.hitSet.add(e);
           dmgEnemy(e, p.data.dmg);
           spawnImpact(p.pos.clone().add(new THREE.Vector3(0, 0.6, 0)), p.data.color || 0xff8800);
@@ -1378,7 +1378,7 @@ function updateProjectiles(dt) {
           // AoE on impact — hardFreeze applies to all in AoE
           if (p.data.aoe) {
             gs.enemies.forEach(e2 => {
-              if (!p.hitSet.has(e2) && p.pos.distanceTo(e2.pos) < p.data.aoe) {
+              if (!p.hitSet.has(e2) && Math.hypot(p.pos.x-e2.pos.x, p.pos.z-e2.pos.z) < p.data.aoe) {
                 dmgEnemy(e2, p.data.dmg * 0.6); p.hitSet.add(e2);
                 if (p.data.hardFreeze) { e2.slowTimer = 8; e2.vel.set(0,0,0); }
                 if (p.data.root) e2.rootTimer = 3.5;
