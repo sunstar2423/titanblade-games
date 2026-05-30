@@ -890,6 +890,9 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 
+let mouseHeld = false;
+document.getElementById('c').addEventListener('mousedown', () => { mouseHeld = true; });
+document.addEventListener('mouseup', () => { mouseHeld = false; });
 document.getElementById('c').addEventListener('click', () => {
   if (!gameStarted) return;
   if (gs.placeMode) { placeAtMouse(); return; }
@@ -944,8 +947,9 @@ if (isMobile) {
   document.getElementById('attack-btn').addEventListener('touchstart', e => {
     e.preventDefault();
     if (!gameStarted || gs.betweenWaves) return;
-    if (gs.placeMode) placeAtMouse(); else doAttack();
+    if (gs.placeMode) placeAtMouse(); else { mouseHeld = true; doAttack(); }
   }, { passive: false });
+  document.getElementById('attack-btn').addEventListener('touchend', () => { mouseHeld = false; });
 
   document.getElementById('wave-start-btn').addEventListener('touchstart', e => {
     e.preventDefault();
@@ -1019,6 +1023,8 @@ function updatePlayer(dt) {
       if (playerMesh._armL) { playerMesh._armL.rotation.x *= 0.78; playerMesh._armR.rotation.x *= 0.78; }
     }
   }
+  // Auto-attack while mouse is held
+  if (mouseHeld && !gs.placeMode) doAttack();
 }
 
 // ═══════════════════════════════════════
@@ -1176,10 +1182,10 @@ function doAttack() {
     for (let i = 0; i < (wd.pellets || 7); i++) {
       const sp = (Math.random() - 0.5) * 0.8;
       const pd = new THREE.Vector3(dir.x + sp, 0, dir.z + sp * 0.5).normalize();
-      spawnProj(gs.playerPos.clone().add(new THREE.Vector3(0, 0.8, 0)), pd, 13, wd, 'weapon', wd.range / 13);
+      spawnProj(gs.playerPos.clone().add(new THREE.Vector3(0, 0.1, 0)), pd, 13, wd, 'weapon', wd.range / 13);
     }
   } else {
-    spawnProj(gs.playerPos.clone().add(new THREE.Vector3(0, 0.8, 0)), dir, 10, wd, 'weapon', wd.range / 10);
+    spawnProj(gs.playerPos.clone().add(new THREE.Vector3(0, 0.1, 0)), dir, 10, wd, 'weapon', wd.range / 10);
   }
 }
 
