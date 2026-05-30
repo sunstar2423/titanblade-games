@@ -12,87 +12,92 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 
 /* HUD */
 #hud { position:absolute; top:12px; left:0; right:0; display:flex; justify-content:space-between; align-items:center; padding:0 20px; }
-.hud-block { background:rgba(0,0,0,0.65); border:2px solid #555; border-radius:10px; padding:6px 14px; color:#fff; font-size:14px; display:flex; align-items:center; gap:8px; }
-#hp-bar-wrap { width:180px; height:14px; background:#333; border-radius:7px; overflow:hidden; }
-#hp-bar { height:100%; background:#4CAF50; border-radius:7px; transition:width 0.2s; }
+.hud-block { background:rgba(0,0,0,0.78); border:2px solid rgba(255,255,255,0.18); border-radius:12px; padding:7px 16px; color:#fff; font-size:14px; display:flex; align-items:center; gap:8px; box-shadow:0 2px 14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07); backdrop-filter:blur(6px); }
+#hp-bar-wrap { width:190px; height:15px; background:rgba(0,0,0,0.55); border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.1); }
+#hp-bar { height:100%; background:linear-gradient(90deg,#e81c1c 0%,#f06030 35%,#f4c030 65%,#3ecf4a 100%); border-radius:8px; transition:width 0.2s; box-shadow:0 0 8px rgba(80,255,80,0.4); }
 
 /* Hotbar */
 #hotbar { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); display:flex; gap:8px; pointer-events:all; }
-.hotslot { width:72px; height:72px; background:rgba(0,0,0,0.7); border:2px solid #555; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; position:relative; }
-.hotslot.active { border-color:#FFD700; background:rgba(255,215,0,0.15); }
-.hotslot .sk { position:absolute; top:3px; left:6px; font-size:11px; color:#888; }
-.hotslot .se { font-size:30px; }
-.hotslot .sn { font-size:9px; color:#ccc; margin-top:1px; text-align:center; }
+.hotslot { width:74px; height:74px; background:rgba(0,0,0,0.78); border:2px solid rgba(255,255,255,0.22); border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; position:relative; box-shadow:0 2px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); backdrop-filter:blur(4px); transition:border-color 0.15s, background 0.15s; }
+.hotslot:hover { border-color:rgba(255,255,255,0.5); background:rgba(255,255,255,0.07); }
+.hotslot.active { border-color:#FFD700; background:rgba(255,215,0,0.18); box-shadow:0 0 18px rgba(255,215,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1); }
+.hotslot .sk { position:absolute; top:3px; left:6px; font-size:11px; color:rgba(255,255,255,0.5); font-weight:bold; }
+.hotslot .se { font-size:30px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6)); }
+.hotslot .sn { font-size:9px; color:#ccc; margin-top:2px; text-align:center; }
 
 /* Side buttons */
-#side-panel { position:absolute; right:10px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:8px; pointer-events:all; }
-.side-btn { width:52px; height:52px; background:rgba(0,0,0,0.7); border:2px solid #555; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:22px; }
-.side-btn:hover { border-color:#4CAF50; }
+#side-panel { position:absolute; right:12px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:8px; pointer-events:all; }
+.side-btn { width:54px; height:54px; background:rgba(0,0,0,0.78); border:2px solid rgba(255,255,255,0.2); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:22px; backdrop-filter:blur(4px); box-shadow:0 2px 10px rgba(0,0,0,0.5); transition:border-color 0.15s, background 0.15s; }
+.side-btn:hover { border-color:#4CAF50; background:rgba(76,175,80,0.15); box-shadow:0 0 14px rgba(76,175,80,0.3); }
 
 /* Shop overlay */
-#shop-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.82); display:none; align-items:center; justify-content:center; pointer-events:all; z-index:10; }
+#shop-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.86); display:none; align-items:center; justify-content:center; pointer-events:all; z-index:10; backdrop-filter:blur(3px); }
 #shop-overlay.show { display:flex; }
-#shop-box { background:#1a2a1a; border:3px solid #4CAF50; border-radius:16px; padding:24px; width:720px; max-height:82vh; overflow-y:auto; }
-.shop-tabs { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
-.shop-tab { padding:7px 18px; border:2px solid #555; border-radius:8px; cursor:pointer; color:#ccc; background:rgba(255,255,255,0.05); font-size:14px; }
-.shop-tab.active { border-color:#4CAF50; color:#fff; background:rgba(76,175,80,0.2); }
+#shop-box { background:linear-gradient(160deg,#182618,#111e11); border:2px solid rgba(76,175,80,0.6); border-radius:18px; padding:24px; width:720px; max-height:82vh; overflow-y:auto; box-shadow:0 0 40px rgba(76,175,80,0.2), 0 8px 32px rgba(0,0,0,0.7); }
+#shop-box::-webkit-scrollbar { width:6px; } #shop-box::-webkit-scrollbar-thumb { background:rgba(76,175,80,0.4); border-radius:3px; }
+.shop-tabs { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.shop-tab { padding:8px 20px; border:2px solid rgba(255,255,255,0.12); border-radius:10px; cursor:pointer; color:#aaa; background:rgba(255,255,255,0.04); font-size:14px; transition:all 0.15s; }
+.shop-tab:hover { border-color:rgba(76,175,80,0.5); color:#fff; }
+.shop-tab.active { border-color:#4CAF50; color:#fff; background:rgba(76,175,80,0.18); box-shadow:0 0 10px rgba(76,175,80,0.2); }
 .shop-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-.si { background:rgba(255,255,255,0.05); border:2px solid #333; border-radius:10px; padding:10px; text-align:center; cursor:pointer; transition:border-color 0.15s; }
-.si:hover { border-color:#FFD700; }
-.si.owned { border-color:#4CAF50; }
-.si.dim { opacity:0.35; cursor:default; }
-.si .ie { font-size:34px; }
-.si .in { color:#fff; font-size:11px; font-weight:bold; margin:3px 0; }
-.si .id { color:#aaa; font-size:9px; font-style:italic; }
-.si .ic { color:#FFD700; font-size:12px; font-weight:bold; margin-top:3px; }
+.si { background:rgba(255,255,255,0.04); border:2px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px; text-align:center; cursor:pointer; transition:all 0.15s; }
+.si:hover { border-color:#FFD700; background:rgba(255,215,0,0.08); transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,0.4); }
+.si.owned { border-color:rgba(76,175,80,0.7); background:rgba(76,175,80,0.08); }
+.si.dim { opacity:0.3; cursor:default; pointer-events:none; }
+.si .ie { font-size:36px; filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5)); }
+.si .in { color:#fff; font-size:11px; font-weight:bold; margin:4px 0 2px; }
+.si .id { color:#999; font-size:9px; font-style:italic; }
+.si .ic { color:#FFD700; font-size:12px; font-weight:bold; margin-top:4px; text-shadow:0 0 8px rgba(255,215,0,0.4); }
 
 /* Screen overlays */
-#screen { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0.88); pointer-events:all; z-index:20; }
+#screen { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0.92); pointer-events:all; z-index:20; backdrop-filter:blur(4px); }
 #screen.hidden { display:none; }
-.stitle { font-size:58px; font-weight:bold; color:#4CAF50; text-shadow:0 0 30px #4CAF50; margin-bottom:12px; }
+.stitle { font-size:60px; font-weight:bold; color:#4CAF50; text-shadow:0 0 40px #4CAF50, 0 0 80px rgba(76,175,80,0.3); margin-bottom:12px; letter-spacing:1px; }
 .ssub { color:#aaa; font-size:18px; margin-bottom:28px; }
-.bbtn { padding:14px 44px; font-size:20px; background:#4CAF50; color:#fff; border:none; border-radius:12px; cursor:pointer; margin:6px; font-weight:bold; }
-.bbtn:hover { filter:brightness(1.15); }
-.bbtn.red { background:#cc2222; }
-.bbtn.gray { background:#555; }
+.bbtn { padding:15px 46px; font-size:20px; background:linear-gradient(135deg,#4CAF50,#2e7d32); color:#fff; border:none; border-radius:14px; cursor:pointer; margin:6px; font-weight:bold; box-shadow:0 4px 16px rgba(76,175,80,0.4); transition:all 0.15s; }
+.bbtn:hover { filter:brightness(1.18); transform:translateY(-2px); box-shadow:0 6px 22px rgba(76,175,80,0.55); }
+.bbtn.red { background:linear-gradient(135deg,#cc2222,#991111); box-shadow:0 4px 16px rgba(204,34,34,0.4); }
+.bbtn.red:hover { box-shadow:0 6px 22px rgba(204,34,34,0.55); }
+.bbtn.gray { background:linear-gradient(135deg,#555,#333); box-shadow:0 4px 12px rgba(0,0,0,0.4); }
 .skin-grid { display:flex; gap:14px; margin:14px 0; }
-.skin-card { width:95px; padding:10px; background:rgba(255,255,255,0.05); border:3px solid #555; border-radius:10px; cursor:pointer; text-align:center; }
-.skin-card.sel { border-color:#FFD700; background:rgba(255,215,0,0.1); }
+.skin-card { width:98px; padding:12px; background:rgba(255,255,255,0.04); border:3px solid rgba(255,255,255,0.15); border-radius:12px; cursor:pointer; text-align:center; transition:all 0.15s; }
+.skin-card:hover { border-color:rgba(255,215,0,0.6); background:rgba(255,215,0,0.06); }
+.skin-card.sel { border-color:#FFD700; background:rgba(255,215,0,0.12); box-shadow:0 0 16px rgba(255,215,0,0.3); }
 .skin-card .sc-e { font-size:32px; }
-.skin-card .sc-n { color:#fff; font-size:10px; margin-top:4px; }
+.skin-card .sc-n { color:#ddd; font-size:10px; margin-top:5px; }
 
 /* Toast */
-#toast { position:absolute; top:80px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#fff; padding:9px 22px; border-radius:20px; font-size:15px; pointer-events:none; opacity:0; transition:opacity 0.3s; white-space:nowrap; }
+#toast { position:absolute; top:82px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.88); color:#fff; padding:10px 26px; border-radius:22px; font-size:15px; pointer-events:none; opacity:0; transition:opacity 0.3s; white-space:nowrap; border:1px solid rgba(255,255,255,0.15); box-shadow:0 4px 16px rgba(0,0,0,0.5); backdrop-filter:blur(6px); }
 #toast.show { opacity:1; }
 
 /* Wave announce */
-#wave-ann { position:absolute; top:45%; left:50%; transform:translate(-50%,-50%); font-size:52px; font-weight:bold; color:#ff4444; text-shadow:0 0 20px #ff4444; pointer-events:none; opacity:0; transition:opacity 0.4s; }
+#wave-ann { position:absolute; top:45%; left:50%; transform:translate(-50%,-50%); font-size:56px; font-weight:bold; color:#ff5555; text-shadow:0 0 30px #ff4444, 0 0 60px rgba(255,68,68,0.3); pointer-events:none; opacity:0; transition:opacity 0.4s; letter-spacing:2px; }
 #wave-ann.show { opacity:1; }
 
 /* Event banner */
-#event-banner { position:absolute; top:30%; left:50%; transform:translate(-50%,-50%); font-size:28px; font-weight:bold; color:#fff; text-align:center; background:rgba(0,0,0,0.72); border:3px solid #FFD700; border-radius:16px; padding:14px 28px; pointer-events:none; opacity:0; transition:opacity 0.4s; white-space:nowrap; text-shadow:0 0 10px #FFD700; }
+#event-banner { position:absolute; top:30%; left:50%; transform:translate(-50%,-50%); font-size:28px; font-weight:bold; color:#fff; text-align:center; background:rgba(0,0,0,0.82); border:2px solid rgba(255,215,0,0.7); border-radius:18px; padding:16px 32px; pointer-events:none; opacity:0; transition:opacity 0.4s; white-space:nowrap; text-shadow:0 0 12px #FFD700; box-shadow:0 0 30px rgba(255,215,0,0.2); backdrop-filter:blur(4px); }
 #event-banner.show { opacity:1; }
-#event-banner.bad { border-color:#ff4444; text-shadow:0 0 10px #ff4444; }
-#event-timer-bar-wrap { width:260px; height:8px; background:#333; border-radius:4px; margin:8px auto 0; overflow:hidden; }
-#event-timer-bar { height:100%; background:#FFD700; border-radius:4px; transition:width 0.5s linear; }
+#event-banner.bad { border-color:rgba(255,68,68,0.7); text-shadow:0 0 12px #ff4444; box-shadow:0 0 30px rgba(255,68,68,0.2); }
+#event-timer-bar-wrap { width:260px; height:8px; background:rgba(0,0,0,0.5); border-radius:4px; margin:10px auto 0; overflow:hidden; }
+#event-timer-bar { height:100%; background:linear-gradient(90deg,#ff8800,#FFD700); border-radius:4px; transition:width 0.5s linear; box-shadow:0 0 6px rgba(255,215,0,0.5); }
 
 /* Controls hint */
-#hint { position:absolute; bottom:100px; right:12px; background:rgba(0,0,0,0.6); border-radius:8px; padding:8px 12px; color:#777; font-size:11px; line-height:1.9; }
+#hint { position:absolute; bottom:100px; right:12px; background:rgba(0,0,0,0.65); border-radius:10px; padding:10px 14px; color:rgba(255,255,255,0.5); font-size:11px; line-height:2.0; border:1px solid rgba(255,255,255,0.08); backdrop-filter:blur(4px); }
 
 /* Touch controls */
 #joystick-zone { position:absolute; bottom:20px; left:20px; width:140px; height:140px; pointer-events:all; display:none; touch-action:none; z-index:5; }
-#joystick-base { width:140px; height:140px; border-radius:50%; background:rgba(255,255,255,0.11); border:3px solid rgba(255,255,255,0.28); position:relative; }
-#joystick-knob { position:absolute; width:62px; height:62px; border-radius:50%; background:rgba(255,255,255,0.46); top:39px; left:39px; box-shadow:0 0 14px rgba(255,255,255,0.25); pointer-events:none; }
-#attack-btn { position:absolute; bottom:24px; right:24px; width:88px; height:88px; border-radius:50%; background:rgba(220,50,50,0.55); border:3px solid rgba(255,110,110,0.7); font-size:34px; display:none; align-items:center; justify-content:center; pointer-events:all; touch-action:none; box-shadow:0 0 18px rgba(220,50,50,0.35); z-index:5; -webkit-user-select:none; user-select:none; }
-#wave-start-btn { position:absolute; bottom:250px; left:50%; transform:translateX(-50%); padding:15px 36px; background:rgba(76,175,80,0.92); border:3px solid #4CAF50; border-radius:18px; color:#fff; font-size:21px; font-weight:bold; display:none; pointer-events:all; touch-action:none; white-space:nowrap; box-shadow:0 0 20px rgba(76,175,80,0.55); z-index:5; -webkit-user-select:none; user-select:none; }
+#joystick-base { width:140px; height:140px; border-radius:50%; background:rgba(255,255,255,0.09); border:3px solid rgba(255,255,255,0.25); position:relative; }
+#joystick-knob { position:absolute; width:62px; height:62px; border-radius:50%; background:rgba(255,255,255,0.44); top:39px; left:39px; box-shadow:0 0 18px rgba(255,255,255,0.22); pointer-events:none; }
+#attack-btn { position:absolute; bottom:24px; right:24px; width:90px; height:90px; border-radius:50%; background:rgba(220,50,50,0.55); border:3px solid rgba(255,110,110,0.7); font-size:34px; display:none; align-items:center; justify-content:center; pointer-events:all; touch-action:none; box-shadow:0 0 22px rgba(220,50,50,0.4); z-index:5; -webkit-user-select:none; user-select:none; }
+#wave-start-btn { position:absolute; bottom:250px; left:50%; transform:translateX(-50%); padding:15px 36px; background:rgba(76,175,80,0.92); border:3px solid rgba(76,175,80,0.8); border-radius:18px; color:#fff; font-size:21px; font-weight:bold; display:none; pointer-events:all; touch-action:none; white-space:nowrap; box-shadow:0 0 24px rgba(76,175,80,0.6); z-index:5; -webkit-user-select:none; user-select:none; }
 #c { touch-action:none; }
 @media (pointer: coarse) {
-  .hotslot { width:58px; height:58px; }
+  .hotslot { width:60px; height:60px; }
   .hotslot .se { font-size:24px; }
   #hint { display:none; }
   #shop-box { width:96vw; padding:14px; }
   .shop-grid { grid-template-columns:repeat(2,1fr); }
-  .stitle { font-size:38px; }
+  .stitle { font-size:40px; }
 }
 </style>
 </head>
@@ -153,21 +158,22 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.55;
+renderer.toneMappingExposure = 0.72;
 renderer.outputEncoding = THREE.sRGBEncoding;
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x3a5a78, 0.01);
+scene.fog = new THREE.FogExp2(0xb85c28, 0.009);
 
 // Sky gradient dome
 (function() {
   const c = document.createElement('canvas'); c.width = 2; c.height = 256;
   const ctx = c.getContext('2d');
   const g = ctx.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0,    '#060e22');
-  g.addColorStop(0.45, '#0d2a55');
-  g.addColorStop(0.75, '#1a3d6e');
-  g.addColorStop(1,    '#2a5080');
+  g.addColorStop(0,    '#070d1e');
+  g.addColorStop(0.28, '#0e2244');
+  g.addColorStop(0.55, '#a03818');
+  g.addColorStop(0.78, '#d46022');
+  g.addColorStop(1,    '#f0a03c');
   ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
   const tex = new THREE.CanvasTexture(c);
   const sky = new THREE.Mesh(
@@ -190,22 +196,25 @@ window.addEventListener('resize', () => {
 });
 
 // Lighting
-const hemiLight = new THREE.HemisphereLight(0x6688bb, 0x336611, 0.35);
+const hemiLight = new THREE.HemisphereLight(0x88aace, 0x5a3a18, 0.5);
 scene.add(hemiLight);
-const sun = new THREE.DirectionalLight(0xfff0cc, 0.75);
-sun.position.set(15, 25, 10);
+const sun = new THREE.DirectionalLight(0xffcc55, 1.1);
+sun.position.set(18, 22, 12);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
 sun.shadow.camera.top = 75;  sun.shadow.camera.bottom = -75;
 sun.shadow.bias = -0.001;
 scene.add(sun);
-const fill = new THREE.DirectionalLight(0x8899cc, 0.2);
-fill.position.set(-10, 8, -10);
+const fill = new THREE.DirectionalLight(0x3355aa, 0.35);
+fill.position.set(-12, 8, -12);
 scene.add(fill);
-const rimLight = new THREE.DirectionalLight(0xffeedd, 0.25);
-rimLight.position.set(-8, 6, 18);
+const rimLight = new THREE.DirectionalLight(0xff8833, 0.55);
+rimLight.position.set(-8, 5, 20);
 scene.add(rimLight);
+const topLight = new THREE.DirectionalLight(0xddeeff, 0.18);
+topLight.position.set(0, 30, 0);
+scene.add(topLight);
 
 // ═══════════════════════════════════════
 //  FARM SCENE
@@ -217,12 +226,24 @@ const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 (function() {
   const c = document.createElement('canvas'); c.width = 256; c.height = 256;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#4a9a30'; ctx.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 600; i++) {
+  ctx.fillStyle = '#3e8a25'; ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 1200; i++) {
     const x = Math.random()*256, y = Math.random()*256;
-    ctx.fillStyle = Math.random() > 0.5 ? '#3d8a25' : '#5cb040';
-    ctx.fillRect(x, y, 3, 3);
+    const c = Math.random();
+    ctx.fillStyle = c < 0.25 ? '#2d6e18' : c < 0.55 ? '#4da030' : c < 0.8 ? '#5ebb38' : '#6acc44';
+    ctx.fillRect(x, y, Math.random()*4+1, Math.random()*4+1);
   }
+  // Subtle grass blade marks
+  for (let i = 0; i < 300; i++) {
+    ctx.strokeStyle = Math.random() > 0.5 ? '#2a6015' : '#70cc48';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    const bx = Math.random()*256, by = Math.random()*256;
+    ctx.moveTo(bx, by); ctx.lineTo(bx + (Math.random()-0.5)*6, by - Math.random()*8);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
   const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(8, 8);
   const gnd = new THREE.Mesh(new THREE.PlaneGeometry(180, 180), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0 }));
   gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true; scene.add(gnd);
@@ -232,15 +253,17 @@ const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 (function() {
   const c = document.createElement('canvas'); c.width = 512; c.height = 512;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#7a5410'; ctx.fillRect(0, 0, 512, 512);
-  for (let i = 0; i < 2000; i++) {
-    ctx.fillStyle = Math.random() > 0.5 ? '#6a4408' : '#8b6318';
-    ctx.fillRect(Math.random()*512, Math.random()*512, Math.random()*6+1, Math.random()*3+1);
+  ctx.fillStyle = '#6b4a0e'; ctx.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 3000; i++) {
+    const c = Math.random();
+    ctx.fillStyle = c < 0.3 ? '#4e3208' : c < 0.6 ? '#7a5812' : c < 0.85 ? '#8e6b1a' : '#9e7a22';
+    ctx.fillRect(Math.random()*512, Math.random()*512, Math.random()*5+1, Math.random()*4+1);
   }
   // Ploughed furrow rows
-  for (let y = 0; y < 512; y += 22) {
-    ctx.fillStyle = '#4e2e06'; ctx.fillRect(0, y, 512, 5);
-    ctx.fillStyle = '#9a7228'; ctx.fillRect(0, y + 5, 512, 3);
+  for (let y = 0; y < 512; y += 20) {
+    ctx.fillStyle = '#3c2204'; ctx.fillRect(0, y, 512, 5);
+    ctx.fillStyle = '#9e7a22'; ctx.fillRect(0, y + 5, 512, 4);
+    ctx.fillStyle = '#7a5810'; ctx.fillRect(0, y + 9, 512, 3);
   }
   const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(6, 6);
   const farm = new THREE.Mesh(new THREE.CircleGeometry(FARM_R, 64), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.97, metalness: 0 }));
@@ -303,12 +326,15 @@ arch.rotation.z = Math.PI/2; arch.position.set(0, 3.2, 3.08); barnGrp.add(arch);
 });
 scene.add(barnGrp);
 // Warm glow from barn windows
-const barnLight = new THREE.PointLight(0xff8822, 3.5, 20);
+const barnLight = new THREE.PointLight(0xff8822, 4.5, 22);
 barnLight.position.set(0, 3.5, 3.5);
 scene.add(barnLight);
-const barnLight2 = new THREE.PointLight(0xff7711, 1.8, 14);
+const barnLight2 = new THREE.PointLight(0xff7711, 2.2, 16);
 barnLight2.position.set(0, 3.5, -3.5);
 scene.add(barnLight2);
+const barnLight3 = new THREE.PointLight(0xffaa44, 1.5, 12);
+barnLight3.position.set(0, 1.0, 3.2);
+scene.add(barnLight3);
 
 // Barn HP ring
 let barnRing = null;
@@ -324,12 +350,18 @@ function updateBarnRing() {
 // Helper: make a tree with layered canopy
 function makeTree(x, z, scale=1) {
   const g = new THREE.Group();
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6B4226, roughness:0.9 });
-  const leafMat  = new THREE.MeshStandardMaterial({ color: 0x2d8b2d, roughness:0.95 });
-  const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.18*scale, 0.28*scale, 1.8*scale, 8), trunkMat);
-  tr.position.y = 0.9*scale; tr.castShadow = true; g.add(tr);
-  [[1.6*scale, 2.0*scale, 2.1*scale], [1.15*scale, 1.6*scale, 3.1*scale], [0.7*scale, 1.1*scale, 4.0*scale]].forEach(([r, h, y]) => {
-    const lv = new THREE.Mesh(new THREE.ConeGeometry(r, h, 8), leafMat);
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a3318, roughness:0.92, metalness:0.0 });
+  const leafColors = [0x1e6614, 0x267a1c, 0x2d8b22, 0x38a828, 0x1a5810];
+  const lc1 = leafColors[Math.floor(Math.random()*leafColors.length)];
+  const lc2 = leafColors[Math.floor(Math.random()*leafColors.length)];
+  const leafMat1 = new THREE.MeshStandardMaterial({ color: lc1, roughness:0.95 });
+  const leafMat2 = new THREE.MeshStandardMaterial({ color: lc2, roughness:0.95 });
+  const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.2*scale, 0.34*scale, 2.2*scale, 8), trunkMat);
+  tr.position.y = 1.1*scale; tr.castShadow = true; g.add(tr);
+  // Layered canopy — alternates between two leaf colors for depth
+  [[1.9*scale, 2.2*scale, 2.4*scale, leafMat1], [1.35*scale, 1.8*scale, 3.6*scale, leafMat2],
+   [0.85*scale, 1.3*scale, 4.6*scale, leafMat1], [0.45*scale, 0.85*scale, 5.5*scale, leafMat2]].forEach(([r, h, y, mat]) => {
+    const lv = new THREE.Mesh(new THREE.ConeGeometry(r, h, 8), mat);
     lv.position.y = y; lv.castShadow = true; g.add(lv);
   });
   g.position.set(x, 0, z); scene.add(g);
@@ -342,18 +374,27 @@ function makeTree(x, z, scale=1) {
 [-52,52].forEach(z => makeTree(0, z, 1.0 + Math.random()*0.4));
 
 // Hay bales scattered outside fence
-const hayMat = new THREE.MeshStandardMaterial({ color: 0xd4a830, roughness: 0.95 });
+const hayMat  = new THREE.MeshStandardMaterial({ color: 0xd4a830, roughness: 0.95 });
+const hayWrap = new THREE.MeshStandardMaterial({ color: 0xb8880a, roughness: 0.98 });
 [[47,10],[-48,-15],[22,-52],[-28,46],[52,-30],[-44,38],[50,45],[-50,20]].forEach(([x,z]) => {
-  const hay = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 1.0, 12), hayMat);
-  hay.rotation.z = Math.PI/2; hay.position.set(x, 0.6, z); hay.castShadow = true; scene.add(hay);
+  const hg = new THREE.Group();
+  const hay = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 1.2, 14), hayMat);
+  hay.rotation.z = Math.PI/2; hay.castShadow = true; hg.add(hay);
+  [-0.38, 0, 0.38].forEach(px => {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.74, 0.06, 5, 16), hayWrap);
+    band.rotation.y = Math.PI/2; band.position.x = px; hg.add(band);
+  });
+  hg.position.set(x, 0.72, z); hg.rotation.y = Math.random() * Math.PI; scene.add(hg);
 });
 
 // Clouds
-const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness:1, transparent:true, opacity:0.88 });
-[[0,22,-15],[-12,24,8],[18,20,-5],[-5,26,18]].forEach(([x,y,z]) => {
+const cloudMat  = new THREE.MeshStandardMaterial({ color: 0xfff0e8, roughness:1, transparent:true, opacity:0.92 });
+const cloudMat2 = new THREE.MeshStandardMaterial({ color: 0xffe0c8, roughness:1, transparent:true, opacity:0.78 });
+[[0,22,-15],[-14,25,9],[20,21,-7],[-6,27,20],[10,19,14]].forEach(([x,y,z], ci) => {
   const cg = new THREE.Group();
-  [[0,0,0,1.8],[1.6,0.3,0,1.3],[-1.5,0,0,1.2],[0.8,0.5,1.0,1.0],[-0.7,0.4,-0.9,0.9]].forEach(([cx,cy,cz,r]) => {
-    const sp = new THREE.Mesh(new THREE.SphereGeometry(r, 7, 7), cloudMat);
+  const cm = ci % 2 === 0 ? cloudMat : cloudMat2;
+  [[0,0,0,2.2],[2.0,0.4,0,1.7],[-1.9,0.1,0,1.6],[1.0,0.7,1.2,1.3],[-0.9,0.5,-1.1,1.2],[0,0.6,0,1.5],[-2.5,-0.2,0.6,1.0]].forEach(([cx,cy,cz,r]) => {
+    const sp = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 8), cm);
     sp.position.set(cx,cy,cz); cg.add(sp);
   });
   cg.position.set(x, y, z); cg._isCloud = true; scene.add(cg);
@@ -1032,13 +1073,15 @@ function updatePlayer(dt) {
 // ═══════════════════════════════════════
 function floatText(pos, text, color) {
   const cv = document.createElement('canvas');
-  cv.width = 128; cv.height = 40;
+  cv.width = 160; cv.height = 56;
   const x = cv.getContext('2d');
+  x.font = 'bold 32px Arial'; x.textAlign = 'center';
+  x.strokeStyle = 'rgba(0,0,0,0.85)'; x.lineWidth = 5; x.lineJoin = 'round';
+  x.strokeText(text, 80, 42);
   x.fillStyle = '#' + color.toString(16).padStart(6, '0');
-  x.font = 'bold 26px Arial'; x.textAlign = 'center';
-  x.fillText(text, 64, 30);
+  x.fillText(text, 80, 42);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true }));
-  sp.scale.set(2, 0.625, 1);
+  sp.scale.set(2.5, 0.875, 1);
   sp.position.copy(pos).add(new THREE.Vector3(0, 1.5, 0));
   scene.add(sp);
   gs.floatingTexts.push({ sp, pos: sp.position.clone(), timer: 1.4 });
@@ -1047,35 +1090,47 @@ function floatText(pos, text, color) {
 function spawnFX(pos, color, dur, size) {
   const g = new THREE.Group(); g.position.copy(pos); scene.add(g);
   const orb = new THREE.Mesh(
-    new THREE.SphereGeometry(size * 0.45, 8, 8),
+    new THREE.SphereGeometry(size * 0.55, 10, 10),
     new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1.0 })
   );
   g.add(orb);
   const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(size * 0.35, size * 0.1, 5, 18),
+    new THREE.TorusGeometry(size * 0.4, size * 0.11, 6, 22),
     new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1.0 })
   );
   ring.rotation.x = Math.PI / 2; ring.position.y = 0.1; g.add(ring);
   const ring2 = new THREE.Mesh(
-    new THREE.TorusGeometry(size * 0.18, size * 0.065, 4, 14),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 })
+    new THREE.TorusGeometry(size * 0.22, size * 0.07, 5, 16),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 })
   );
-  ring2.rotation.x = Math.PI / 2; ring2.position.y = 0.12; g.add(ring2);
-  gs.effects.push({ mesh: g, timer: dur, max: dur, _ring: ring, _ring2: ring2, _orb: orb, _size: size });
+  ring2.rotation.x = Math.PI / 2; ring2.position.y = 0.1; g.add(ring2);
+  const ring3 = new THREE.Mesh(
+    new THREE.TorusGeometry(size * 0.6, size * 0.08, 5, 22),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55 })
+  );
+  ring3.rotation.x = Math.PI / 2; ring3.position.y = 0.1; g.add(ring3);
+  gs.effects.push({ mesh: g, timer: dur, max: dur, type: 'fx', _orb: orb, _ring: ring, _ring2: ring2, _ring3: ring3, size });
 }
 
 function spawnImpact(pos, color) {
-  for (let i = 0; i < 7; i++) {
+  const shockRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.1, 0.05, 4, 16),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 })
+  );
+  shockRing.rotation.x = Math.PI/2; shockRing.position.copy(pos); shockRing.position.y = 0.05;
+  scene.add(shockRing);
+  gs.effects.push({ mesh: shockRing, timer: 0.28, max: 0.28, type: 'shockRing' });
+  for (let i = 0; i < 12; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const up = Math.random() * Math.PI * 0.55;
-    const spd = 5 + Math.random() * 7;
+    const up = Math.random() * Math.PI * 0.65;
+    const spd = 6 + Math.random() * 9;
     const vel = new THREE.Vector3(Math.cos(angle)*Math.cos(up)*spd, Math.sin(up)*spd, Math.sin(angle)*Math.cos(up)*spd);
     const spark = new THREE.Mesh(
-      new THREE.SphereGeometry(0.06 + Math.random() * 0.07, 4, 4),
+      new THREE.SphereGeometry(0.07 + Math.random() * 0.09, 4, 4),
       new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 })
     );
     spark.position.copy(pos); scene.add(spark);
-    const dur = 0.16 + Math.random() * 0.2;
+    const dur = 0.18 + Math.random() * 0.24;
     gs.effects.push({ mesh: spark, timer: dur, max: dur, type: 'spark', vel });
   }
 }
@@ -1340,11 +1395,11 @@ function updateProjectiles(dt) {
     if (p._trailT <= 0 && p.data.kind !== 'shotgun') {
       p._trailT = 0.042;
       const trail = new THREE.Mesh(
-        new THREE.SphereGeometry(0.11, 4, 4),
-        new THREE.MeshBasicMaterial({ color: p.data.color || 0xffffff, transparent: true, opacity: 0.55 })
+        new THREE.SphereGeometry(0.15, 5, 5),
+        new THREE.MeshBasicMaterial({ color: p.data.color || 0xffffff, transparent: true, opacity: 0.72 })
       );
       trail.position.copy(p.pos); scene.add(trail);
-      gs.effects.push({ mesh: trail, timer: 0.14, max: 0.14, type: 'trail' });
+      gs.effects.push({ mesh: trail, timer: 0.22, max: 0.22, type: 'trail' });
     }
 
     if (p.owner === 'enemy') {
@@ -2687,12 +2742,16 @@ function updateEffects(dt) {
       ef._glow.material.opacity = pct * 0.5;
       if (ef._flash) ef._flash.material.opacity = pct * 0.95;
     } else if (ef.type === 'trail') {
-      if (ef.mesh.material) ef.mesh.material.opacity = pct * 0.55;
+      if (ef.mesh.material) ef.mesh.material.opacity = pct * 0.72;
+    } else if (ef.type === 'shockRing') {
+      ef.mesh.scale.setScalar(1 + (1 - pct) * 5.0);
+      ef.mesh.material.opacity = pct * 0.85;
     } else {
       // Default spawnFX: orb + expanding rings
-      if (ef._orb) { ef._orb.material.opacity = pct * 1.0; ef._orb.scale.setScalar(0.35 + (1 - pct) * 1.5); }
-      if (ef._ring)  { ef._ring.material.opacity  = pct * 1.0; ef._ring.scale.setScalar(1 + (1 - pct) * 4.0); }
-      if (ef._ring2) { ef._ring2.material.opacity = pct * 0.85; ef._ring2.scale.setScalar(1 + (1 - pct) * 6.0); }
+      if (ef._orb) { ef._orb.material.opacity = pct; ef._orb.scale.setScalar(0.4 + (1 - pct) * 1.8); }
+      if (ef._ring)  { ef._ring.material.opacity  = pct; ef._ring.scale.setScalar(1 + (1 - pct) * 4.5); }
+      if (ef._ring2) { ef._ring2.material.opacity = pct * 0.9; ef._ring2.scale.setScalar(1 + (1 - pct) * 7.0); }
+      if (ef._ring3) { ef._ring3.material.opacity = pct * 0.55; ef._ring3.scale.setScalar(1 + (1 - pct) * 3.5); }
       if (!ef._orb && ef.mesh && ef.mesh.material) ef.mesh.material.opacity = Math.max(0, pct * 0.7);
     }
     if (ef.type === 'cloud') {
