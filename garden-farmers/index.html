@@ -890,6 +890,9 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 
+let mouseHeld = false;
+document.getElementById('c').addEventListener('mousedown', () => { mouseHeld = true; });
+document.addEventListener('mouseup', () => { mouseHeld = false; });
 document.getElementById('c').addEventListener('click', () => {
   if (!gameStarted) return;
   if (gs.placeMode) { placeAtMouse(); return; }
@@ -944,8 +947,9 @@ if (isMobile) {
   document.getElementById('attack-btn').addEventListener('touchstart', e => {
     e.preventDefault();
     if (!gameStarted || gs.betweenWaves) return;
-    if (gs.placeMode) placeAtMouse(); else doAttack();
+    if (gs.placeMode) placeAtMouse(); else { mouseHeld = true; doAttack(); }
   }, { passive: false });
+  document.getElementById('attack-btn').addEventListener('touchend', () => { mouseHeld = false; });
 
   document.getElementById('wave-start-btn').addEventListener('touchstart', e => {
     e.preventDefault();
@@ -1019,6 +1023,8 @@ function updatePlayer(dt) {
       if (playerMesh._armL) { playerMesh._armL.rotation.x *= 0.78; playerMesh._armR.rotation.x *= 0.78; }
     }
   }
+  // Auto-attack while mouse is held
+  if (mouseHeld && !gs.placeMode) doAttack();
 }
 
 // ═══════════════════════════════════════
@@ -1176,10 +1182,10 @@ function doAttack() {
     for (let i = 0; i < (wd.pellets || 7); i++) {
       const sp = (Math.random() - 0.5) * 0.8;
       const pd = new THREE.Vector3(dir.x + sp, 0, dir.z + sp * 0.5).normalize();
-      spawnProj(gs.playerPos.clone().add(new THREE.Vector3(0, 0.8, 0)), pd, 13, wd, 'weapon', wd.range / 13);
+      spawnProj(gs.playerPos.clone().add(new THREE.Vector3(0, 0.1, 0)), pd, 13, wd, 'weapon', wd.range / 13);
     }
   } else {
-    spawnProj(gs.playerPos.clone().add(new THREE.Vector3(0, 0.8, 0)), dir, 10, wd, 'weapon', wd.range / 10);
+    spawnProj(gs.playerPos.clone().add(new THREE.Vector3(0, 0.1, 0)), dir, 10, wd, 'weapon', wd.range / 10);
   }
 }
 
@@ -1311,7 +1317,7 @@ function updateProjectiles(dt) {
     p.timer -= dt;
     if (p.timer <= 0) {
       if (p.data.aoe && p.owner === 'weapon') {
-        gs.enemies.forEach(e => { if (p.pos.distanceTo(e.pos) < p.data.aoe) dmgEnemy(e, p.data.dmg * 0.6); });
+        gs.enemies.forEach(e => { if (Math.hypot(p.pos.x-e.pos.x, p.pos.z-e.pos.z) < p.data.aoe) dmgEnemy(e, p.data.dmg * 0.6); });
         spawnFX(p.pos.clone(), p.data.color, 0.4, p.data.aoe * 0.55);
         spawnImpact(p.pos.clone().add(new THREE.Vector3(0,0.5,0)), p.data.color || 0xff8800);
         sfxExplosion();
@@ -1365,7 +1371,7 @@ function updateProjectiles(dt) {
     if (p.owner === 'weapon' || p.owner === 'plant') {
       for (const e of gs.enemies) {
         if (p.hitSet.has(e)) continue;
-        if (p.pos.distanceTo(e.pos) < 0.5 + e.data.sz) {
+        if (Math.hypot(p.pos.x - e.pos.x, p.pos.z - e.pos.z) < 0.5 + e.data.sz) {
           p.hitSet.add(e);
           dmgEnemy(e, p.data.dmg);
           spawnImpact(p.pos.clone().add(new THREE.Vector3(0, 0.6, 0)), p.data.color || 0xff8800);
@@ -1378,7 +1384,7 @@ function updateProjectiles(dt) {
           // AoE on impact — hardFreeze applies to all in AoE
           if (p.data.aoe) {
             gs.enemies.forEach(e2 => {
-              if (!p.hitSet.has(e2) && p.pos.distanceTo(e2.pos) < p.data.aoe) {
+              if (!p.hitSet.has(e2) && Math.hypot(p.pos.x-e2.pos.x, p.pos.z-e2.pos.z) < p.data.aoe) {
                 dmgEnemy(e2, p.data.dmg * 0.6); p.hitSet.add(e2);
                 if (p.data.hardFreeze) { e2.slowTimer = 8; e2.vel.set(0,0,0); }
                 if (p.data.root) e2.rootTimer = 3.5;
