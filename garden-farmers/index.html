@@ -539,10 +539,15 @@ const DEFENSE_ITEMS = [
 ];
 
 const ANIMALS = [
-  { id:'hen',   name:'Guard Hen',  emoji:'🐔', cost:35, kind:'animal', attack:'egg',    dmg:22, range:8,   cd:1.8, hp:60,  color:0xfffcd0, desc:'Throws eggs at enemies' },
-  { id:'cow',   name:'Battle Cow', emoji:'🐄', cost:70, kind:'animal', attack:'charge', dmg:70, range:7,   cd:5.0, hp:130, color:0xf0f0f0, desc:'Charges at enemies — massive knockback' },
-  { id:'pig',   name:'Mud Pig',    emoji:'🐷', cost:45, kind:'animal', attack:'mud',    dmg:14, range:4.0, cd:3.5, hp:85,  color:0xf4a0b0, desc:'Splatters mud — slows all nearby enemies' },
-  { id:'sheep', name:'Ram Sheep',  emoji:'🐑', cost:40, kind:'animal', attack:'ram',    dmg:12, range:5,   cd:2.5, hp:75,  color:0xeeeeee, desc:'Rams nearest enemy — strong knockback' },
+  { id:'hen',    name:'Guard Hen',    emoji:'🐔', cost:35, kind:'animal', attack:'egg',     dmg:22, range:8,   cd:1.8, hp:60,  color:0xfffcd0, desc:'Throws eggs at nearby enemies' },
+  { id:'cow',    name:'Battle Cow',   emoji:'🐄', cost:70, kind:'animal', attack:'charge',  dmg:70, range:7,   cd:5.0, hp:130, color:0xf0f0f0, desc:'Charges — cone damage + huge knockback' },
+  { id:'pig',    name:'Mud Pig',      emoji:'🐷', cost:45, kind:'animal', attack:'mud',     dmg:14, range:4.0, cd:3.5, hp:85,  color:0xf4a0b0, desc:'Mud splat — slows all nearby enemies' },
+  { id:'sheep',  name:'Ram Sheep',    emoji:'🐑', cost:40, kind:'animal', attack:'ram',     dmg:12, range:5,   cd:2.5, hp:75,  color:0xeeeeee, desc:'Rams nearest enemy — strong knockback' },
+  { id:'duck',   name:'Guard Duck',   emoji:'🦆', cost:30, kind:'animal', attack:'water',   dmg:10, range:6,   cd:2.2, hp:50,  color:0x88ddff, desc:'Splashes water — slows nearby enemies' },
+  { id:'goat',   name:'Headbutt Goat',emoji:'🐐', cost:55, kind:'animal', attack:'headbutt',dmg:50, range:7,   cd:4.5, hp:100, color:0xccbbaa, desc:'Headbutts — line charge, huge knockback' },
+  { id:'horse',  name:'Kick Horse',   emoji:'🐴', cost:65, kind:'animal', attack:'kick',    dmg:55, range:3.5, cd:3.0, hp:110, color:0x8b6914, desc:'Powerful kick — wide arc, hits multiple' },
+  { id:'llama',  name:'Spitting Llama',emoji:'🦙',cost:55, kind:'animal', attack:'spit',    dmg:20, range:11,  cd:2.5, hp:80,  color:0xd4b896, desc:'Spits — long range, poisons enemies' },
+  { id:'rooster',name:'War Rooster',  emoji:'🐓', cost:45, kind:'animal', attack:'crow',    dmg:8,  range:5.5, cd:6.0, hp:65,  color:0xcc2200, desc:'Battle crow — stuns all nearby enemies' },
 ];
 
 const RANDOM_EVENTS = [
@@ -1978,7 +1983,7 @@ function updateEnemies(dt) {
           const pp = gs.placedPlants.find(p => p.pos.distanceTo(e.pos) < 2);
           if (pp) {
             pp.hp -= e.data.dmg;
-            if (pp.hp <= 0) { scene.remove(pp.mesh); gs.placedPlants = gs.placedPlants.filter(x => x !== pp); showToast('A plant was destroyed!'); }
+            if (pp.hp <= 0) { scene.remove(pp.mesh); gs.placedPlants = gs.placedPlants.filter(x => x !== pp); if (pp.data.kind === 'animal') showAnimalEliminated(pp.data); else showToast('A plant was destroyed!'); }
           }
         }
       }
@@ -2618,6 +2623,125 @@ function buildPlantMesh(data) {
       [0.2,-0.2].forEach(x => [0.1,0.44].forEach(z => add(new THREE.CylinderGeometry(0.06,0.055,0.38,6), S(0x333333), 0.19, x, z)));
       break;
     }
+    case 'duck': {
+      // White body (wider, lower than hen)
+      add(new THREE.SphereGeometry(0.3,9,8), S(0xffffff), 0.38);
+      add(new THREE.SphereGeometry(0.22,8,7), S(0xffffff), 0.36, 0, 0.3);
+      // Head
+      add(new THREE.SphereGeometry(0.18,8,8), S(0xffffff), 0.72, 0, 0.28);
+      // Flat orange bill
+      add(new THREE.BoxGeometry(0.18,0.07,0.2), S(0xff8800), 0.7, 0, 0.5);
+      // Eyes
+      add(new THREE.SphereGeometry(0.04,5,5), S(0x111111), 0.78, 0.1, 0.4);
+      add(new THREE.SphereGeometry(0.04,5,5), S(0x111111), 0.78,-0.1, 0.4);
+      // Tail feather curl
+      add(new THREE.TorusGeometry(0.1,0.04,5,10,Math.PI), S(0xdddddd), 0.52, 0,-0.34, 0.7,0,0);
+      // Webbed feet (flat orange discs)
+      add(new THREE.CylinderGeometry(0.1,0.13,0.04,7), S(0xff8800), 0.04,  0.1, 0.1);
+      add(new THREE.CylinderGeometry(0.1,0.13,0.04,7), S(0xff8800), 0.04, -0.1, 0.1);
+      break;
+    }
+    case 'goat': {
+      // Body
+      add(new THREE.SphereGeometry(0.36,9,8), S(0xccbbaa), 0.58);
+      add(new THREE.SphereGeometry(0.28,8,7), S(0xccbbaa), 0.55, 0, 0.42);
+      // Head
+      add(new THREE.SphereGeometry(0.2,8,8), S(0xccbbaa), 0.92, 0, 0.56);
+      // Curved horns
+      add(new THREE.TorusGeometry(0.12,0.035,5,12,Math.PI*1.1), S(0x888866), 1.1, 0.14, 0.48, 0,0,-0.6);
+      add(new THREE.TorusGeometry(0.12,0.035,5,12,Math.PI*1.1), S(0x888866), 1.1,-0.14, 0.48, 0,0, 0.6);
+      // Beard
+      add(new THREE.ConeGeometry(0.06,0.2,5), S(0xbbaa88), 0.68, 0, 0.68, 0.3,0,0);
+      // Eyes
+      add(new THREE.SphereGeometry(0.045,5,5), S(0x111111), 0.98, 0.1, 0.7);
+      add(new THREE.SphereGeometry(0.045,5,5), S(0x111111), 0.98,-0.1, 0.7);
+      // Legs
+      [0.18,-0.18].forEach(x => [0.08,0.5].forEach(z => add(new THREE.CylinderGeometry(0.06,0.05,0.36,6), S(0xbbaa99), 0.18, x, z)));
+      // Tail stub
+      add(new THREE.SphereGeometry(0.07,5,5), S(0xffffff), 0.62, 0, -0.38);
+      break;
+    }
+    case 'horse': {
+      // Large body
+      add(new THREE.SphereGeometry(0.52,10,8), S(0x8b6914), 0.72);
+      add(new THREE.SphereGeometry(0.44,9,8), S(0x8b6914), 0.7, 0, 0.56);
+      // Neck + head
+      add(new THREE.CylinderGeometry(0.18,0.22,0.5,7), S(0x8b6914), 1.14, 0, 0.42, -0.5,0,0);
+      add(new THREE.SphereGeometry(0.24,9,8), S(0x8b6914), 1.28, 0, 0.76);
+      // Snout
+      add(new THREE.SphereGeometry(0.15,8,6), S(0x7a5010), 1.18, 0, 0.96);
+      // Nostrils
+      add(new THREE.SphereGeometry(0.04,5,5), S(0x442200), 1.2, 0.06, 1.08);
+      add(new THREE.SphereGeometry(0.04,5,5), S(0x442200), 1.2,-0.06, 1.08);
+      // Eyes
+      add(new THREE.SphereGeometry(0.055,6,6), S(0x111111), 1.38, 0.16, 0.84);
+      add(new THREE.SphereGeometry(0.055,6,6), S(0x111111), 1.38,-0.16, 0.84);
+      // Mane (ridge of spheres)
+      [0,0.18,0.34,0.48].forEach((z,i) => add(new THREE.SphereGeometry(0.1-i*0.015,6,5), S(0x3a2208), 1.3-i*0.04, 0, 0.56-z));
+      // Tail
+      add(new THREE.CylinderGeometry(0.06,0.02,0.5,6), S(0x3a2208), 0.72, 0,-0.62, 0.4,0,0);
+      // Hooves (4 legs)
+      [0.24,-0.24].forEach(x => [0.12,0.64].forEach(z => {
+        add(new THREE.CylinderGeometry(0.08,0.07,0.48,6), S(0x8b6914), 0.24, x, z);
+        add(new THREE.CylinderGeometry(0.09,0.09,0.1,6), S(0x222222), 0.04, x, z);
+      }));
+      break;
+    }
+    case 'llama': {
+      // Round fluffy body
+      add(new THREE.SphereGeometry(0.42,9,8), S(0xd4b896), 0.64);
+      // Long neck
+      add(new THREE.CylinderGeometry(0.14,0.18,0.7,7), S(0xd4b896), 1.14, 0, 0.28, -0.15,0,0);
+      // Small head
+      add(new THREE.SphereGeometry(0.18,8,8), S(0xd4b896), 1.54, 0, 0.42);
+      // Long ears
+      add(new THREE.ConeGeometry(0.05,0.28,5), S(0xc4a886), 1.78,  0.1, 0.38, 0,0,-0.15);
+      add(new THREE.ConeGeometry(0.05,0.28,5), S(0xc4a886), 1.78, -0.1, 0.38, 0,0, 0.15);
+      // Eyes
+      add(new THREE.SphereGeometry(0.045,5,5), S(0x111111), 1.6,  0.1, 0.56);
+      add(new THREE.SphereGeometry(0.045,5,5), S(0x111111), 1.6, -0.1, 0.56);
+      // Snout bump
+      add(new THREE.SphereGeometry(0.1,7,6), S(0xc4a080), 1.5, 0, 0.58);
+      // Fluffy wool patches
+      add(new THREE.SphereGeometry(0.25,7,6), S(0xede0cc), 0.82, 0.28, 0);
+      add(new THREE.SphereGeometry(0.22,7,6), S(0xede0cc), 0.78,-0.26, 0.1);
+      add(new THREE.SphereGeometry(0.2,7,6),  S(0xede0cc), 0.88, 0, -0.28);
+      // Legs
+      [0.18,-0.18].forEach(x => [0.08,0.56].forEach(z => add(new THREE.CylinderGeometry(0.07,0.06,0.42,6), S(0xc4a886), 0.21, x, z)));
+      break;
+    }
+    case 'rooster': {
+      // Body (bigger than hen)
+      add(new THREE.SphereGeometry(0.36,10,8), S(0xcc2200), 0.52);
+      // Head
+      add(new THREE.SphereGeometry(0.2,8,8), S(0xcc2200), 0.96, 0, 0.26);
+      // Beak
+      add(new THREE.ConeGeometry(0.06,0.16,5), S(0xff9900), 0.94, 0, 0.48, Math.PI/2,0,0);
+      // Large red comb (4 bumps)
+      add(new THREE.SphereGeometry(0.08,6,6), S(0xff0000), 1.14, -0.04, 0.22);
+      add(new THREE.SphereGeometry(0.07,6,6), S(0xff0000), 1.18,  0.06, 0.2);
+      add(new THREE.SphereGeometry(0.065,6,6),S(0xff0000), 1.14,  0.14, 0.24);
+      add(new THREE.SphereGeometry(0.055,6,6),S(0xff0000), 1.1,  -0.13, 0.25);
+      // Wattle (double)
+      add(new THREE.SphereGeometry(0.065,6,6), S(0xdd0000), 0.82,  0.06, 0.44);
+      add(new THREE.SphereGeometry(0.055,6,6), S(0xdd0000), 0.8,  -0.06, 0.44);
+      // Eyes
+      add(new THREE.SphereGeometry(0.05,6,6), S(0xffcc00), 1.06,  0.16, 0.36);
+      add(new THREE.SphereGeometry(0.05,6,6), S(0xffcc00), 1.06, -0.16, 0.36);
+      // Long showy tail feathers
+      add(new THREE.ConeGeometry(0.1,0.44,5), S(0x880000), 0.76, 0, -0.44, -1.1,0,0);
+      add(new THREE.ConeGeometry(0.08,0.38,5), S(0xdd4400), 0.82,  0.15,-0.4, -1.0,0, 0.35);
+      add(new THREE.ConeGeometry(0.08,0.38,5), S(0xdd4400), 0.82, -0.15,-0.4, -1.0,0,-0.35);
+      add(new THREE.ConeGeometry(0.06,0.32,5), S(0xffaa00), 0.86,  0.26,-0.36,-0.95,0, 0.6);
+      add(new THREE.ConeGeometry(0.06,0.32,5), S(0xffaa00), 0.86, -0.26,-0.36,-0.95,0,-0.6);
+      // Spurs
+      add(new THREE.ConeGeometry(0.03,0.12,4), S(0x888866), 0.15,  0.18, 0.1, 0,0,-0.5);
+      add(new THREE.ConeGeometry(0.03,0.12,4), S(0x888866), 0.15, -0.18, 0.1, 0,0, 0.5);
+      // Legs
+      add(new THREE.CylinderGeometry(0.05,0.05,0.3,5), S(0xff9900), 0.15,  0.12, 0.1);
+      add(new THREE.CylinderGeometry(0.05,0.05,0.3,5), S(0xff9900), 0.15, -0.12, 0.1);
+      break;
+    }
     default: {
       add(new THREE.CylinderGeometry(0.1,0.15,0.8,8), S(0x228B22), 0.4);
       add(new THREE.SphereGeometry(0.38,10,10), S(data.color||0x00ff00), 0.9);
@@ -2866,6 +2990,70 @@ function updatePlacedPlants(dt) {
           spawnFX(nearest.pos.clone(), 0xffffff, 0.3, 1.4);
           spawnImpact(nearest.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), 0xdddddd);
           sfxHeavySlam();
+
+        } else if (p.data.attack === 'water') {
+          // Duck: water splash AoE — damages + slows
+          gs.enemies.forEach(e => {
+            if (e.pos.distanceTo(p.pos) < p.data.range) {
+              dmgEnemy(e, p.data.dmg);
+              e.slowTimer = Math.max(e.slowTimer || 0, 2.5);
+              spawnFX(e.pos.clone(), 0x44aaff, 0.3, 0.6);
+            }
+          });
+          spawnFX(p.pos.clone(), 0x44aaff, 0.45, p.data.range * 0.4);
+          sfxSplat();
+
+        } else if (p.data.attack === 'headbutt') {
+          // Goat: narrow line charge — hits enemies directly ahead, giant knockback
+          gs.enemies.forEach(e => {
+            const edist = e.pos.distanceTo(p.pos);
+            const edot  = dir.dot(e.pos.clone().sub(p.pos).normalize());
+            if (edist < p.data.range && edot > 0.7) {
+              dmgEnemy(e, p.data.dmg);
+              e.vel.add(dir.clone().multiplyScalar(22));
+              spawnFX(e.pos.clone(), 0xaabb88, 0.4, 1.3);
+            }
+          });
+          spawnSlash(p.pos.clone(), dir, 0x99aa66, p.data.range);
+          sfxHeavySlam();
+
+        } else if (p.data.attack === 'kick') {
+          // Horse: wide arc kick — hits all enemies in a broad 180° sweep
+          gs.enemies.forEach(e => {
+            const edist = e.pos.distanceTo(p.pos);
+            const edot  = dir.dot(e.pos.clone().sub(p.pos).normalize());
+            if (edist < p.data.range && edot > 0.0) {
+              dmgEnemy(e, p.data.dmg);
+              e.vel.add(dir.clone().multiplyScalar(12));
+              spawnImpact(e.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), 0xaa8800);
+            }
+          });
+          spawnSlash(p.pos.clone(), dir, 0xaa8800, p.data.range * 1.2);
+          sfxHeavySlam();
+
+        } else if (p.data.attack === 'spit') {
+          // Llama: long-range poison spit projectile
+          const spitData = { kind:'slow', dmg:p.data.dmg, color:0x88dd44, id:'llama_spit', poison:true };
+          spawnProj(p.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), dir, 11, spitData, 'plant', p.data.range / 11);
+          spawnFX(p.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), 0x88dd44, 0.2, 0.4);
+          sfxShoot(0.25);
+
+        } else if (p.data.attack === 'crow') {
+          // Rooster: battle crow — briefly stuns (roots) all enemies in range
+          let hit = false;
+          gs.enemies.forEach(e => {
+            if (e.pos.distanceTo(p.pos) < p.data.range) {
+              dmgEnemy(e, p.data.dmg);
+              e.rootTimer = Math.max(e.rootTimer || 0, 1.8);
+              e.vel.set(0, 0, 0);
+              spawnFX(e.pos.clone(), 0xffcc00, 0.35, 0.8);
+              hit = true;
+            }
+          });
+          if (hit) {
+            spawnFX(p.pos.clone(), 0xffcc00, 0.5, p.data.range * 0.5);
+            sfxSwing(0.55);
+          }
         }
       }
     }
@@ -3000,6 +3188,21 @@ function showToast(msg, dur = 2200) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
   clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function showAnimalEliminated(animalData) {
+  const el = document.getElementById('wave-ann');
+  el.style.color = '#ff6622';
+  el.style.textShadow = '0 0 30px #ff4400, 0 0 60px rgba(255,68,0,0.3)';
+  el.textContent = animalData.emoji + ' ' + animalData.name + ' Eliminated!';
+  el.classList.add('show');
+  clearTimeout(el._at);
+  el._at = setTimeout(() => {
+    el.classList.remove('show');
+    el.style.color = '';
+    el.style.textShadow = '';
+  }, 2800);
+  sfxPlayerHurt();
 }
 
 function showWaveAnn(txt) {
