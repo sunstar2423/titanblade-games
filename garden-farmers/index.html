@@ -220,7 +220,10 @@ scene.add(topLight);
 // ═══════════════════════════════════════
 //  FARM SCENE
 // ═══════════════════════════════════════
-const FARM_R = 42;
+let FARM_R = 42;
+let _farmDirt = null, _farmDirtMat = null;
+const _fenceMeshes = [];
+let _pathMesh = null, _pathMat = null;
 const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
 // Outer ground — canvas grass texture
@@ -267,8 +270,9 @@ const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
     ctx.fillStyle = '#7a5810'; ctx.fillRect(0, y + 9, 512, 3);
   }
   const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(6, 6);
-  const farm = new THREE.Mesh(new THREE.CircleGeometry(FARM_R, 64), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.97, metalness: 0 }));
-  farm.rotation.x = -Math.PI / 2; farm.position.y = 0.01; farm.receiveShadow = true; scene.add(farm);
+  _farmDirtMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.97, metalness: 0 });
+  _farmDirt = new THREE.Mesh(new THREE.CircleGeometry(FARM_R, 64), _farmDirtMat);
+  _farmDirt.rotation.x = -Math.PI / 2; _farmDirt.position.y = 0.01; _farmDirt.receiveShadow = true; scene.add(_farmDirt);
 })();
 
 // Fence posts + rails around edge
@@ -278,7 +282,7 @@ for (let i = 0; i < POST_N; i++) {
   const a = (i / POST_N) * Math.PI * 2;
   const post = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.1, 0.22), FENCE_MAT);
   post.position.set(Math.cos(a) * FARM_R, 0.55, Math.sin(a) * FARM_R);
-  post.castShadow = true; scene.add(post);
+  post.castShadow = true; scene.add(post); _fenceMeshes.push(post);
   // Rail to next post
   const a2 = ((i + 1) / POST_N) * Math.PI * 2;
   const x1 = Math.cos(a) * FARM_R, z1 = Math.sin(a) * FARM_R;
@@ -286,9 +290,9 @@ for (let i = 0; i < POST_N; i++) {
   const mid = new THREE.Vector3((x1+x2)/2, 0.85, (z1+z2)/2);
   const len = Math.sqrt((x2-x1)**2 + (z2-z1)**2);
   const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.1, 0.1), FENCE_MAT);
-  rail.position.copy(mid); rail.rotation.y = -Math.atan2(z2-z1, x2-x1); scene.add(rail);
+  rail.position.copy(mid); rail.rotation.y = -Math.atan2(z2-z1, x2-x1); scene.add(rail); _fenceMeshes.push(rail);
   // Lower rail
-  const rail2 = rail.clone(); rail2.position.y = 0.45; scene.add(rail2);
+  const rail2 = rail.clone(); rail2.position.y = 0.45; scene.add(rail2); _fenceMeshes.push(rail2);
 }
 
 // Barn (center) — improved
@@ -477,10 +481,10 @@ let windmillBlades = null;
 
 // Dirt path from barn south to fence
 (function() {
-  const pathMat = new THREE.MeshStandardMaterial({ color: 0x8a6010, roughness: 0.97 });
-  const path = new THREE.Mesh(new THREE.PlaneGeometry(2.4, FARM_R - 6), pathMat);
-  path.rotation.x = -Math.PI / 2; path.position.set(0, 0.018, (FARM_R - 6) / 2 + 4);
-  path.receiveShadow = true; scene.add(path);
+  _pathMat = new THREE.MeshStandardMaterial({ color: 0x8a6010, roughness: 0.97 });
+  _pathMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.4, FARM_R - 6), _pathMat);
+  _pathMesh.rotation.x = -Math.PI / 2; _pathMesh.position.set(0, 0.018, (FARM_R - 6) / 2 + 4);
+  _pathMesh.receiveShadow = true; scene.add(_pathMesh);
 })();
 
 // ═══════════════════════════════════════
@@ -825,6 +829,7 @@ const gs = {
   placeId: null,
   eventTimer: 300,
   activeEvents: {},
+  farmExpansions: 0,
 };
 
 let playerMesh = null;
@@ -3252,7 +3257,21 @@ function renderShop() {
       <div class="si ${gs.straw<30?'dim':gs.barnHP>=gs.barnMaxHP?'dim':''}" onclick="buyBarnRepair()">
         <div class="ie">🔨</div><div class="in">Repair Barn</div><div class="id">Restore 50 barn HP</div><div class="ic">🌾 30</div></div>
       <div class="si ${gs.straw<80?'dim':''}" onclick="buyBarnUpgrade()">
-        <div class="ie">🏰</div><div class="in">Upgrade Barn</div><div class="id">+100 max barn HP</div><div class="ic">🌾 80</div></div>`;
+        <div class="ie">🏰</div><div class="in">Upgrade Barn</div><div class="id">+100 max barn HP</div><div class="ic">🌾 80</div></div>
+      <div style="grid-column:1/-1;color:#aaa;font-size:12px;margin:8px 0 2px">🌾 Land Expansions (${gs.farmExpansions}/${MAX_FARM_EXPANSIONS}) — Current radius: ${FARM_R}</div>
+      ${gs.farmExpansions >= MAX_FARM_EXPANSIONS
+        ? `<div class="si owned"><div class="ie">🏞️</div><div class="in">Maximum Land</div><div class="id">Farm fully expanded!</div><div class="ic">✅ Max</div></div>`
+        : (() => {
+            const lvl = gs.farmExpansions;
+            const cost = LAND_COSTS[lvl];
+            const labels = ['Small Plot','Large Plot','Grand Farm','Vast Estate'];
+            const icons = ['🌱','🌿','🌾','🏞️'];
+            return `<div class="si ${gs.straw<cost?'dim':''}" onclick="expandFarm()">
+              <div class="ie">${icons[lvl]}</div><div class="in">Expand: ${labels[lvl]}</div>
+              <div class="id">+8 farm radius (${FARM_R} → ${FARM_R+8}) — more room to place defenses</div>
+              <div class="ic">🌾 ${cost}</div></div>`;
+          })()
+      }`;
     return;
   }
 
@@ -3355,6 +3374,52 @@ function buyBarnUpgrade() {
   if (gs.straw < 80) return;
   gs.straw -= 80; gs.barnMaxHP += 100; gs.barnHP += 100;
   updateBarnRing(); showToast('Barn upgraded! 🏰'); renderShop(); saveGame();
+}
+
+const LAND_COSTS = [150, 300, 500, 750];
+const MAX_FARM_EXPANSIONS = 4;
+
+function rebuildFarmGeometry() {
+  if (_farmDirt) { scene.remove(_farmDirt); _farmDirt.geometry.dispose(); }
+  _farmDirt = new THREE.Mesh(new THREE.CircleGeometry(FARM_R, 64), _farmDirtMat);
+  _farmDirt.rotation.x = -Math.PI / 2; _farmDirt.position.y = 0.01; _farmDirt.receiveShadow = true;
+  scene.add(_farmDirt);
+
+  _fenceMeshes.forEach(m => scene.remove(m));
+  _fenceMeshes.length = 0;
+  const pn = Math.round(52 * FARM_R / 42);
+  for (let i = 0; i < pn; i++) {
+    const a = (i / pn) * Math.PI * 2;
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.1, 0.22), FENCE_MAT);
+    post.position.set(Math.cos(a) * FARM_R, 0.55, Math.sin(a) * FARM_R);
+    post.castShadow = true; scene.add(post); _fenceMeshes.push(post);
+    const a2 = ((i + 1) / pn) * Math.PI * 2;
+    const x1 = Math.cos(a) * FARM_R, z1 = Math.sin(a) * FARM_R;
+    const x2 = Math.cos(a2) * FARM_R, z2 = Math.sin(a2) * FARM_R;
+    const mid = new THREE.Vector3((x1+x2)/2, 0.85, (z1+z2)/2);
+    const len = Math.sqrt((x2-x1)**2 + (z2-z1)**2);
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.1, 0.1), FENCE_MAT);
+    rail.position.copy(mid); rail.rotation.y = -Math.atan2(z2-z1, x2-x1); scene.add(rail); _fenceMeshes.push(rail);
+    const rail2 = rail.clone(); rail2.position.y = 0.45; scene.add(rail2); _fenceMeshes.push(rail2);
+  }
+
+  if (_pathMesh) { scene.remove(_pathMesh); _pathMesh.geometry.dispose(); }
+  _pathMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.4, FARM_R - 6), _pathMat);
+  _pathMesh.rotation.x = -Math.PI / 2; _pathMesh.position.set(0, 0.018, (FARM_R - 6) / 2 + 4);
+  _pathMesh.receiveShadow = true; scene.add(_pathMesh);
+}
+
+function expandFarm() {
+  const lvl = gs.farmExpansions;
+  if (lvl >= MAX_FARM_EXPANSIONS) return;
+  const cost = LAND_COSTS[lvl];
+  if (gs.straw < cost) return;
+  gs.straw -= cost;
+  gs.farmExpansions++;
+  FARM_R = 42 + gs.farmExpansions * 8;
+  rebuildFarmGeometry();
+  showToast('Farm expanded! 🌾 New radius: ' + FARM_R);
+  renderShop(); saveGame();
 }
 
 // ═══════════════════════════════════════
@@ -3518,7 +3583,7 @@ function saveGame() {
     barnHP: gs.barnHP, barnMaxHP: gs.barnMaxHP,
     playerHP: gs.playerHP, totalKills: gs.totalKills,
     ownedWeapons: [...gs.ownedWeapons], ownedPlaceables: [...gs.ownedPlaceables],
-    hotbar: gs.hotbar,
+    hotbar: gs.hotbar, farmExpansions: gs.farmExpansions,
   }));
 }
 
@@ -3531,6 +3596,9 @@ function loadGame() {
     gs.ownedWeapons = new Set(d.ownedWeapons || ['carrot']);
     gs.ownedPlaceables = new Set(d.ownedPlaceables || []);
     gs.hotbar = d.hotbar || ['carrot', null, null, null, null];
+    gs.farmExpansions = d.farmExpansions || 0;
+    FARM_R = 42 + gs.farmExpansions * 8;
+    if (gs.farmExpansions > 0) rebuildFarmGeometry();
     gs.betweenWaves = true;
     updateBarnRing();
   } catch (e) { console.error('Load error', e); }
@@ -3555,6 +3623,7 @@ function resetGame() {
   gs.totalKills = 0; attackCd = 0;
   gs.playerSlowTimer = 0;
   gs.eventTimer = 90; gs.activeEvents = {}; gs._strawRainTick = 0;
+  gs.farmExpansions = 0; FARM_R = 42; rebuildFarmGeometry();
   _evCdEl.style.display = 'none';
   hideEventBanner();
   updateBarnRing();
