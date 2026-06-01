@@ -135,6 +135,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
         <div class="shop-tab active" onclick="shopTab('weapons')">⚔️ Weapons</div>
         <div class="shop-tab" onclick="shopTab('plants')">🌱 Placeable</div>
         <div class="shop-tab" onclick="shopTab('defenses')">🏰 Defenses</div>
+        <div class="shop-tab" onclick="shopTab('animals')">🐾 Animals</div>
         <div class="shop-tab" onclick="shopTab('barn')">🏚️ Barn</div>
       </div>
       <div id="shop-content" class="shop-grid"></div>
@@ -158,22 +159,22 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.72;
+renderer.toneMappingExposure = 0.38;
 renderer.outputEncoding = THREE.sRGBEncoding;
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0xb85c28, 0.009);
+scene.fog = new THREE.FogExp2(0x0a0a14, 0.011);
 
 // Sky gradient dome
 (function() {
   const c = document.createElement('canvas'); c.width = 2; c.height = 256;
   const ctx = c.getContext('2d');
   const g = ctx.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0,    '#070d1e');
-  g.addColorStop(0.28, '#0e2244');
-  g.addColorStop(0.55, '#a03818');
-  g.addColorStop(0.78, '#d46022');
-  g.addColorStop(1,    '#f0a03c');
+  g.addColorStop(0,    '#020408');
+  g.addColorStop(0.35, '#060e1a');
+  g.addColorStop(0.65, '#0d1a2e');
+  g.addColorStop(0.85, '#1a2a3e');
+  g.addColorStop(1,    '#1e3040');
   ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
   const tex = new THREE.CanvasTexture(c);
   const sky = new THREE.Mesh(
@@ -196,9 +197,9 @@ window.addEventListener('resize', () => {
 });
 
 // Lighting
-const hemiLight = new THREE.HemisphereLight(0x88aace, 0x5a3a18, 0.5);
+const hemiLight = new THREE.HemisphereLight(0x223344, 0x111108, 0.4);
 scene.add(hemiLight);
-const sun = new THREE.DirectionalLight(0xffcc55, 1.1);
+const sun = new THREE.DirectionalLight(0x9999cc, 0.45);
 sun.position.set(18, 22, 12);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -206,13 +207,13 @@ sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
 sun.shadow.camera.top = 75;  sun.shadow.camera.bottom = -75;
 sun.shadow.bias = -0.001;
 scene.add(sun);
-const fill = new THREE.DirectionalLight(0x3355aa, 0.35);
+const fill = new THREE.DirectionalLight(0x112244, 0.2);
 fill.position.set(-12, 8, -12);
 scene.add(fill);
-const rimLight = new THREE.DirectionalLight(0xff8833, 0.55);
+const rimLight = new THREE.DirectionalLight(0x334466, 0.3);
 rimLight.position.set(-8, 5, 20);
 scene.add(rimLight);
-const topLight = new THREE.DirectionalLight(0xddeeff, 0.18);
+const topLight = new THREE.DirectionalLight(0x223355, 0.1);
 topLight.position.set(0, 30, 0);
 scene.add(topLight);
 
@@ -326,13 +327,13 @@ arch.rotation.z = Math.PI/2; arch.position.set(0, 3.2, 3.08); barnGrp.add(arch);
 });
 scene.add(barnGrp);
 // Warm glow from barn windows
-const barnLight = new THREE.PointLight(0xff8822, 4.5, 22);
+const barnLight = new THREE.PointLight(0xff6611, 3.0, 18);
 barnLight.position.set(0, 3.5, 3.5);
 scene.add(barnLight);
-const barnLight2 = new THREE.PointLight(0xff7711, 2.2, 16);
+const barnLight2 = new THREE.PointLight(0xff5500, 1.4, 12);
 barnLight2.position.set(0, 3.5, -3.5);
 scene.add(barnLight2);
-const barnLight3 = new THREE.PointLight(0xffaa44, 1.5, 12);
+const barnLight3 = new THREE.PointLight(0xff8833, 1.2, 10);
 barnLight3.position.set(0, 1.0, 3.2);
 scene.add(barnLight3);
 
@@ -535,6 +536,13 @@ const DEFENSE_ITEMS = [
   { id:'bombtwr',  name:'Bomb Tower',    emoji:'💣', cost:40, desc:'AoE bomb every 3s (range 5)',          type:'bombtwr',  hp:80,  dmg:60, range:5,  cd:3.0, aoe:3 },
   { id:'spike',    name:'Spike Trap',    emoji:'🗡️', cost:15, desc:'Damages enemies walking over it',      type:'spike',    hp:80,  dmg:18, range:1.6 },
   { id:'tesla',    name:'Tesla Coil',    emoji:'⚡', cost:35, desc:'Zaps up to 4 enemies every 2s',        type:'tesla',    hp:70,  dmg:22, range:5.5, cd:2.0, chains:4 },
+];
+
+const ANIMALS = [
+  { id:'hen',   name:'Guard Hen',  emoji:'🐔', cost:35, kind:'animal', attack:'egg',    dmg:22, range:8,   cd:1.8, hp:60,  color:0xfffcd0, desc:'Throws eggs at enemies' },
+  { id:'cow',   name:'Battle Cow', emoji:'🐄', cost:70, kind:'animal', attack:'charge', dmg:70, range:7,   cd:5.0, hp:130, color:0xf0f0f0, desc:'Charges at enemies — massive knockback' },
+  { id:'pig',   name:'Mud Pig',    emoji:'🐷', cost:45, kind:'animal', attack:'mud',    dmg:14, range:4.0, cd:3.5, hp:85,  color:0xf4a0b0, desc:'Splatters mud — slows all nearby enemies' },
+  { id:'sheep', name:'Ram Sheep',  emoji:'🐑', cost:40, kind:'animal', attack:'ram',    dmg:12, range:5,   cd:2.5, hp:75,  color:0xeeeeee, desc:'Rams nearest enemy — strong knockback' },
 ];
 
 const RANDOM_EVENTS = [
@@ -762,17 +770,17 @@ const WAVES_SNOW = [
 
 function getActiveData() {
   if (gs.biome === 'jungle') return {
-    weapons: WEAPONS_JUNGLE, placeables: PLACEABLES_JUNGLE, defenses: DEFENSES_JUNGLE,
+    weapons: WEAPONS_JUNGLE, placeables: PLACEABLES_JUNGLE, defenses: DEFENSES_JUNGLE, animals: ANIMALS,
     enemies: ENEMY_TYPES_JUNGLE, waves: WAVES_JUNGLE,
     starter: 'vine_whip', resourceEmoji: '🍌', enemyName: 'monkeys',
   };
   if (gs.biome === 'snow') return {
-    weapons: WEAPONS_SNOW, placeables: PLACEABLES_SNOW, defenses: DEFENSES_SNOW,
+    weapons: WEAPONS_SNOW, placeables: PLACEABLES_SNOW, defenses: DEFENSES_SNOW, animals: ANIMALS,
     enemies: ENEMY_TYPES_SNOW, waves: WAVES_SNOW,
     starter: 'ice_pick', resourceEmoji: '❄️', enemyName: 'snowmen',
   };
   return {
-    weapons: WEAPONS, placeables: PLACEABLES, defenses: DEFENSE_ITEMS,
+    weapons: WEAPONS, placeables: PLACEABLES, defenses: DEFENSE_ITEMS, animals: ANIMALS,
     enemies: ENEMY_TYPES, waves: WAVES,
     starter: 'carrot', resourceEmoji: '🌾', enemyName: 'scarecrows',
   };
@@ -2517,6 +2525,99 @@ function buildPlantMesh(data) {
       for (let i=0;i<4;i++) { const a=i/4*Math.PI*2; add(new THREE.ConeGeometry(0.03,0.18,4), cM, 0.88, Math.cos(a)*0.22, Math.sin(a)*0.22, Math.PI/2, a, 0); }
       break;
     }
+    // ── ANIMALS ──
+    case 'hen': {
+      // Body
+      add(new THREE.SphereGeometry(0.32,10,8), S(0xf5e8a0), 0.48);
+      // Head
+      add(new THREE.SphereGeometry(0.18,8,8), S(0xf5e8a0), 0.9, 0, 0.24);
+      // Beak
+      add(new THREE.ConeGeometry(0.055,0.14,5), S(0xff8800), 0.88, 0, 0.44, Math.PI/2,0,0);
+      // Red comb (3 bumps)
+      add(new THREE.SphereGeometry(0.065,6,6), S(0xdd1111), 1.04, -0.04, 0.22);
+      add(new THREE.SphereGeometry(0.05,6,6),  S(0xdd1111), 1.06,  0.07, 0.2);
+      add(new THREE.SphereGeometry(0.045,6,6), S(0xdd1111), 1.02, -0.12, 0.24);
+      // Wattle
+      add(new THREE.SphereGeometry(0.05,6,6), S(0xcc0000), 0.76, 0, 0.42);
+      // Tail feathers
+      add(new THREE.ConeGeometry(0.09,0.32,5), S(0xe0b840), 0.72, 0,-0.36, -0.9,0,0);
+      add(new THREE.ConeGeometry(0.07,0.28,5), S(0xd09030), 0.76, 0.12,-0.33, -0.85,0,0.3);
+      add(new THREE.ConeGeometry(0.07,0.28,5), S(0xd09030), 0.76,-0.12,-0.33, -0.85,0,-0.3);
+      // Wings
+      add(new THREE.SphereGeometry(0.22,8,6), S(0xd4c070), 0.48,  0.3, 0.05);
+      add(new THREE.SphereGeometry(0.22,8,6), S(0xd4c070), 0.48, -0.3, 0.05);
+      // Legs
+      add(new THREE.CylinderGeometry(0.04,0.04,0.26,5), S(0xff9900), 0.13, 0.1, 0.08);
+      add(new THREE.CylinderGeometry(0.04,0.04,0.26,5), S(0xff9900), 0.13,-0.1, 0.08);
+      break;
+    }
+    case 'cow': {
+      // Body
+      add(new THREE.SphereGeometry(0.55,10,8), S(0xf0f0f0), 0.7);
+      add(new THREE.SphereGeometry(0.5,10,8), S(0xf0f0f0), 0.68, 0, 0.55);
+      // Head
+      add(new THREE.SphereGeometry(0.28,9,8), S(0xf0f0f0), 0.95, 0, 0.88);
+      // Snout
+      add(new THREE.SphereGeometry(0.16,8,6), S(0xf4b8a0), 0.9, 0, 1.1);
+      // Nostrils
+      add(new THREE.SphereGeometry(0.04,5,5), S(0x442211), 0.92, 0.06, 1.24);
+      add(new THREE.SphereGeometry(0.04,5,5), S(0x442211), 0.92,-0.06, 1.24);
+      // Eyes
+      add(new THREE.SphereGeometry(0.05,6,6), S(0x222222), 1.04, 0.16, 1.0);
+      add(new THREE.SphereGeometry(0.05,6,6), S(0x222222), 1.04,-0.16, 1.0);
+      // Horns
+      add(new THREE.ConeGeometry(0.04,0.24,5), S(0xddcc88), 1.2, 0.2, 0.82, 0,0,-0.5);
+      add(new THREE.ConeGeometry(0.04,0.24,5), S(0xddcc88), 1.2,-0.2, 0.82, 0,0, 0.5);
+      // Black spots
+      add(new THREE.SphereGeometry(0.22,8,6), S(0x111111), 0.78,  0.35, 0.15);
+      add(new THREE.SphereGeometry(0.16,8,6), S(0x111111), 0.62, -0.25, 0.55);
+      // Legs (4)
+      [0.28,-0.28].forEach(x => [0.1,0.7].forEach(z => add(new THREE.CylinderGeometry(0.08,0.07,0.44,6), S(0xf0f0f0), 0.22, x, z)));
+      // Udder
+      add(new THREE.SphereGeometry(0.18,8,6), S(0xf4c0a0), 0.22, 0, 0.4);
+      break;
+    }
+    case 'pig': {
+      // Body
+      add(new THREE.SphereGeometry(0.44,10,8), S(0xf4a0b0), 0.58);
+      // Head
+      add(new THREE.SphereGeometry(0.28,9,8), S(0xf4a0b0), 0.88, 0, 0.5);
+      // Snout disc
+      add(new THREE.CylinderGeometry(0.14,0.14,0.08,10), S(0xf08898), 0.85, 0, 0.72, Math.PI/2,0,0);
+      // Nostrils
+      add(new THREE.SphereGeometry(0.04,5,5), S(0xcc5566), 0.86, 0.06, 0.79);
+      add(new THREE.SphereGeometry(0.04,5,5), S(0xcc5566), 0.86,-0.06, 0.79);
+      // Eyes
+      add(new THREE.SphereGeometry(0.045,6,6), S(0x222222), 0.98, 0.12, 0.64);
+      add(new THREE.SphereGeometry(0.045,6,6), S(0x222222), 0.98,-0.12, 0.64);
+      // Ears (flopped)
+      add(new THREE.SphereGeometry(0.1,7,5), S(0xf090a0), 1.06, 0.2, 0.4);
+      add(new THREE.SphereGeometry(0.1,7,5), S(0xf090a0), 1.06,-0.2, 0.4);
+      // Curly tail (small torus)
+      add(new THREE.TorusGeometry(0.1,0.04,5,12), S(0xf4a0b0), 0.6, 0,-0.48, Math.PI/3,0,0);
+      // Legs
+      [0.22,-0.22].forEach(x => [0.12,0.38].forEach(z => add(new THREE.CylinderGeometry(0.07,0.06,0.36,6), S(0xf4a0b0), 0.18, x, z)));
+      break;
+    }
+    case 'sheep': {
+      // Fluffy body — sphere cluster for wool
+      add(new THREE.SphereGeometry(0.42,9,8), S(0xeeeeee), 0.6);
+      [[0.3,0.7,0.1],[-0.3,0.65,0.1],[0,0.72,0.3],[0,0.72,-0.28],[0.28,0.62,-0.2],[-0.28,0.62,-0.18]].forEach(([x,y,z]) =>
+        add(new THREE.SphereGeometry(0.2+Math.random()*0.05,7,6), S(0xf0f0f0), y, x, z));
+      // Dark head
+      add(new THREE.SphereGeometry(0.2,8,8), S(0x444444), 0.88, 0, 0.52);
+      // Ears
+      add(new THREE.SphereGeometry(0.09,6,5), S(0x555555), 0.9,  0.18, 0.46);
+      add(new THREE.SphereGeometry(0.09,6,5), S(0x555555), 0.9, -0.18, 0.46);
+      // Eyes
+      add(new THREE.SphereGeometry(0.04,5,5), S(0xffd700), 0.94, 0.08, 0.7);
+      add(new THREE.SphereGeometry(0.04,5,5), S(0xffd700), 0.94,-0.08, 0.7);
+      // Snout
+      add(new THREE.SphereGeometry(0.1,7,6), S(0x666666), 0.8, 0, 0.68);
+      // Dark legs
+      [0.2,-0.2].forEach(x => [0.1,0.44].forEach(z => add(new THREE.CylinderGeometry(0.06,0.055,0.38,6), S(0x333333), 0.19, x, z)));
+      break;
+    }
     default: {
       add(new THREE.CylinderGeometry(0.1,0.15,0.8,8), S(0x228B22), 0.4);
       add(new THREE.SphereGeometry(0.38,10,10), S(data.color||0x00ff00), 0.9);
@@ -2607,17 +2708,16 @@ function placeAtMouse() {
   const ad = getActiveData();
   const pd = ad.placeables.find(p => p.id === gs.placeId);
   const dd = ad.defenses.find(d => d.id === gs.placeId);
-  const data = pd || dd;
+  const an = (ad.animals||[]).find(a => a.id === gs.placeId);
+  const data = pd || dd || an;
   if (!data) return;
-
-
 
   const g = buildPlantMesh(data);
   const pos = new THREE.Vector3(x, 0, z);
   g.position.copy(pos); scene.add(g);
 
-  if (pd) {
-    gs.placedPlants.push({ mesh: g, data: pd, hp: pd.hp, maxHp: pd.hp, pos: pos.clone(), timer: 0 });
+  if (pd || an) {
+    gs.placedPlants.push({ mesh: g, data: (pd||an), hp: (pd||an).hp, maxHp: (pd||an).hp, pos: pos.clone(), timer: 0 });
   } else {
     gs.defenses.push({ mesh: g, data: dd, pos: pos.clone(), timer: 0 });
   }
@@ -2669,13 +2769,64 @@ function updatePlacedPlants(dt) {
       if (nearest && nearest.pos.distanceTo(p.pos) < p.data.range) {
         p.timer = p.data.cd || 1;
         if (p.data.hardFreeze) {
-          // Freeze tower: instantly hard-freezes the nearest enemy (no projectile)
           nearest.slowTimer = 8; nearest.vel.set(0,0,0);
           spawnFX(nearest.pos.clone(), 0xaaddff, 0.55, 2.0);
           showToast('🧊 Enemy hard-frozen!', 800);
         } else {
           const dir = nearest.pos.clone().sub(p.pos).normalize();
           spawnProj(p.pos.clone().add(new THREE.Vector3(0, 1, 0)), dir, 9, p.data, 'plant', p.data.range / 9);
+        }
+      }
+    }
+
+    // Animal attacks
+    if (p.data.kind === 'animal' && p.timer <= 0) {
+      const nearest = gs.enemies.slice().sort((a, b) => a.pos.distanceTo(p.pos) - b.pos.distanceTo(p.pos))[0];
+      if (nearest && nearest.pos.distanceTo(p.pos) < p.data.range) {
+        p.timer = p.data.cd;
+        const dir = nearest.pos.clone().sub(p.pos).setY(0).normalize();
+
+        if (p.data.attack === 'egg') {
+          // Hen: lob an egg projectile
+          const eggData = { kind:'throw', dmg:p.data.dmg, color:0xffffcc, id:'hen_egg' };
+          spawnProj(p.pos.clone().add(new THREE.Vector3(0, 1.0, 0)), dir, 9, eggData, 'plant', p.data.range / 9);
+          spawnFX(p.pos.clone().add(new THREE.Vector3(0,1,0)), 0xffffcc, 0.18, 0.5);
+          sfxShoot(0.28);
+
+        } else if (p.data.attack === 'charge') {
+          // Cow: damages all enemies in a forward cone + knocks them back
+          gs.enemies.forEach(e => {
+            const edist = e.pos.distanceTo(p.pos);
+            const edot = dir.dot(e.pos.clone().sub(p.pos).normalize());
+            if (edist < p.data.range && edot > 0.45) {
+              dmgEnemy(e, p.data.dmg);
+              e.vel.add(dir.clone().multiplyScalar(16));
+              spawnFX(e.pos.clone(), 0xcc6600, 0.35, 1.2);
+            }
+          });
+          spawnSlash(p.pos.clone(), dir, 0xcc6600, p.data.range);
+          spawnImpact(p.pos.clone().add(dir.clone().multiplyScalar(p.data.range * 0.5)), 0xcc6600);
+          sfxHeavySlam();
+
+        } else if (p.data.attack === 'mud') {
+          // Pig: AoE slow + damage around itself
+          gs.enemies.forEach(e => {
+            if (e.pos.distanceTo(p.pos) < p.data.range) {
+              dmgEnemy(e, p.data.dmg);
+              e.slowTimer = Math.max(e.slowTimer || 0, 3.5);
+              spawnFX(e.pos.clone(), 0x7a4a1a, 0.35, 0.7);
+            }
+          });
+          spawnFX(p.pos.clone(), 0x7a4a1a, 0.5, p.data.range * 0.45);
+          sfxSplat();
+
+        } else if (p.data.attack === 'ram') {
+          // Sheep: single target hard knockback
+          dmgEnemy(nearest, p.data.dmg);
+          nearest.vel.add(dir.clone().multiplyScalar(20));
+          spawnFX(nearest.pos.clone(), 0xffffff, 0.3, 1.4);
+          spawnImpact(nearest.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), 0xdddddd);
+          sfxHeavySlam();
         }
       }
     }
@@ -2830,7 +2981,7 @@ function toggleShop(forceClose) {
 function shopTab(tab) {
   currentShopTab = tab;
   document.querySelectorAll('.shop-tab').forEach((el, i) => {
-    el.classList.toggle('active', ['weapons', 'plants', 'defenses', 'barn'][i] === tab);
+    el.classList.toggle('active', ['weapons', 'plants', 'defenses', 'animals', 'barn'][i] === tab);
   });
   renderShop();
 }
@@ -2864,7 +3015,7 @@ function renderShop() {
   }
 
   const _ad = getActiveData();
-  const items = currentShopTab === 'weapons' ? _ad.weapons : currentShopTab === 'plants' ? _ad.placeables : _ad.defenses;
+  const items = currentShopTab === 'weapons' ? _ad.weapons : currentShopTab === 'plants' ? _ad.placeables : currentShopTab === 'animals' ? _ad.animals : _ad.defenses;
   items.forEach(item => {
     const owned = currentShopTab === 'weapons' && gs.ownedWeapons.has(item.id);
     const afford = gs.straw >= item.cost;
@@ -2886,6 +3037,9 @@ function buyItem(item, tab) {
     equipWeapon(item.id);
   } else if (tab === 'plants') {
     autoPlacePlant(item);
+    toggleShop(true);
+  } else if (tab === 'animals') {
+    startPlace(item.id);
     toggleShop(true);
   } else if (tab === 'defenses') {
     startPlace(item.id);
@@ -2925,7 +3079,7 @@ function equipWeapon(id) {
 function startPlace(id) {
   gs.placeMode = true; gs.placeId = id;
   const _adb = getActiveData();
-  const item = [..._adb.placeables, ..._adb.defenses].find(x => x.id === id);
+  const item = [..._adb.placeables, ..._adb.defenses, ...(_adb.animals||[])].find(x => x.id === id);
   const ab = document.getElementById('attack-btn');
   if (ab) ab.textContent = '🌱';
   showToast((isMobile ? 'Tap ▶ to place ' : 'Click to place ') + (item ? item.name : id) + '!', 3000);
