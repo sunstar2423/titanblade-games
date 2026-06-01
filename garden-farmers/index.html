@@ -158,22 +158,22 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.72;
+renderer.toneMappingExposure = 0.38;
 renderer.outputEncoding = THREE.sRGBEncoding;
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0xb85c28, 0.009);
+scene.fog = new THREE.FogExp2(0x0a0a14, 0.011);
 
 // Sky gradient dome
 (function() {
   const c = document.createElement('canvas'); c.width = 2; c.height = 256;
   const ctx = c.getContext('2d');
   const g = ctx.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0,    '#070d1e');
-  g.addColorStop(0.28, '#0e2244');
-  g.addColorStop(0.55, '#a03818');
-  g.addColorStop(0.78, '#d46022');
-  g.addColorStop(1,    '#f0a03c');
+  g.addColorStop(0,    '#020408');
+  g.addColorStop(0.35, '#060e1a');
+  g.addColorStop(0.65, '#0d1a2e');
+  g.addColorStop(0.85, '#1a2a3e');
+  g.addColorStop(1,    '#1e3040');
   ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
   const tex = new THREE.CanvasTexture(c);
   const sky = new THREE.Mesh(
@@ -196,9 +196,9 @@ window.addEventListener('resize', () => {
 });
 
 // Lighting
-const hemiLight = new THREE.HemisphereLight(0x88aace, 0x5a3a18, 0.5);
+const hemiLight = new THREE.HemisphereLight(0x223344, 0x111108, 0.4);
 scene.add(hemiLight);
-const sun = new THREE.DirectionalLight(0xffcc55, 1.1);
+const sun = new THREE.DirectionalLight(0x9999cc, 0.45);
 sun.position.set(18, 22, 12);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -206,13 +206,13 @@ sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
 sun.shadow.camera.top = 75;  sun.shadow.camera.bottom = -75;
 sun.shadow.bias = -0.001;
 scene.add(sun);
-const fill = new THREE.DirectionalLight(0x3355aa, 0.35);
+const fill = new THREE.DirectionalLight(0x112244, 0.2);
 fill.position.set(-12, 8, -12);
 scene.add(fill);
-const rimLight = new THREE.DirectionalLight(0xff8833, 0.55);
+const rimLight = new THREE.DirectionalLight(0x334466, 0.3);
 rimLight.position.set(-8, 5, 20);
 scene.add(rimLight);
-const topLight = new THREE.DirectionalLight(0xddeeff, 0.18);
+const topLight = new THREE.DirectionalLight(0x223355, 0.1);
 topLight.position.set(0, 30, 0);
 scene.add(topLight);
 
@@ -326,13 +326,13 @@ arch.rotation.z = Math.PI/2; arch.position.set(0, 3.2, 3.08); barnGrp.add(arch);
 });
 scene.add(barnGrp);
 // Warm glow from barn windows
-const barnLight = new THREE.PointLight(0xff8822, 4.5, 22);
+const barnLight = new THREE.PointLight(0xff6611, 3.0, 18);
 barnLight.position.set(0, 3.5, 3.5);
 scene.add(barnLight);
-const barnLight2 = new THREE.PointLight(0xff7711, 2.2, 16);
+const barnLight2 = new THREE.PointLight(0xff5500, 1.4, 12);
 barnLight2.position.set(0, 3.5, -3.5);
 scene.add(barnLight2);
-const barnLight3 = new THREE.PointLight(0xffaa44, 1.5, 12);
+const barnLight3 = new THREE.PointLight(0xff8833, 1.2, 10);
 barnLight3.position.set(0, 1.0, 3.2);
 scene.add(barnLight3);
 
