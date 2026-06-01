@@ -612,7 +612,12 @@ const WAVES = [
   [{t:'speedy',n:12},{t:'bomb',n:4},{t:'basic',n:6}],
   [{t:'giant',n:1},{t:'shadow',n:5},{t:'armor',n:4}],
   [{t:'ice',n:6},{t:'speedy',n:8},{t:'bomb',n:4},{t:'sword',n:4}],
-  [{t:'giant',n:2},{t:'shadow',n:6},{t:'boss',n:3},{t:'bomb',n:5},{t:'ice',n:4}],
+  [{t:'giant',n:2},{t:'speedy',n:8},{t:'bomb',n:4},{t:'shadow',n:6}],
+  [{t:'boss',n:4},{t:'bomb',n:6},{t:'ice',n:5},{t:'armor',n:5}],
+  [{t:'speedy',n:18},{t:'shadow',n:10},{t:'bomb',n:6}],
+  [{t:'giant',n:3},{t:'boss',n:4},{t:'armor',n:7},{t:'flame',n:6}],
+  [{t:'speedy',n:12},{t:'giant',n:2},{t:'bomb',n:8},{t:'shadow',n:8},{t:'boss',n:4}],
+  [{t:'giant',n:5},{t:'boss',n:8},{t:'armor',n:10},{t:'flame',n:8},{t:'shadow',n:8}],
 ];
 
 // ─── JUNGLE BIOME ───────────────────────────────────────────
@@ -693,7 +698,12 @@ const WAVES_JUNGLE = [
   [{t:'spider_monk',n:12},{t:'bomb_monk',n:4},{t:'chimp',n:6}],
   [{t:'kong',n:1},{t:'stealth_monk',n:5},{t:'alpha',n:4}],
   [{t:'troop',n:15},{t:'spider_monk',n:8},{t:'bomb_monk',n:4},{t:'howler',n:4}],
-  [{t:'kong',n:2},{t:'stealth_monk',n:6},{t:'chimp_boss',n:3},{t:'bomb_monk',n:5},{t:'troop',n:8}],
+  [{t:'kong',n:2},{t:'spider_monk',n:10},{t:'stealth_monk',n:8}],
+  [{t:'chimp_boss',n:4},{t:'bomb_monk',n:6},{t:'troop',n:10},{t:'alpha',n:5}],
+  [{t:'troop',n:18},{t:'spider_monk',n:10},{t:'stealth_monk',n:8}],
+  [{t:'kong',n:3},{t:'chimp_boss',n:4},{t:'alpha',n:8},{t:'poison_monk',n:6}],
+  [{t:'spider_monk',n:14},{t:'kong',n:2},{t:'bomb_monk',n:8},{t:'stealth_monk',n:8},{t:'chimp_boss',n:4}],
+  [{t:'kong',n:5},{t:'chimp_boss',n:8},{t:'alpha',n:10},{t:'poison_monk',n:8},{t:'stealth_monk',n:8}],
 ];
 
 // ─── SNOW BIOME ─────────────────────────────────────────────
@@ -774,7 +784,12 @@ const WAVES_SNOW = [
   [{t:'snow_speedy',n:12},{t:'snow_bomb',n:4},{t:'snow_basic',n:6}],
   [{t:'snow_giant',n:1},{t:'snow_shadow',n:5},{t:'snow_armor',n:4}],
   [{t:'snow_troop',n:14},{t:'snow_bomb',n:4},{t:'snow_thrower',n:5},{t:'yeti',n:1}],
-  [{t:'glacier',n:1},{t:'snow_shadow',n:6},{t:'snow_boss',n:3},{t:'snow_bomb',n:5},{t:'yeti',n:2}],
+  [{t:'glacier',n:2},{t:'snow_speedy',n:12},{t:'snow_shadow',n:8}],
+  [{t:'snow_boss',n:4},{t:'snow_bomb',n:6},{t:'yeti',n:3},{t:'snow_armor',n:5}],
+  [{t:'snow_troop',n:18},{t:'snow_speedy',n:10},{t:'snow_bomb',n:6}],
+  [{t:'glacier',n:3},{t:'snow_boss',n:4},{t:'yeti',n:3},{t:'snow_armor',n:7}],
+  [{t:'snow_speedy',n:12},{t:'glacier',n:2},{t:'snow_bomb',n:8},{t:'snow_shadow',n:8},{t:'snow_boss',n:4}],
+  [{t:'glacier',n:5},{t:'snow_boss',n:8},{t:'yeti',n:4},{t:'snow_armor',n:10},{t:'snow_shadow',n:8}],
 ];
 
 function getActiveData() {
@@ -2108,10 +2123,11 @@ function startNextWave() {
   gs.spawnQueue.sort(() => Math.random() - 0.5);
   gs.waveEnemiesLeft = gs.spawnQueue.length;
   gs.spawnTimer = 0;
-  const waveLabels = {5:'👹 BOSS WAVE!', 10:'💀 DOUBLE BOSS!', 12:'💀 DOUBLE BOSS!', 15:'☠️ BOSS ARMY!', 18:'🔥 TRIPLE BOSS!', 20:'💥 WAVE 20!', 21:'⚡ SPEED DEMONS!', 22:'🏔️ GIANT AWAKENS!', 23:'🧊 ICE AGE!', 24:'💥 APOCALYPSE!'};
-  const label = waveLabels[gs.wave] || (gs.wave === 20 ? '💥 FINAL WAVE!' : '⚠️ WAVE ' + gs.wave + '!');
+  const totalWaves = getActiveData().waves.length;
+  const waveLabels = {5:'👹 BOSS WAVE!', 10:'💀 DOUBLE BOSS!', 12:'💀 DOUBLE BOSS!', 15:'☠️ BOSS ARMY!', 18:'🔥 TRIPLE BOSS!', 20:'💥 WAVE 20!', 21:'⚡ SPEED DEMONS!', 22:'🏔️ GIANT AWAKENS!', 23:'🧊 ICE AGE!', 24:'💥 APOCALYPSE!', 25:'🌪️ CHAOS WAVE!', 26:'💣 BOMB BLITZ!', 27:'⚡ SPEED RUSH!', 28:'👹 TRIPLE GIANTS!', 29:'🔥 INFERNO!', 30:'💀 FINAL STAND!'};
+  const label = waveLabels[gs.wave] || '⚠️ WAVE ' + gs.wave + '!';
   showWaveAnn(label);
-  showToast('Wave ' + gs.wave + ' / 20 incoming!', 2200);
+  showToast('Wave ' + gs.wave + ' / ' + totalWaves + ' incoming!', 2200);
 }
 
 function checkWaveEnd() {
