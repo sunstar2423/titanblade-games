@@ -513,6 +513,7 @@ const WEAPONS = [
   { id:'sun',     name:'Sunflower Ray',         emoji:'🌻', cost:50, desc:'Giant instant light beam',      kind:'beam',     dmg:80, range:18,  cd:2.5,  color:0xffd700 },
   { id:'acorn',   name:'Acorn Star',            emoji:'🌰', cost:30, desc:'Spinning 4-point star projectile',kind:'star',    dmg:22, range:10,  cd:0.5,  color:0xa0522d },
   { id:'beet_orb',name:'Beet Orb',              emoji:'🫒', cost:40, desc:'Orb with rings — explodes at end', kind:'orb',    dmg:30, range:12,  cd:1.1,  color:0x990055, aoe:2.8 },
+  { id:'magic_wand',name:"Magician's Wand",    emoji:'🪄', cost:45, desc:'Click to TELEPORT to cursor — blasts enemies at destination', kind:'wand', dmg:35, range:20, cd:1.2, aoe:3.5, color:0xcc44ff },
 ];
 
 const PLACEABLES = [
@@ -582,6 +583,7 @@ const ENEMY_TYPES = [
   { id:'ice',    name:'Ice Scarecrow',          hp:75,  spd:1.5, dmg:9,  straw:18,  sz:1,   color:0x88ccff, ranged:true },
   { id:'shadow', name:'Shadow Scarecrow',       hp:65,  spd:3.0, dmg:12, straw:20,  sz:0.9, color:0x440088 },
   { id:'giant',  name:'Giant Scarecrow',        hp:700, spd:0.65,dmg:28, straw:120, sz:2.6, color:0x5c3d1e },
+  { id:'mage',   name:'Magician Scarecrow',     hp:90,  spd:2.0, dmg:14, straw:28,  sz:1,   color:0x6600cc, ranged:true, teleport:true },
 ];
 
 const WAVES = [
@@ -595,31 +597,31 @@ const WAVES = [
   [{t:'basic',n:6},{t:'torch',n:3},{t:'sword',n:2}],
   [{t:'armor',n:3},{t:'flame',n:3}],
   [{t:'boss',n:1},{t:'armor',n:2},{t:'torch',n:4}],
-  // Wave 9-12: Escalating — bigger swarms + two bosses
-  [{t:'basic',n:8},{t:'sword',n:4}],
+  // Wave 9-12: Escalating — bigger swarms + two bosses + first mages
+  [{t:'basic',n:8},{t:'sword',n:4},{t:'mage',n:1}],
   [{t:'armor',n:4},{t:'flame',n:4},{t:'boss',n:1}],
-  [{t:'torch',n:6},{t:'sword',n:4},{t:'armor',n:2}],
-  [{t:'boss',n:2},{t:'armor',n:3},{t:'flame',n:2}],
+  [{t:'torch',n:6},{t:'sword',n:4},{t:'armor',n:2},{t:'mage',n:2}],
+  [{t:'boss',n:2},{t:'armor',n:3},{t:'flame',n:2},{t:'mage',n:1}],
   // Wave 13-16: Hard — mega swarms and fire
-  [{t:'basic',n:10},{t:'flame',n:4},{t:'torch',n:4}],
+  [{t:'basic',n:10},{t:'flame',n:4},{t:'torch',n:4},{t:'mage',n:2}],
   [{t:'sword',n:5},{t:'armor',n:4},{t:'flame',n:3}],
-  [{t:'boss',n:2},{t:'armor',n:4},{t:'sword',n:3}],
-  [{t:'basic',n:8},{t:'torch',n:6},{t:'flame',n:4},{t:'sword',n:3}],
+  [{t:'boss',n:2},{t:'armor',n:4},{t:'sword',n:3},{t:'mage',n:2}],
+  [{t:'basic',n:8},{t:'torch',n:6},{t:'flame',n:4},{t:'sword',n:3},{t:'mage',n:2}],
   // Wave 17-20: Final gauntlet
-  [{t:'armor',n:5},{t:'sword',n:5},{t:'boss',n:2},{t:'flame',n:3}],
+  [{t:'armor',n:5},{t:'sword',n:5},{t:'boss',n:2},{t:'flame',n:3},{t:'mage',n:3}],
   [{t:'boss',n:3},{t:'armor',n:5},{t:'flame',n:4}],
-  [{t:'armor',n:6},{t:'sword',n:6},{t:'flame',n:5},{t:'boss',n:2}],
+  [{t:'armor',n:6},{t:'sword',n:6},{t:'flame',n:5},{t:'boss',n:2},{t:'mage',n:2}],
   [{t:'boss',n:5},{t:'armor',n:6},{t:'flame',n:6},{t:'sword',n:4}],
   // Wave 21-24: New enemy chaos
-  [{t:'speedy',n:12},{t:'bomb',n:4},{t:'basic',n:6}],
-  [{t:'giant',n:1},{t:'shadow',n:5},{t:'armor',n:4}],
+  [{t:'speedy',n:12},{t:'bomb',n:4},{t:'basic',n:6},{t:'mage',n:3}],
+  [{t:'giant',n:1},{t:'shadow',n:5},{t:'armor',n:4},{t:'mage',n:2}],
   [{t:'ice',n:6},{t:'speedy',n:8},{t:'bomb',n:4},{t:'sword',n:4}],
-  [{t:'giant',n:2},{t:'speedy',n:8},{t:'bomb',n:4},{t:'shadow',n:6}],
-  [{t:'boss',n:4},{t:'bomb',n:6},{t:'ice',n:5},{t:'armor',n:5}],
-  [{t:'speedy',n:18},{t:'shadow',n:10},{t:'bomb',n:6}],
-  [{t:'giant',n:3},{t:'boss',n:4},{t:'armor',n:7},{t:'flame',n:6}],
-  [{t:'speedy',n:12},{t:'giant',n:2},{t:'bomb',n:8},{t:'shadow',n:8},{t:'boss',n:4}],
-  [{t:'giant',n:5},{t:'boss',n:8},{t:'armor',n:10},{t:'flame',n:8},{t:'shadow',n:8}],
+  [{t:'giant',n:2},{t:'speedy',n:8},{t:'bomb',n:4},{t:'shadow',n:6},{t:'mage',n:3}],
+  [{t:'boss',n:4},{t:'bomb',n:6},{t:'ice',n:5},{t:'armor',n:5},{t:'mage',n:4}],
+  [{t:'speedy',n:18},{t:'shadow',n:10},{t:'bomb',n:6},{t:'mage',n:3}],
+  [{t:'giant',n:3},{t:'boss',n:4},{t:'armor',n:7},{t:'flame',n:6},{t:'mage',n:4}],
+  [{t:'speedy',n:12},{t:'giant',n:2},{t:'bomb',n:8},{t:'shadow',n:8},{t:'boss',n:4},{t:'mage',n:5}],
+  [{t:'giant',n:5},{t:'boss',n:8},{t:'armor',n:10},{t:'flame',n:8},{t:'shadow',n:8},{t:'mage',n:6}],
 ];
 
 // ─── JUNGLE BIOME ───────────────────────────────────────────
@@ -1285,6 +1287,23 @@ function doAttack() {
       gs.enemies.forEach(e => { if (!e._beamHit && e.pos.distanceTo(hp) < 1.0 + e.data.sz) { e._beamHit = true; dmgEnemy(e, wd.dmg); spawnImpact(e.pos.clone().add(new THREE.Vector3(0,1,0)), wd.color); } });
     }
     gs.enemies.forEach(e => { e._beamHit = false; });
+  } else if (wd.kind === 'wand') {
+    const dest = new THREE.Vector3(mouseWorld.x, 0, mouseWorld.z);
+    const dr = Math.hypot(dest.x, dest.z);
+    if (dr > FARM_R - 1.5) { dest.x = dest.x / dr * (FARM_R - 1.5); dest.z = dest.z / dr * (FARM_R - 1.5); }
+    spawnFX(gs.playerPos.clone().add(new THREE.Vector3(0, 0.5, 0)), 0xcc44ff, 0.45, 1.8);
+    gs.playerPos.set(dest.x, 0.75, dest.z);
+    gs.playerJumpVel = 0; gs.playerOnGround = true;
+    if (playerMesh) { playerMesh.position.set(dest.x, 0.75, dest.z); }
+    spawnFX(gs.playerPos.clone().add(new THREE.Vector3(0, 0.5, 0)), 0xaa00ff, 0.5, 2.2);
+    gs.enemies.forEach(e => {
+      if (e.pos.distanceTo(gs.playerPos) < wd.aoe) {
+        dmgEnemy(e, wd.dmg);
+        spawnImpact(e.pos.clone().add(new THREE.Vector3(0, 1, 0)), wd.color);
+        e.vel.add(e.pos.clone().sub(gs.playerPos).setY(0).normalize().multiplyScalar(5));
+      }
+    });
+    sfxShoot();
   } else if (wd.kind === 'cloud') {
     const cp = gs.playerPos.clone().add(dir.clone().multiplyScalar(3));
     spawnFX(cp, wd.color, wd.dur, wd.aoe);
@@ -1772,6 +1791,7 @@ function spawnEnemy(typeId) {
   const isTorch = data.id === 'torch';
   const isSword = data.id === 'sword';
   const isFlame = data.id === 'flame';
+  const isMage  = data.id === 'mage';
 
   // Legs — two wooden post legs
   [-0.19*sz, 0.19*sz].forEach(x => {
@@ -1832,6 +1852,13 @@ function spawnEnemy(typeId) {
     g.add(mk(new THREE.ConeGeometry(0.11*sz, 0.28*sz, 7), 0xff6600, 0.9*sz, 1.09*sz, 0.12*sz, 0, 0, -Math.PI/2, 0.35, 0, 0xff4400, 1.0));
     g.add(mk(new THREE.CylinderGeometry(0.07*sz, 0.1*sz, 0.3*sz, 7), 0x444444, 0.9*sz, 0.72*sz, 0.12*sz, 0.3, 0, 0, 0.5, 0.6));
   }
+  if (isMage) {
+    // Wand in right hand
+    g.add(mk(new THREE.CylinderGeometry(0.04*sz, 0.04*sz, 0.7*sz, 6), 0x3a006e, 0.78*sz, 0.79*sz, 0.1*sz, 0, 0, 0.22, 0.5, 0.1));
+    g.add(mk(new THREE.SphereGeometry(0.1*sz, 7, 7), 0xcc44ff, 1.15*sz, 0.86*sz, 0.1*sz, 0, 0, 0, 0.2, 0, 0xaa00ff, 2.0));
+    // Glow orb sparkles
+    g.add(mk(new THREE.OctahedronGeometry(0.07*sz, 0), 0xee88ff, 1.22*sz, 0.83*sz, 0.13*sz, 0, 0, 0, 0.1, 0, 0xff88ff, 2.5));
+  }
 
   // HEAD
   if (isBoss) {
@@ -1883,6 +1910,14 @@ function spawnEnemy(typeId) {
     g.add(mk(new THREE.CylinderGeometry(0.74*sz, 0.74*sz, 0.09*sz, 10), 0x1a0e00, 2.9*sz));
     g.add(mk(new THREE.CylinderGeometry(0.31*sz, 0.39*sz, 0.84*sz, 8), 0x2a1a00, 3.32*sz));
     g.add(mk(new THREE.CylinderGeometry(0.4*sz, 0.4*sz, 0.09*sz, 8), 0xcc9900, 2.97*sz, 0, 0, 0, 0, 0, 0.5, 0.5));
+  } else if (isMage) {
+    // Tall pointy wizard hat
+    g.add(mk(new THREE.CylinderGeometry(0.62*sz, 0.62*sz, 0.07*sz, 10), 0x2a0055, 2.7*sz));
+    g.add(mk(new THREE.ConeGeometry(0.36*sz, 1.1*sz, 8), 0x3a007a, 3.32*sz, 0, 0, 0, 0, 0, 0.4, 0, 0x6600cc, 0.4));
+    // Hat band with glow
+    g.add(mk(new THREE.CylinderGeometry(0.37*sz, 0.37*sz, 0.1*sz, 10), 0xcc44ff, 2.78*sz, 0, 0, 0, 0, 0, 0.3, 0, 0xaa00ff, 1.5));
+    // Star ornament on hat
+    g.add(mk(new THREE.OctahedronGeometry(0.1*sz, 0), 0xffddff, 3.85*sz, 0, 0, 0, 0, 0, 0.2, 0, 0xff88ff, 3.0));
   } else {
     // Floppy hat slightly tilted
     g.add(mk(new THREE.CylinderGeometry(0.63*sz, 0.63*sz, 0.07*sz, 10), 0x1a0e00, 2.7*sz, 0.07*sz, 0,  0.08, 0,  0.06));
@@ -1984,6 +2019,19 @@ function updateEnemies(dt) {
       e._hpFill.material.color.setHex(pct > 0.5 ? 0x44ff44 : pct > 0.25 ? 0xff8800 : 0xff2222);
     }
 
+    // Mage teleport — jumps to a random farm position every few seconds
+    if (e.data.teleport) {
+      e._mageTpTimer = (e._mageTpTimer !== undefined ? e._mageTpTimer : 3 + Math.random() * 2) - dt;
+      if (e._mageTpTimer <= 0) {
+        e._mageTpTimer = 4.5 + Math.random() * 3;
+        spawnFX(e.pos.clone().add(new THREE.Vector3(0, 1, 0)), 0xcc44ff, 0.4, 1.2);
+        const tpAngle = Math.random() * Math.PI * 2;
+        const tpR = 4 + Math.random() * (FARM_R - 6);
+        e.pos.set(Math.cos(tpAngle) * tpR, 0, Math.sin(tpAngle) * tpR);
+        e.mesh.position.copy(e.pos);
+        spawnFX(e.pos.clone().add(new THREE.Vector3(0, 1, 0)), 0xaa00ff, 0.45, 1.5);
+      }
+    }
     // Shadow / Stealth teleport
     if (e.data.id === 'shadow' || e.data.id === 'stealth_monk' || e.data.id === 'snow_shadow') {
       e._teleportTimer = (e._teleportTimer || 3.5) - dt;
