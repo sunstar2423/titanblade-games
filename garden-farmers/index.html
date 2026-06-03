@@ -89,6 +89,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 #joystick-base { width:140px; height:140px; border-radius:50%; background:rgba(255,255,255,0.09); border:3px solid rgba(255,255,255,0.25); position:relative; }
 #joystick-knob { position:absolute; width:62px; height:62px; border-radius:50%; background:rgba(255,255,255,0.44); top:39px; left:39px; box-shadow:0 0 18px rgba(255,255,255,0.22); pointer-events:none; }
 #attack-btn { position:absolute; bottom:24px; right:24px; width:90px; height:90px; border-radius:50%; background:rgba(220,50,50,0.55); border:3px solid rgba(255,110,110,0.7); font-size:34px; display:none; align-items:center; justify-content:center; pointer-events:all; touch-action:none; box-shadow:0 0 22px rgba(220,50,50,0.4); z-index:5; -webkit-user-select:none; user-select:none; }
+#jump-btn { position:absolute; bottom:130px; right:24px; width:70px; height:70px; border-radius:50%; background:rgba(50,140,220,0.55); border:3px solid rgba(110,180,255,0.7); font-size:28px; display:none; align-items:center; justify-content:center; pointer-events:all; touch-action:none; box-shadow:0 0 18px rgba(50,140,220,0.4); z-index:5; -webkit-user-select:none; user-select:none; }
 #wave-start-btn { position:absolute; bottom:250px; left:50%; transform:translateX(-50%); padding:15px 36px; background:rgba(76,175,80,0.92); border:3px solid rgba(76,175,80,0.8); border-radius:18px; color:#fff; font-size:21px; font-weight:bold; display:none; pointer-events:all; touch-action:none; white-space:nowrap; box-shadow:0 0 24px rgba(76,175,80,0.6); z-index:5; -webkit-user-select:none; user-select:none; }
 #c { touch-action:none; }
 @media (pointer: coarse) {
@@ -120,6 +121,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div id="wave-ann"></div>
   <div id="joystick-zone"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
   <div id="attack-btn">⚔️</div>
+  <div id="jump-btn">🦘</div>
 <div id="wave-start-btn">▶ START WAVE</div>
 <div id="event-banner"><span id="event-text"></span><div id="event-timer-bar-wrap"><div id="event-timer-bar"></div></div></div>
 
@@ -817,6 +819,8 @@ const gs = {
   playerHP: 100, playerMaxHP: 100,
   playerPos: new THREE.Vector3(5, 0.75, 0),
   playerVel: new THREE.Vector3(),
+  playerJumpVel: 0,
+  playerOnGround: true,
   skin: 'classic',
   biome: 'garden',
   straw: 25,
@@ -958,8 +962,10 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Digit4') setSlot(3);
   if (e.code === 'Digit5') setSlot(4);
   if (e.code === 'Escape') { toggleShop(true); gs.placeMode = false; gs.placeId = null; const ab=document.getElementById('attack-btn'); if(ab) ab.textContent='⚔️'; }
-  if (e.code === 'Space' && gameStarted && gs.betweenWaves && !shopOpen) {
-    e.preventDefault(); startNextWave();
+  if (e.code === 'Space' && gameStarted && !shopOpen) {
+    e.preventDefault();
+    if (gs.betweenWaves) { startNextWave(); }
+    else if (gs.playerOnGround) { gs.playerJumpVel = 9; gs.playerOnGround = false; }
   }
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -982,6 +988,7 @@ const JMAX = 46;
 if (isMobile) {
   document.getElementById('joystick-zone').style.display = 'block';
   document.getElementById('attack-btn').style.display = 'flex';
+  document.getElementById('jump-btn').style.display = 'flex';
   document.getElementById('hotbar').style.bottom = '170px';
 }
 
@@ -1024,6 +1031,11 @@ if (isMobile) {
     if (gs.placeMode) placeAtMouse(); else { mouseHeld = true; doAttack(); }
   }, { passive: false });
   document.getElementById('attack-btn').addEventListener('touchend', () => { mouseHeld = false; });
+
+  document.getElementById('jump-btn').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (gameStarted && !gs.betweenWaves && gs.playerOnGround) { gs.playerJumpVel = 9; gs.playerOnGround = false; }
+  }, { passive: false });
 
   document.getElementById('wave-start-btn').addEventListener('touchstart', e => {
     e.preventDefault();
@@ -1076,7 +1088,18 @@ function updatePlayer(dt) {
     gs.playerPos.z = (gs.playerPos.z / r) * (FARM_R - 0.6);
     gs.playerVel.set(0, 0, 0);
   }
-  gs.playerPos.y = 0.75;
+  // Jump / gravity
+  if (!gs.playerOnGround) {
+    gs.playerJumpVel -= 22 * dt;
+    gs.playerPos.y += gs.playerJumpVel * dt;
+    if (gs.playerPos.y <= 0.75) {
+      gs.playerPos.y = 0.75;
+      gs.playerJumpVel = 0;
+      gs.playerOnGround = true;
+    }
+  } else {
+    gs.playerPos.y = 0.75;
+  }
   if (playerMesh) {
     playerMesh.position.x = gs.playerPos.x;
     playerMesh.position.z = gs.playerPos.z;
@@ -1088,9 +1111,9 @@ function updatePlayer(dt) {
     const now = Date.now() * 0.013;
     if (moving) {
       const swing = Math.sin(now) * 0.52;
-      playerMesh.position.y = gs.playerPos.y + Math.abs(Math.sin(now)) * 0.08;
-      if (playerMesh._legL) { playerMesh._legL.rotation.x = swing; playerMesh._legR.rotation.x = -swing; }
-      if (playerMesh._armL) { playerMesh._armL.rotation.x = -swing * 0.55; playerMesh._armR.rotation.x = swing * 0.55; }
+      playerMesh.position.y = gs.playerPos.y + (gs.playerOnGround ? Math.abs(Math.sin(now)) * 0.08 : 0);
+      if (playerMesh._legL) { playerMesh._legL.rotation.x = gs.playerOnGround ? swing : 0.4; playerMesh._legR.rotation.x = gs.playerOnGround ? -swing : -0.4; }
+      if (playerMesh._armL) { playerMesh._armL.rotation.x = gs.playerOnGround ? -swing * 0.55 : -0.6; playerMesh._armR.rotation.x = gs.playerOnGround ? swing * 0.55 : -0.6; }
     } else {
       playerMesh.position.y = gs.playerPos.y;
       if (playerMesh._legL) { playerMesh._legL.rotation.x *= 0.78; playerMesh._legR.rotation.x *= 0.78; }
@@ -3630,7 +3653,7 @@ function resetGame() {
   gs.enemies = []; gs.projectiles = []; gs.placedPlants = [];
   gs.defenses = []; gs.effects = []; gs.floatingTexts = [];
   gs.playerHP = 100; gs.playerMaxHP = 100; gs.straw = 25;
-  gs.playerPos.set(5, 0.75, 0); gs.playerVel.set(0, 0, 0);
+  gs.playerPos.set(5, 0.75, 0); gs.playerVel.set(0, 0, 0); gs.playerJumpVel = 0; gs.playerOnGround = true;
   gs.wave = 0; gs.waveActive = false; gs.betweenWaves = true;
   gs.barnHP = 200; gs.barnMaxHP = 200;
   const _starter = getActiveData().starter;
