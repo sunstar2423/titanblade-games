@@ -1487,6 +1487,19 @@ function updateProjectiles(dt) {
         spawnImpact(p.pos.clone().add(new THREE.Vector3(0, 0.6, 0)), p.data.color);
         scene.remove(p.mesh); return false;
       }
+      const hitPlant = gs.placedPlants.find(pp => Math.hypot(p.pos.x - pp.pos.x, p.pos.z - pp.pos.z) < 1.2);
+      if (hitPlant) {
+        hitPlant.hp -= p.data.dmg;
+        spawnFX(p.pos.clone(), p.data.color, 0.28, 0.55);
+        spawnImpact(p.pos.clone().add(new THREE.Vector3(0, 0.5, 0)), p.data.color);
+        if (hitPlant.hp <= 0) {
+          scene.remove(hitPlant.mesh);
+          gs.placedPlants = gs.placedPlants.filter(x => x !== hitPlant);
+          if (hitPlant.data.kind === 'animal') showAnimalEliminated(hitPlant.data);
+          else showToast('A plant was destroyed!');
+        }
+        scene.remove(p.mesh); return false;
+      }
       const barnDist = new THREE.Vector2(p.pos.x, p.pos.z).length();
       if (barnDist < 2.5) {
         if (!gs.activeEvents.barnShield) {
