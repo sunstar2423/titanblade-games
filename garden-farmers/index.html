@@ -584,6 +584,8 @@ const ENEMY_TYPES = [
   { id:'shadow', name:'Shadow Scarecrow',       hp:65,  spd:3.0, dmg:12, straw:20,  sz:0.9, color:0x440088 },
   { id:'giant',  name:'Giant Scarecrow',        hp:700, spd:0.65,dmg:28, straw:120, sz:2.6, color:0x5c3d1e },
   { id:'mage',   name:'Magician Scarecrow',     hp:90,  spd:2.0, dmg:14, straw:28,  sz:1,   color:0x6600cc, ranged:true, teleport:true },
+  { id:'golden', name:'Golden Scarecrow',       hp:260, spd:0.85,dmg:15, straw:200, sz:1.25,color:0xFFD700 },
+  { id:'guard',  name:'Guard Scarecrow',        hp:120, spd:1.9, dmg:13, straw:8,   sz:1.05,color:0x5c3000 },
 ];
 
 const WAVES = [
@@ -594,18 +596,18 @@ const WAVES = [
   [{t:'torch',n:4},{t:'flame',n:2}],
   // Wave 5-8: First boss, armored scarecrows
   [{t:'sword',n:3},{t:'armor',n:2},{t:'boss',n:1}],
-  [{t:'basic',n:6},{t:'torch',n:3},{t:'sword',n:2}],
+  [{t:'basic',n:6},{t:'torch',n:3},{t:'sword',n:2},{t:'golden',n:1}],
   [{t:'armor',n:3},{t:'flame',n:3}],
   [{t:'boss',n:1},{t:'armor',n:2},{t:'torch',n:4}],
   // Wave 9-12: Escalating — bigger swarms + two bosses + first mages
   [{t:'basic',n:8},{t:'sword',n:4},{t:'mage',n:1}],
   [{t:'armor',n:4},{t:'flame',n:4},{t:'boss',n:1}],
-  [{t:'torch',n:6},{t:'sword',n:4},{t:'armor',n:2},{t:'mage',n:2}],
+  [{t:'torch',n:6},{t:'sword',n:4},{t:'armor',n:2},{t:'mage',n:2},{t:'golden',n:1}],
   [{t:'boss',n:2},{t:'armor',n:3},{t:'flame',n:2},{t:'mage',n:1}],
   // Wave 13-16: Hard — mega swarms and fire
   [{t:'basic',n:10},{t:'flame',n:4},{t:'torch',n:4},{t:'mage',n:2}],
   [{t:'sword',n:5},{t:'armor',n:4},{t:'flame',n:3}],
-  [{t:'boss',n:2},{t:'armor',n:4},{t:'sword',n:3},{t:'mage',n:2}],
+  [{t:'boss',n:2},{t:'armor',n:4},{t:'sword',n:3},{t:'mage',n:2},{t:'golden',n:1}],
   [{t:'basic',n:8},{t:'torch',n:6},{t:'flame',n:4},{t:'sword',n:3},{t:'mage',n:2}],
   // Wave 17-20: Final gauntlet
   [{t:'armor',n:5},{t:'sword',n:5},{t:'boss',n:2},{t:'flame',n:3},{t:'mage',n:3}],
@@ -614,7 +616,7 @@ const WAVES = [
   [{t:'boss',n:5},{t:'armor',n:6},{t:'flame',n:6},{t:'sword',n:4}],
   // Wave 21-24: New enemy chaos
   [{t:'speedy',n:12},{t:'bomb',n:4},{t:'basic',n:6},{t:'mage',n:3}],
-  [{t:'giant',n:1},{t:'shadow',n:5},{t:'armor',n:4},{t:'mage',n:2}],
+  [{t:'giant',n:1},{t:'shadow',n:5},{t:'armor',n:4},{t:'mage',n:2},{t:'golden',n:2}],
   [{t:'ice',n:6},{t:'speedy',n:8},{t:'bomb',n:4},{t:'sword',n:4}],
   [{t:'giant',n:2},{t:'speedy',n:8},{t:'bomb',n:4},{t:'shadow',n:6},{t:'mage',n:3}],
   [{t:'boss',n:4},{t:'bomb',n:6},{t:'ice',n:5},{t:'armor',n:5},{t:'mage',n:4}],
@@ -1437,6 +1439,11 @@ function killEnemy(e) {
   gs.totalKills++;
   gs.waveEnemiesLeft = Math.max(0, gs.waveEnemiesLeft - 1);
   floatText(e.pos.clone(), '+' + straw + getActiveData().resourceEmoji, 0xFFD700);
+  if (e.data.id === 'golden') {
+    gs.enemies.forEach(g => { if (g._guardOf === e) { g._guardOf = null; g._berserk = true; } });
+    spawnFX(e.pos.clone(), 0xFFD700, 0.9, 4.2);
+    showToast('👑 Golden Scarecrow slain! Guards berserk! 🔥', 2500);
+  }
 }
 
 // ═══════════════════════════════════════
@@ -1780,12 +1787,17 @@ function spawnSnowman(data, pos) {
   _addEnemyToScene(g, pos, data, sz);
 }
 
-function spawnEnemy(typeId) {
+function spawnEnemy(typeId, atPos = null) {
   const data = getActiveData().enemies.find(e => e.id === typeId);
   if (!data) return;
-  const angle = Math.random() * Math.PI * 2;
-  const r = FARM_R + 2 + Math.random() * 3;
-  const pos = new THREE.Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+  let pos;
+  if (atPos) {
+    pos = atPos.clone();
+  } else {
+    const angle = Math.random() * Math.PI * 2;
+    const r = FARM_R + 2 + Math.random() * 3;
+    pos = new THREE.Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+  }
   if (gs.biome === 'jungle') { spawnMonkey(data, pos); return; }
   if (gs.biome === 'snow')   { spawnSnowman(data, pos); return; }
   const sz = data.sz || 1;
@@ -1799,12 +1811,14 @@ function spawnEnemy(typeId) {
     const m = new THREE.Mesh(geo, smat(col, rough, met, emCol, emInt));
     m.position.set(px, py, pz); m.rotation.set(rx, ry, rz); m.castShadow = true; return m;
   };
-  const isBoss  = data.id === 'boss';
-  const isArmor = data.id === 'armor';
-  const isTorch = data.id === 'torch';
-  const isSword = data.id === 'sword';
-  const isFlame = data.id === 'flame';
-  const isMage  = data.id === 'mage';
+  const isBoss   = data.id === 'boss';
+  const isArmor  = data.id === 'armor';
+  const isTorch  = data.id === 'torch';
+  const isSword  = data.id === 'sword';
+  const isFlame  = data.id === 'flame';
+  const isMage   = data.id === 'mage';
+  const isGolden = data.id === 'golden';
+  const isGuard  = data.id === 'guard';
 
   // Legs — two wooden post legs
   [-0.19*sz, 0.19*sz].forEach(x => {
@@ -1869,8 +1883,20 @@ function spawnEnemy(typeId) {
     // Wand in right hand
     g.add(mk(new THREE.CylinderGeometry(0.04*sz, 0.04*sz, 0.7*sz, 6), 0x3a006e, 0.78*sz, 0.79*sz, 0.1*sz, 0, 0, 0.22, 0.5, 0.1));
     g.add(mk(new THREE.SphereGeometry(0.1*sz, 7, 7), 0xcc44ff, 1.15*sz, 0.86*sz, 0.1*sz, 0, 0, 0, 0.2, 0, 0xaa00ff, 2.0));
-    // Glow orb sparkles
     g.add(mk(new THREE.OctahedronGeometry(0.07*sz, 0), 0xee88ff, 1.22*sz, 0.83*sz, 0.13*sz, 0, 0, 0, 0.1, 0, 0xff88ff, 2.5));
+  }
+  if (isGuard) {
+    // Shield on left arm
+    g.add(mk(new THREE.BoxGeometry(0.38*sz, 0.58*sz, 0.06*sz), 0x7a4a10, 0.96*sz, -0.82*sz, 0.12*sz, 0, 0.18, 0, 0.7, 0.2));
+    g.add(mk(new THREE.BoxGeometry(0.34*sz, 0.54*sz, 0.05*sz), 0x3a1800, 0.96*sz, -0.82*sz, 0.16*sz, 0, 0.18, 0, 0.8, 0));
+    g.add(mk(new THREE.SphereGeometry(0.08*sz, 6, 5), 0x9e7a30, 0.96*sz, -0.82*sz, 0.21*sz, 0, 0, 0, 0.3, 0.7, 0xcc9900, 0.5));
+  }
+  if (isGolden) {
+    // Gold orbit rings
+    const gr1 = new THREE.Mesh(new THREE.TorusGeometry(0.95*sz, 0.055*sz, 6, 18), smat(0xFFD700, 0.15, 0.95, 0xFFD700, 1.4));
+    gr1.rotation.x = Math.PI/2; gr1.position.y = 0.15; g.add(gr1);
+    const gr2 = new THREE.Mesh(new THREE.TorusGeometry(1.18*sz, 0.04*sz, 6, 18), smat(0xffcc44, 0.15, 0.9, 0xffcc44, 0.9));
+    gr2.rotation.x = Math.PI/5; gr2.position.y = 0.22; g.add(gr2);
   }
 
   // HEAD
@@ -1927,10 +1953,23 @@ function spawnEnemy(typeId) {
     // Tall pointy wizard hat
     g.add(mk(new THREE.CylinderGeometry(0.62*sz, 0.62*sz, 0.07*sz, 10), 0x2a0055, 2.7*sz));
     g.add(mk(new THREE.ConeGeometry(0.36*sz, 1.1*sz, 8), 0x3a007a, 3.32*sz, 0, 0, 0, 0, 0, 0.4, 0, 0x6600cc, 0.4));
-    // Hat band with glow
     g.add(mk(new THREE.CylinderGeometry(0.37*sz, 0.37*sz, 0.1*sz, 10), 0xcc44ff, 2.78*sz, 0, 0, 0, 0, 0, 0.3, 0, 0xaa00ff, 1.5));
-    // Star ornament on hat
     g.add(mk(new THREE.OctahedronGeometry(0.1*sz, 0), 0xffddff, 3.85*sz, 0, 0, 0, 0, 0, 0.2, 0, 0xff88ff, 3.0));
+  } else if (isGolden) {
+    // Gold crown
+    g.add(mk(new THREE.CylinderGeometry(0.62*sz, 0.6*sz, 0.18*sz, 10), 0xFFD700, 2.73*sz, 0, 0, 0, 0, 0, 0.15, 0.95, 0xFFD700, 0.8));
+    for (let i = 0; i < 6; i++) {
+      const ca = (i / 6) * Math.PI * 2;
+      g.add(mk(new THREE.ConeGeometry(0.065*sz, 0.28*sz, 5), 0xFFD700, 2.96*sz, Math.cos(ca)*0.54*sz, Math.sin(ca)*0.54*sz, 0, 0, 0, 0.15, 0.95, 0xFFD700, 1.2));
+    }
+    // Crown gem
+    g.add(mk(new THREE.OctahedronGeometry(0.12*sz, 0), 0xff4444, 3.0*sz, 0, 0, 0, 0, 0, 0.1, 0.1, 0xff2200, 2.5));
+  } else if (isGuard) {
+    // Dark armored hat with visor
+    g.add(mk(new THREE.CylinderGeometry(0.62*sz, 0.62*sz, 0.07*sz, 10), 0x0f0800, 2.7*sz));
+    g.add(mk(new THREE.CylinderGeometry(0.27*sz, 0.34*sz, 0.5*sz, 8), 0x0f0800, 2.96*sz));
+    // Dark visor strip across eyes
+    g.add(mk(new THREE.BoxGeometry(0.5*sz, 0.12*sz, 0.46*sz), 0x111111, 2.33*sz, 0, 0.35*sz, 0, 0, 0, 0.2, 0.8, 0x222222, 0.4));
   } else {
     // Floppy hat slightly tilted
     g.add(mk(new THREE.CylinderGeometry(0.63*sz, 0.63*sz, 0.07*sz, 10), 0x1a0e00, 2.7*sz, 0.07*sz, 0,  0.08, 0,  0.06));
@@ -1949,6 +1988,17 @@ function spawnEnemy(typeId) {
   g.position.copy(pos); scene.add(g);
   const scaledHP = data.hp * (1 + (gs.wave - 1) * 0.1);
   gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, poisonTimer: 0, rootTimer: 0, _dead: false, _hpFill: hpFill, _hpSz: 1.2*sz, _phase: Math.random() * Math.PI * 2, _swayZ: 0, _leanX: 0, _bob: 0, _poisonFxT: 0 });
+  if (data.id === 'golden') {
+    const goldenEnemy = gs.enemies[gs.enemies.length - 1];
+    for (let i = 0; i < 2; i++) {
+      const ga = (i / 2) * Math.PI * 2 + Math.PI / 6;
+      const gp = new THREE.Vector3(pos.x + Math.cos(ga) * 3.2, 0, pos.z + Math.sin(ga) * 3.2);
+      const gr = Math.hypot(gp.x, gp.z);
+      if (gr > FARM_R - 2) { gp.x *= (FARM_R - 2) / gr; gp.z *= (FARM_R - 2) / gr; }
+      spawnEnemy('guard', gp);
+      gs.enemies[gs.enemies.length - 1]._guardOf = goldenEnemy;
+    }
+  }
 }
 
 function updateEnemies(dt) {
@@ -1959,6 +2009,14 @@ function updateEnemies(dt) {
     gs.placedPlants.forEach(p => { const d = e.pos.distanceTo(p.pos); if (d < minD) { minD = d; tgt = p.pos.clone(); } });
     const pd = e.pos.distanceTo(gs.playerPos);
     if (pd < minD - 2) { tgt = gs.playerPos.clone(); }
+
+    // Guard: position between the golden scarecrow and the current threat
+    if (e._guardOf && !e._guardOf._dead) {
+      const gPos = e._guardOf.pos;
+      const threatVec = tgt.clone().sub(gPos).setY(0);
+      const tvLen = threatVec.length();
+      tgt = tvLen > 0.1 ? gPos.clone().add(threatVec.normalize().multiplyScalar(Math.min(2.8, tvLen * 0.55))) : gPos.clone();
+    }
 
     const dir = tgt.clone().sub(e.pos).setY(0);
     const dist = dir.length();
@@ -1988,7 +2046,7 @@ function updateEnemies(dt) {
       if (e.data.id === 'glacier' || e.data.id === 'snow_giant') {
         e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.003 * dt);
       }
-      const spd = e.data.spd * rageMult * frozenMult * (e.slowTimer > 0 ? 0.3 : 1);
+      const spd = e.data.spd * rageMult * frozenMult * (e.slowTimer > 0 ? 0.3 : 1) * (e._berserk ? 2.8 : 1);
       if (dist > attackRange) {
         e.vel.lerp(dir.multiplyScalar(spd), 0.12);
         e.pos.add(e.vel.clone().multiplyScalar(dt));
@@ -2208,7 +2266,7 @@ function startNextWave() {
   gs.waveEnemiesLeft = gs.spawnQueue.length;
   gs.spawnTimer = 0;
   const totalWaves = getActiveData().waves.length;
-  const waveLabels = {5:'👹 BOSS WAVE!', 10:'💀 DOUBLE BOSS!', 12:'💀 DOUBLE BOSS!', 15:'☠️ BOSS ARMY!', 18:'🔥 TRIPLE BOSS!', 20:'💥 WAVE 20!', 21:'⚡ SPEED DEMONS!', 22:'🏔️ GIANT AWAKENS!', 23:'🧊 ICE AGE!', 24:'💥 APOCALYPSE!', 25:'🌪️ CHAOS WAVE!', 26:'💣 BOMB BLITZ!', 27:'⚡ SPEED RUSH!', 28:'👹 TRIPLE GIANTS!', 29:'🔥 INFERNO!', 30:'💀 FINAL STAND!'};
+  const waveLabels = {5:'👹 BOSS WAVE!', 6:'👑 GOLDEN SCARE!', 10:'💀 DOUBLE BOSS!', 11:'👑 GOLDEN SCARE!', 15:'☠️ BOSS ARMY!', 15:'👑 GOLDEN HUNT!', 18:'🔥 TRIPLE BOSS!', 20:'💥 WAVE 20!', 21:'⚡ SPEED DEMONS!', 22:'👑 DOUBLE GOLD!', 23:'🧊 ICE AGE!', 24:'💥 APOCALYPSE!', 25:'🌪️ CHAOS WAVE!', 26:'💣 BOMB BLITZ!', 27:'⚡ SPEED RUSH!', 28:'👹 TRIPLE GIANTS!', 29:'🔥 INFERNO!', 30:'💀 FINAL STAND!'};
   const label = waveLabels[gs.wave] || '⚠️ WAVE ' + gs.wave + '!';
   showWaveAnn(label);
   showToast('Wave ' + gs.wave + ' / ' + totalWaves + ' incoming!', 2200);
