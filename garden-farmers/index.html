@@ -2034,9 +2034,9 @@ function updateEnemies(dt) {
 
     // Mage teleport — jumps to a random farm position every few seconds
     if (e.data.teleport) {
-      e._mageTpTimer = (e._mageTpTimer !== undefined ? e._mageTpTimer : 3 + Math.random() * 2) - dt;
+      e._mageTpTimer = (e._mageTpTimer !== undefined ? e._mageTpTimer : 1 + Math.random()) - dt;
       if (e._mageTpTimer <= 0) {
-        e._mageTpTimer = 4.5 + Math.random() * 3;
+        e._mageTpTimer = 1.8 + Math.random() * 1.5;
         spawnFX(e.pos.clone().add(new THREE.Vector3(0, 1, 0)), 0xcc44ff, 0.4, 1.2);
         const tpAngle = Math.random() * Math.PI * 2;
         const tpR = 4 + Math.random() * (FARM_R - 6);
