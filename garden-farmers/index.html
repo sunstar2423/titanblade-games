@@ -587,7 +587,11 @@ const ANIMALS = [
   { id:'goat',   name:'Headbutt Goat',emoji:'🐐', cost:55, kind:'animal', attack:'headbutt',dmg:50, range:7,   cd:4.5, hp:100, color:0xccbbaa, desc:'Headbutts — line charge, huge knockback' },
   { id:'horse',  name:'Kick Horse',   emoji:'🐴', cost:65, kind:'animal', attack:'kick',    dmg:55, range:3.5, cd:3.0, hp:110, color:0x8b6914, desc:'Powerful kick — wide arc, hits multiple' },
   { id:'llama',  name:'Spitting Llama',emoji:'🦙',cost:55, kind:'animal', attack:'spit',    dmg:20, range:11,  cd:2.5, hp:80,  color:0xd4b896, desc:'Spits — long range, poisons enemies' },
-  { id:'rooster',name:'War Rooster',  emoji:'🐓', cost:45, kind:'animal', attack:'crow',    dmg:8,  range:5.5, cd:6.0, hp:65,  color:0xcc2200, desc:'Battle crow — stuns all nearby enemies' },
+  { id:'rooster',name:'War Rooster',  emoji:'🐓', cost:45, kind:'animal', attack:'crow',  dmg:8,  range:5.5, cd:6.0, hp:65,  color:0xcc2200, desc:'Battle crow — stuns all nearby enemies' },
+  { id:'falcon', name:'War Falcon',   emoji:'🦅', cost:60, kind:'animal', attack:'egg',   dmg:50, range:12,  cd:3.0, hp:70,  color:0x8b5914, desc:'Hurls talons — long range, high damage' },
+  { id:'parrot', name:'Guard Parrot', emoji:'🦜', cost:40, kind:'animal', attack:'water', dmg:14, range:8,   cd:2.0, hp:55,  color:0x22aa33, desc:'Squawks + splash — slows nearby enemies' },
+  { id:'owl',    name:'Scout Owl',    emoji:'🦉', cost:50, kind:'animal', attack:'crow',  dmg:10, range:9,   cd:4.5, hp:65,  color:0x7a5010, desc:'Hoot — stuns all nearby enemies' },
+  { id:'pigeon', name:'Carrier Pigeon',emoji:'🕊️',cost:30, kind:'animal', attack:'egg',  dmg:10, range:6,   cd:2.5, hp:45,  color:0xdddddd, desc:'Quick peck at nearby enemies' },
 ];
 
 const RANDOM_EVENTS = [
@@ -657,6 +661,8 @@ const WAVES = [
   [{t:'giant',n:3},{t:'boss',n:4},{t:'armor',n:7},{t:'flame',n:6},{t:'mage',n:4}],
   [{t:'speedy',n:12},{t:'giant',n:2},{t:'bomb',n:8},{t:'shadow',n:8},{t:'boss',n:4},{t:'mage',n:5}],
   [{t:'giant',n:5},{t:'boss',n:8},{t:'armor',n:10},{t:'flame',n:8},{t:'shadow',n:8},{t:'mage',n:6}],
+  // Wave 30: THE MAGICIAN WAVE — all Magician Scarecrows!
+  [{t:'mage',n:20},{t:'golden',n:2}],
 ];
 
 // ─── JUNGLE BIOME ───────────────────────────────────────────
@@ -871,6 +877,8 @@ const gs = {
   projectiles: [],
   effects: [],
   floatingTexts: [],
+  wildBirds: [],
+  _wildBirdTimer: 15,
   barnHP: 200, barnMaxHP: 200,
   barnCannons: 0,
   _barnCannonTimer: 0,
@@ -1278,6 +1286,8 @@ function spawnBeam(start, dir, len, color) {
 // ═══════════════════════════════════════
 function doAttack() {
   if (!gameStarted || gs.betweenWaves || attackCd > 0) return;
+  // Check for wild bird catch first
+  if (gs.wildBirds.length > 0 && catchWildBird()) { attackCd = 0.4; return; }
   const wid = gs.hotbar[gs.activeSlot];
   if (!wid) return;
   const wd = getActiveData().weapons.find(w => w.id === wid);
@@ -2946,6 +2956,96 @@ function buildPlantMesh(data) {
       add(new THREE.CylinderGeometry(0.05,0.05,0.3,5), S(0xff9900), 0.15, -0.12, 0.1);
       break;
     }
+    case 'falcon': {
+      // Body — sleek brown oval
+      add(new THREE.SphereGeometry(0.30,10,8), S(0x7a4a10), 0.50);
+      add(new THREE.SphereGeometry(0.16,8,8),  S(0x4a2800), 0.86, 0, 0.22);
+      // Beak
+      add(new THREE.ConeGeometry(0.055,0.16,5), S(0xddaa00), 0.84, 0, 0.46, Math.PI/2,0,0);
+      // Eyes (bright yellow)
+      add(new THREE.SphereGeometry(0.045,6,6), S(0xffee00), 0.92,  0.10, 0.34);
+      add(new THREE.SphereGeometry(0.045,6,6), S(0xffee00), 0.92, -0.10, 0.34);
+      // Wings — swept back, spread wide
+      const fw1 = add(new THREE.BoxGeometry(0.72,0.06,0.28), S(0x5a3408), 0.54, 0.52, 0); fw1.rotation.y = -0.35;
+      const fw2 = add(new THREE.BoxGeometry(0.72,0.06,0.28), S(0x5a3408), 0.54,-0.52, 0); fw2.rotation.y =  0.35;
+      // Tail fan
+      add(new THREE.ConeGeometry(0.14,0.32,5), S(0x3a2000), 0.42, 0,-0.38, -Math.PI/2,0,0);
+      // Talons
+      add(new THREE.CylinderGeometry(0.03,0.025,0.22,5), S(0x888866), 0.11,  0.10, 0.08);
+      add(new THREE.CylinderGeometry(0.03,0.025,0.22,5), S(0x888866), 0.11, -0.10, 0.08);
+      break;
+    }
+    case 'parrot': {
+      // Body — bright green
+      add(new THREE.SphereGeometry(0.28,10,8), S(0x22aa33), 0.50);
+      add(new THREE.SphereGeometry(0.20,8,8),  S(0x00cc44), 0.82, 0, 0.20);
+      // Hooked beak
+      add(new THREE.ConeGeometry(0.06,0.14,5), S(0xddcc00), 0.80, 0, 0.44, Math.PI/2,0,0);
+      add(new THREE.ConeGeometry(0.05,0.10,5), S(0xccbb00), 0.74, 0, 0.44, -Math.PI/2+0.4,0,0);
+      // Colorful face patch (red)
+      add(new THREE.SphereGeometry(0.08,6,6), S(0xff2200), 0.82, 0, 0.26);
+      // Eyes
+      add(new THREE.SphereGeometry(0.04,6,6), S(0xffffff), 0.90,  0.12, 0.32);
+      add(new THREE.SphereGeometry(0.04,6,6), S(0xffffff), 0.90, -0.12, 0.32);
+      // Wings
+      const pw1 = add(new THREE.BoxGeometry(0.62,0.06,0.24), S(0x118822), 0.52,  0.44, 0); pw1.rotation.y = -0.3;
+      const pw2 = add(new THREE.BoxGeometry(0.62,0.06,0.24), S(0x118822), 0.52, -0.44, 0); pw2.rotation.y =  0.3;
+      // Long colorful tail (blue)
+      add(new THREE.ConeGeometry(0.07,0.50,5), S(0x0055ff), 0.40, 0,-0.52, -Math.PI/2,0,0);
+      add(new THREE.ConeGeometry(0.05,0.40,5), S(0xff4400), 0.44, 0.10,-0.46, -Math.PI/2,0, 0.3);
+      // Perch feet
+      add(new THREE.CylinderGeometry(0.03,0.025,0.20,5), S(0x888866), 0.10,  0.08, 0.06);
+      add(new THREE.CylinderGeometry(0.03,0.025,0.20,5), S(0x888866), 0.10, -0.08, 0.06);
+      break;
+    }
+    case 'owl': {
+      // Body — round brown
+      add(new THREE.SphereGeometry(0.34,10,8), S(0x7a5010), 0.50);
+      // Wide flat face
+      add(new THREE.SphereGeometry(0.22,8,8), S(0x5a3800), 0.88, 0, 0.20);
+      // Facial disc (cream)
+      add(new THREE.SphereGeometry(0.18,8,8), S(0xf0d090), 0.88, 0, 0.22);
+      // Big bright eyes
+      add(new THREE.SphereGeometry(0.07,7,7), S(0xffcc00), 0.90,  0.09, 0.34);
+      add(new THREE.SphereGeometry(0.07,7,7), S(0xffcc00), 0.90, -0.09, 0.34);
+      add(new THREE.SphereGeometry(0.035,5,5), S(0x111111), 0.90,  0.09, 0.36);
+      add(new THREE.SphereGeometry(0.035,5,5), S(0x111111), 0.90, -0.09, 0.36);
+      // Tiny beak
+      add(new THREE.ConeGeometry(0.04,0.08,4), S(0xddaa44), 0.86, 0, 0.40, Math.PI/2,0,0);
+      // Ear tufts
+      add(new THREE.ConeGeometry(0.04,0.14,4), S(0x5a3808), 1.08,  0.10, 0.12, 0,0,-0.3);
+      add(new THREE.ConeGeometry(0.04,0.14,4), S(0x5a3808), 1.08, -0.10, 0.12, 0,0, 0.3);
+      // Broad wings (slightly raised)
+      const ow1 = add(new THREE.BoxGeometry(0.68,0.07,0.32), S(0x5a3808), 0.56,  0.50, 0); ow1.rotation.y = -0.2; ow1.rotation.z = 0.15;
+      const ow2 = add(new THREE.BoxGeometry(0.68,0.07,0.32), S(0x5a3808), 0.56, -0.50, 0); ow2.rotation.y =  0.2; ow2.rotation.z = -0.15;
+      // Short tail
+      add(new THREE.ConeGeometry(0.12,0.22,5), S(0x4a2800), 0.38, 0,-0.36, -Math.PI/2,0,0);
+      // Talons
+      add(new THREE.CylinderGeometry(0.03,0.025,0.24,5), S(0x888866), 0.10,  0.10, 0.06);
+      add(new THREE.CylinderGeometry(0.03,0.025,0.24,5), S(0x888866), 0.10, -0.10, 0.06);
+      break;
+    }
+    case 'pigeon': {
+      // Compact round body — gray
+      add(new THREE.SphereGeometry(0.24,9,8), S(0xbbbbcc), 0.46);
+      add(new THREE.SphereGeometry(0.14,8,8), S(0x999aaa), 0.74, 0, 0.18);
+      // Iridescent neck patch (purple-green tint)
+      add(new THREE.SphereGeometry(0.10,6,6), S(0x8855aa), 0.64, 0, 0.22);
+      // Small beak
+      add(new THREE.ConeGeometry(0.035,0.10,5), S(0x888888), 0.74, 0, 0.36, Math.PI/2,0,0);
+      // Eyes (orange-red)
+      add(new THREE.SphereGeometry(0.035,5,5), S(0xff6600), 0.80,  0.08, 0.28);
+      add(new THREE.SphereGeometry(0.035,5,5), S(0xff6600), 0.80, -0.08, 0.28);
+      // Wings
+      const gw1 = add(new THREE.BoxGeometry(0.52,0.05,0.22), S(0x8888aa), 0.48,  0.36, 0); gw1.rotation.y = -0.25;
+      const gw2 = add(new THREE.BoxGeometry(0.52,0.05,0.22), S(0x8888aa), 0.48, -0.36, 0); gw2.rotation.y =  0.25;
+      // Fan tail
+      add(new THREE.ConeGeometry(0.10,0.22,5), S(0x999aaa), 0.40, 0,-0.30, -Math.PI/2,0,0);
+      // Feet
+      add(new THREE.CylinderGeometry(0.025,0.02,0.18,5), S(0xdd8888), 0.09,  0.07, 0.04);
+      add(new THREE.CylinderGeometry(0.025,0.02,0.18,5), S(0xdd8888), 0.09, -0.07, 0.04);
+      break;
+    }
     default: {
       add(new THREE.CylinderGeometry(0.1,0.15,0.8,8), S(0x228B22), 0.4);
       add(new THREE.SphereGeometry(0.38,10,10), S(data.color||0x00ff00), 0.9);
@@ -3305,6 +3405,86 @@ function updatePlacedPlants(dt) {
       }
     }
   });
+}
+
+// ═══════════════════════════════════════
+//  WILD BIRDS
+// ═══════════════════════════════════════
+function buildWildBirdMesh() {
+  const g = new THREE.Group();
+  const S = (col) => new THREE.MeshStandardMaterial({color:col, roughness:0.8});
+  const colors = [0xaaaaaa, 0x8b5914, 0x22aa33, 0xdddddd, 0xcc6600];
+  const col = colors[Math.floor(Math.random() * colors.length)];
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.18,7,6), S(col));
+  body.position.set(0, 0, 0); body.castShadow = false; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.10,6,5), S(col));
+  head.position.set(0, 0.13, 0.16); g.add(head);
+  const w1 = new THREE.Mesh(new THREE.BoxGeometry(0.44,0.04,0.16), S(col));
+  w1.position.set( 0.28, 0, 0); w1.rotation.y = -0.2; g.add(w1);
+  const w2 = new THREE.Mesh(new THREE.BoxGeometry(0.44,0.04,0.16), S(col));
+  w2.position.set(-0.28, 0, 0); w2.rotation.y =  0.2; g.add(w2);
+  g._w1 = w1; g._w2 = w2;
+  return g;
+}
+
+function spawnWildBird() {
+  const angle = Math.random() * Math.PI * 2;
+  const r = FARM_R * 0.4 + Math.random() * FARM_R * 0.5;
+  const height = 9 + Math.random() * 7;
+  const mesh = buildWildBirdMesh();
+  mesh.position.set(Math.cos(angle) * r, height, Math.sin(angle) * r);
+  scene.add(mesh);
+  const orbitDir = Math.random() < 0.5 ? 1 : -1;
+  gs.wildBirds.push({
+    mesh, pos: mesh.position.clone(),
+    orbitAngle: angle, orbitR: r, orbitSpd: (0.3 + Math.random() * 0.4) * orbitDir,
+    height, bobPhase: Math.random() * Math.PI * 2,
+    life: 25 + Math.random() * 35, maxLife: 60,
+  });
+}
+
+function updateWildBirds(dt) {
+  gs.wildBirds = gs.wildBirds.filter(b => {
+    b.life -= dt;
+    if (b.life <= 0) { scene.remove(b.mesh); return false; }
+    b.orbitAngle += b.orbitSpd * dt;
+    b.bobPhase += 2.8 * dt;
+    b.pos.set(
+      Math.cos(b.orbitAngle) * b.orbitR,
+      b.height + Math.sin(b.bobPhase) * 0.6,
+      Math.sin(b.orbitAngle) * b.orbitR
+    );
+    b.mesh.position.copy(b.pos);
+    b.mesh.rotation.y = -b.orbitAngle + (b.orbitSpd > 0 ? Math.PI/2 : -Math.PI/2);
+    // Flap wings
+    const flapAmp = 0.28;
+    b.mesh._w1.rotation.z = -flapAmp + Math.sin(b.bobPhase * 2.5) * flapAmp;
+    b.mesh._w2.rotation.z =  flapAmp - Math.sin(b.bobPhase * 2.5) * flapAmp;
+    // Fade out last 5 seconds
+    if (b.life < 5) {
+      const op = b.life / 5;
+      b.mesh.children.forEach(c => { if (c.material) c.material.transparent = true; c.material.opacity = op; });
+    }
+    return true;
+  });
+}
+
+function catchWildBird() {
+  const playerXZ = new THREE.Vector2(gs.playerPos.x, gs.playerPos.z);
+  for (let i = gs.wildBirds.length - 1; i >= 0; i--) {
+    const b = gs.wildBirds[i];
+    const dist = playerXZ.distanceTo(new THREE.Vector2(b.pos.x, b.pos.z));
+    if (dist < 7) {
+      const bonus = 15 + Math.floor(Math.random() * 12);
+      gs.straw += bonus;
+      spawnFX(b.pos.clone(), 0xffee44, 0.5, 1.8);
+      scene.remove(b.mesh);
+      gs.wildBirds.splice(i, 1);
+      showToast('🐦 Caught a bird! +' + bonus + ' straw!');
+      return true;
+    }
+  }
+  return false;
 }
 
 function updateEffects(dt) {
@@ -3876,6 +4056,7 @@ function resetGame() {
   gs.floatingTexts.forEach(f => scene.remove(f.sp));
   gs.enemies = []; gs.projectiles = []; gs.placedPlants = [];
   gs.defenses = []; gs.effects = []; gs.floatingTexts = [];
+  gs.wildBirds.forEach(b => scene.remove(b.mesh)); gs.wildBirds = []; gs._wildBirdTimer = 15;
   gs.playerHP = 100; gs.playerMaxHP = 100; gs.straw = 25;
   gs.playerPos.set(5, 0.75, 0); gs.playerVel.set(0, 0, 0); gs.playerJumpVel = 0; gs.playerOnGround = true;
   gs.wave = 0; gs.waveActive = false; gs.betweenWaves = true;
@@ -4216,6 +4397,13 @@ function loop(ts) {
     updatePlacedPlants(dt);
     updateEffects(dt);
     updateEventSystem(dt);
+    // Wild birds
+    updateWildBirds(dt);
+    gs._wildBirdTimer -= dt;
+    if (gs._wildBirdTimer <= 0 && gs.wildBirds.length < 4) {
+      gs._wildBirdTimer = 18 + Math.random() * 22;
+      spawnWildBird();
+    }
 
     // Camera follows player
     camera.position.lerp(gs.playerPos.clone().add(CAM_OFF), 0.06);
