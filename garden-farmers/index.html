@@ -3154,6 +3154,7 @@ function placeAtMouse() {
   const ab = document.getElementById('attack-btn');
   if (ab) ab.textContent = '⚔️';
   showToast('Placed! 🌱');
+  saveGame();
 }
 
 function updatePlacedPlants(dt) {
@@ -3720,6 +3721,7 @@ function autoPlacePlant(item) {
   scene.add(g);
   gs.placedPlants.push({ mesh: g, data: item, hp: item.hp, maxHp: item.hp, pos: pos.clone(), timer: 0 });
   showToast(item.name + ' placed on your farm! ' + (item.support ? '💚' : '⚔️'));
+  saveGame();
 }
 
 function equipWeapon(id) {
@@ -4020,11 +4022,13 @@ function hasSave() { return !!localStorage.getItem(SAVE_KEY); }
 
 function saveGame() {
   localStorage.setItem(SAVE_KEY, JSON.stringify({
-    straw: gs.straw, wave: gs.wave, skin: gs.skin,
+    straw: gs.straw, wave: gs.wave, skin: gs.skin, biome: gs.biome,
     barnHP: gs.barnHP, barnMaxHP: gs.barnMaxHP, barnCannons: gs.barnCannons,
     playerHP: gs.playerHP, totalKills: gs.totalKills,
     ownedWeapons: [...gs.ownedWeapons], ownedPlaceables: [...gs.ownedPlaceables],
     hotbar: gs.hotbar, farmExpansions: gs.farmExpansions,
+    placedPlants: gs.placedPlants.map(p => ({ id: p.data.id, x: p.pos.x, z: p.pos.z, hp: p.hp })),
+    defenses: gs.defenses.map(d => ({ id: d.data.id, x: d.pos.x, z: d.pos.z })),
   }));
 }
 
@@ -4032,6 +4036,7 @@ function loadGame() {
   try {
     const d = JSON.parse(localStorage.getItem(SAVE_KEY));
     gs.straw = d.straw || 0; gs.wave = d.wave || 0; gs.skin = d.skin || 'classic';
+    if (d.biome) gs.biome = d.biome;
     gs.barnHP = d.barnHP || 200; gs.barnMaxHP = d.barnMaxHP || 200;
     gs.barnCannons = d.barnCannons || 0;
     for (let i = 1; i <= gs.barnCannons; i++) addBarnCannonMesh(i);
@@ -4042,6 +4047,35 @@ function loadGame() {
     gs.farmExpansions = d.farmExpansions || 0;
     FARM_R = 42 + gs.farmExpansions * 8;
     if (gs.farmExpansions > 0) rebuildFarmGeometry();
+    // Restore placed plants and animals
+    if (d.placedPlants) {
+      const ad = getActiveData();
+      const allItems = [...ad.placeables, ...ANIMALS];
+      d.placedPlants.forEach(s => {
+        const data = allItems.find(it => it.id === s.id);
+        if (!data) return;
+        const g = buildPlantMesh(data);
+        if (data.support) {
+          const glow = new THREE.Mesh(new THREE.SphereGeometry(0.7,8,8), new THREE.MeshBasicMaterial({color:0x00ff88,transparent:true,opacity:0.18}));
+          glow.position.y = 0.9; g.add(glow);
+        }
+        const pos = new THREE.Vector3(s.x, 0, s.z);
+        g.position.copy(pos); scene.add(g);
+        gs.placedPlants.push({ mesh: g, data, hp: s.hp, maxHp: data.hp, pos: pos.clone(), timer: 0 });
+      });
+    }
+    // Restore defenses
+    if (d.defenses) {
+      const ad = getActiveData();
+      d.defenses.forEach(s => {
+        const data = ad.defenses.find(it => it.id === s.id);
+        if (!data) return;
+        const g = buildPlantMesh(data);
+        const pos = new THREE.Vector3(s.x, 0, s.z);
+        g.position.copy(pos); scene.add(g);
+        gs.defenses.push({ mesh: g, data, pos: pos.clone(), timer: 0 });
+      });
+    }
     gs.betweenWaves = true;
     updateBarnRing();
   } catch (e) { console.error('Load error', e); }
