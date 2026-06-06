@@ -1007,6 +1007,10 @@ document.addEventListener('keydown', e => {
     if (gs.betweenWaves) { startNextWave(); }
     else if (gs.playerOnGround) { gs.playerJumpVel = 9; gs.playerOnGround = false; }
   }
+  if (e.code === 'KeyE' && gameStarted) {
+    if (barnOpen) exitBarn();
+    else if (gs.playerPos.length() < 6) enterBarn();
+  }
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 
@@ -2293,6 +2297,7 @@ function updateEventSystem(dt) {
 //  WAVE SYSTEM
 // ═══════════════════════════════════════
 function startNextWave() {
+  gs._barnRestedThisWave = false;
   gs.betweenWaves = false; gs.waveActive = true;
   gs.wave++;
   const waveData = getActiveData().waves[(gs.wave - 1) % getActiveData().waves.length];
@@ -3381,6 +3386,8 @@ function updateHUD() {
     : 'Wave ' + gs.wave + '/' + totalWaves + ' — ' + (gs.enemies.length + gs.spawnQueue.length) + ' left';
   const wsb = document.getElementById('wave-start-btn');
   if (wsb) wsb.style.display = (isMobile && gameStarted && gs.betweenWaves) ? 'block' : 'none';
+  const bpEl = document.getElementById('barn-prompt');
+  if (bpEl) bpEl.style.display = (gameStarted && !barnOpen && gs.playerPos.length() < 6) ? 'block' : 'none';
 }
 
 function showToast(msg, dur = 2200) {
@@ -3592,6 +3599,42 @@ function buyBarnCannon() {
   addBarnCannonMesh(gs.barnCannons);
   showToast('🔫 Barn Cannon ' + gs.barnCannons + ' armed!');
   renderShop(); saveGame();
+}
+
+let barnOpen = false;
+function enterBarn() {
+  if (!gameStarted || barnOpen) return;
+  barnOpen = true;
+  document.getElementById('barn-overlay').classList.remove('hidden');
+  renderBarnInterior();
+}
+function exitBarn() {
+  barnOpen = false;
+  document.getElementById('barn-overlay').classList.add('hidden');
+}
+function renderBarnInterior() {
+  const el = document.getElementById('barn-interior-content');
+  const canRest = !gs.waveActive && !gs._barnRestedThisWave;
+  el.innerHTML = `
+    <div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="color:#aaa;font-size:13px;margin-bottom:6px">BARN STATUS</div>
+      <div>❤️ HP: <b>${Math.ceil(gs.barnHP)} / ${gs.barnMaxHP}</b></div>
+      <div>🔫 Cannons: <b>${gs.barnCannons} / 3</b></div>
+      <div>🌾 Straw: <b>${gs.straw}</b></div>
+    </div>
+    <div style="margin-bottom:10px">
+      <button onclick="barnRest()" style="width:100%;padding:13px;background:${canRest?'rgba(76,175,80,0.85)':'rgba(80,80,80,0.4)'};color:#fff;border:none;border-radius:10px;cursor:${canRest?'pointer':'default'};font-size:15px;font-weight:bold">
+        🛌 Rest (Restore full HP)${gs._barnRestedThisWave?' — Already rested this round':gs.waveActive?' — Not during a wave!':''}
+      </button>
+    </div>
+    <div style="color:#aaa;font-size:12px;text-align:center;margin-top:6px">Press E or click 🚪 Leave to exit</div>`;
+}
+function barnRest() {
+  if (gs.waveActive || gs._barnRestedThisWave) return;
+  gs._barnRestedThisWave = true;
+  gs.playerHP = gs.playerMaxHP;
+  showToast('🛌 Rested! HP fully restored!', 2000);
+  renderBarnInterior();
 }
 
 const LAND_COSTS = [150, 300, 500, 750];
