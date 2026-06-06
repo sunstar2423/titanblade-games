@@ -588,10 +588,10 @@ const ANIMALS = [
   { id:'horse',  name:'Kick Horse',   emoji:'🐴', cost:65, kind:'animal', attack:'kick',    dmg:55, range:3.5, cd:3.0, hp:110, color:0x8b6914, desc:'Powerful kick — wide arc, hits multiple' },
   { id:'llama',  name:'Spitting Llama',emoji:'🦙',cost:55, kind:'animal', attack:'spit',    dmg:20, range:11,  cd:2.5, hp:80,  color:0xd4b896, desc:'Spits — long range, poisons enemies' },
   { id:'rooster',name:'War Rooster',  emoji:'🐓', cost:45, kind:'animal', attack:'crow',  dmg:8,  range:5.5, cd:6.0, hp:65,  color:0xcc2200, desc:'Battle crow — stuns all nearby enemies' },
-  { id:'falcon', name:'War Falcon',   emoji:'🦅', cost:60, kind:'animal', attack:'egg',   dmg:50, range:12,  cd:3.0, hp:70,  color:0x8b5914, desc:'Hurls talons — long range, high damage' },
-  { id:'parrot', name:'Guard Parrot', emoji:'🦜', cost:40, kind:'animal', attack:'water', dmg:14, range:8,   cd:2.0, hp:55,  color:0x22aa33, desc:'Squawks + splash — slows nearby enemies' },
-  { id:'owl',    name:'Scout Owl',    emoji:'🦉', cost:50, kind:'animal', attack:'crow',  dmg:10, range:9,   cd:4.5, hp:65,  color:0x7a5010, desc:'Hoot — stuns all nearby enemies' },
-  { id:'pigeon', name:'Carrier Pigeon',emoji:'🕊️',cost:30, kind:'animal', attack:'egg',  dmg:10, range:6,   cd:2.5, hp:45,  color:0xdddddd, desc:'Quick peck at nearby enemies' },
+  { id:'falcon', name:'War Falcon',   emoji:'🦅', cost:60, kind:'animal', attack:'egg',   dmg:50, range:12,  cd:3.0, hp:70,  color:0x8b5914, desc:'Hurls talons — long range, high damage', flying:true },
+  { id:'parrot', name:'Guard Parrot', emoji:'🦜', cost:40, kind:'animal', attack:'water', dmg:14, range:8,   cd:2.0, hp:55,  color:0x22aa33, desc:'Squawks + splash — slows nearby enemies', flying:true },
+  { id:'owl',    name:'Scout Owl',    emoji:'🦉', cost:50, kind:'animal', attack:'crow',  dmg:10, range:9,   cd:4.5, hp:65,  color:0x7a5010, desc:'Hoot — stuns all nearby enemies', flying:true },
+  { id:'pigeon', name:'Carrier Pigeon',emoji:'🕊️',cost:30, kind:'animal', attack:'egg',  dmg:10, range:6,   cd:2.5, hp:45,  color:0xdddddd, desc:'Quick peck at nearby enemies', flying:true },
 ];
 
 const RANDOM_EVENTS = [
@@ -2968,6 +2968,7 @@ function buildPlantMesh(data) {
       // Wings — swept back, spread wide
       const fw1 = add(new THREE.BoxGeometry(0.72,0.06,0.28), S(0x5a3408), 0.54, 0.52, 0); fw1.rotation.y = -0.35;
       const fw2 = add(new THREE.BoxGeometry(0.72,0.06,0.28), S(0x5a3408), 0.54,-0.52, 0); fw2.rotation.y =  0.35;
+      g._w1 = fw1; g._w2 = fw2;
       // Tail fan
       add(new THREE.ConeGeometry(0.14,0.32,5), S(0x3a2000), 0.42, 0,-0.38, -Math.PI/2,0,0);
       // Talons
@@ -2990,6 +2991,7 @@ function buildPlantMesh(data) {
       // Wings
       const pw1 = add(new THREE.BoxGeometry(0.62,0.06,0.24), S(0x118822), 0.52,  0.44, 0); pw1.rotation.y = -0.3;
       const pw2 = add(new THREE.BoxGeometry(0.62,0.06,0.24), S(0x118822), 0.52, -0.44, 0); pw2.rotation.y =  0.3;
+      g._w1 = pw1; g._w2 = pw2;
       // Long colorful tail (blue)
       add(new THREE.ConeGeometry(0.07,0.50,5), S(0x0055ff), 0.40, 0,-0.52, -Math.PI/2,0,0);
       add(new THREE.ConeGeometry(0.05,0.40,5), S(0xff4400), 0.44, 0.10,-0.46, -Math.PI/2,0, 0.3);
@@ -3018,6 +3020,7 @@ function buildPlantMesh(data) {
       // Broad wings (slightly raised)
       const ow1 = add(new THREE.BoxGeometry(0.68,0.07,0.32), S(0x5a3808), 0.56,  0.50, 0); ow1.rotation.y = -0.2; ow1.rotation.z = 0.15;
       const ow2 = add(new THREE.BoxGeometry(0.68,0.07,0.32), S(0x5a3808), 0.56, -0.50, 0); ow2.rotation.y =  0.2; ow2.rotation.z = -0.15;
+      g._w1 = ow1; g._w2 = ow2;
       // Short tail
       add(new THREE.ConeGeometry(0.12,0.22,5), S(0x4a2800), 0.38, 0,-0.36, -Math.PI/2,0,0);
       // Talons
@@ -3039,6 +3042,7 @@ function buildPlantMesh(data) {
       // Wings
       const gw1 = add(new THREE.BoxGeometry(0.52,0.05,0.22), S(0x8888aa), 0.48,  0.36, 0); gw1.rotation.y = -0.25;
       const gw2 = add(new THREE.BoxGeometry(0.52,0.05,0.22), S(0x8888aa), 0.48, -0.36, 0); gw2.rotation.y =  0.25;
+      g._w1 = gw1; g._w2 = gw2;
       // Fan tail
       add(new THREE.ConeGeometry(0.10,0.22,5), S(0x999aaa), 0.40, 0,-0.30, -Math.PI/2,0,0);
       // Feet
@@ -3210,38 +3214,68 @@ function updatePlacedPlants(dt) {
 
     // Animal movement — roam the whole farm
     if (p.data.kind === 'animal') {
-      if (!p._vel) {
-        p._vel = new THREE.Vector3();
-        p._wanderTimer = Math.random() * 2;
-        p._bobPhase = Math.random() * Math.PI * 2;
-      }
-      p._wanderTimer -= dt;
-      if (p._wanderTimer <= 0) {
-        p._wanderTimer = 1.6 + Math.random() * 2.8;
-        if (Math.random() < 0.22) {
-          p._vel.set(0, 0, 0); // pause to graze
-        } else {
-          const angle = Math.random() * Math.PI * 2;
-          const spd = { hen:3.2, cow:5.5, pig:3.8, sheep:4.5, duck:3.5, goat:5.0, horse:7.0, llama:4.2, rooster:4.0 }[p.data.id] || 4.0;
-          p._vel.set(Math.cos(angle) * spd, 0, Math.sin(angle) * spd);
+      if (!p._bobPhase) p._bobPhase = Math.random() * Math.PI * 2;
+
+      if (p.data.flying) {
+        // Flying birds — orbit their home position at altitude
+        if (!p._homePos) {
+          p._homePos = p.pos.clone();
+          p._orbitAngle = Math.random() * Math.PI * 2;
+          p._orbitDir = Math.random() < 0.5 ? 1 : -1;
+          p._orbitR = 1.8 + Math.random() * 1.4;
+          p._flyH = 2.2 + Math.random() * 0.8;
         }
-      }
-      // Steer away from farm boundary
-      const distFromCenter = Math.hypot(p.pos.x, p.pos.z);
-      if (distFromCenter > FARM_R - 3) {
-        const inward = new THREE.Vector3(-p.pos.x, 0, -p.pos.z).normalize();
-        p._vel.x = inward.x * 2.8; p._vel.z = inward.z * 2.8;
-        p._wanderTimer = 0.5;
-      }
-      p.pos.x += p._vel.x * dt;
-      p.pos.z += p._vel.z * dt;
-      const moving = p._vel.lengthSq() > 0.04;
-      if (moving) {
-        p.mesh.rotation.y = Math.atan2(p._vel.x, p._vel.z);
-        p._bobPhase += dt * 9;
-        p.mesh.position.set(p.pos.x, Math.abs(Math.sin(p._bobPhase)) * 0.07, p.pos.z);
+        p._orbitAngle += p._orbitDir * 0.9 * dt;
+        p._bobPhase += dt * 3.0;
+        const nx = p._homePos.x + Math.cos(p._orbitAngle) * p._orbitR;
+        const nz = p._homePos.z + Math.sin(p._orbitAngle) * p._orbitR;
+        const flyY = p._flyH + Math.sin(p._bobPhase * 0.8) * 0.35;
+        p.pos.x = nx; p.pos.z = nz;
+        // Face direction of travel
+        const moveAngle = Math.atan2(
+          nx - p.mesh.position.x,
+          nz - p.mesh.position.z
+        );
+        p.mesh.rotation.y = moveAngle;
+        p.mesh.position.set(nx, flyY, nz);
+        // Flap wings
+        if (p.mesh._w1 && p.mesh._w2) {
+          const flap = Math.sin(p._bobPhase * 5) * 0.4;
+          p.mesh._w1.rotation.z = -0.2 - flap;
+          p.mesh._w2.rotation.z =  0.2 + flap;
+        }
       } else {
-        p.mesh.position.set(p.pos.x, 0, p.pos.z);
+        if (!p._vel) {
+          p._vel = new THREE.Vector3();
+          p._wanderTimer = Math.random() * 2;
+        }
+        p._wanderTimer -= dt;
+        if (p._wanderTimer <= 0) {
+          p._wanderTimer = 1.6 + Math.random() * 2.8;
+          if (Math.random() < 0.22) {
+            p._vel.set(0, 0, 0);
+          } else {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = { hen:3.2, cow:5.5, pig:3.8, sheep:4.5, duck:3.5, goat:5.0, horse:7.0, llama:4.2, rooster:4.0 }[p.data.id] || 4.0;
+            p._vel.set(Math.cos(angle) * spd, 0, Math.sin(angle) * spd);
+          }
+        }
+        const distFromCenter = Math.hypot(p.pos.x, p.pos.z);
+        if (distFromCenter > FARM_R - 3) {
+          const inward = new THREE.Vector3(-p.pos.x, 0, -p.pos.z).normalize();
+          p._vel.x = inward.x * 2.8; p._vel.z = inward.z * 2.8;
+          p._wanderTimer = 0.5;
+        }
+        p.pos.x += p._vel.x * dt;
+        p.pos.z += p._vel.z * dt;
+        const moving = p._vel.lengthSq() > 0.04;
+        if (moving) {
+          p.mesh.rotation.y = Math.atan2(p._vel.x, p._vel.z);
+          p._bobPhase += dt * 9;
+          p.mesh.position.set(p.pos.x, Math.abs(Math.sin(p._bobPhase)) * 0.07, p.pos.z);
+        } else {
+          p.mesh.position.set(p.pos.x, 0, p.pos.z);
+        }
       }
     }
 
