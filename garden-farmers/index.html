@@ -100,6 +100,10 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   .shop-grid { grid-template-columns:repeat(2,1fr); }
   .stitle { font-size:40px; }
 }
+#barn-prompt { position:absolute; top:52%; left:50%; transform:translateX(-50%); background:rgba(20,10,0,0.85); color:#FFD700; padding:9px 22px; border-radius:12px; font-size:16px; font-weight:bold; pointer-events:none; display:none; z-index:6; border:1px solid rgba(255,180,0,0.4); }
+#barn-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:20; display:flex; align-items:center; justify-content:center; }
+#barn-overlay.hidden { display:none; }
+#barn-box { background:linear-gradient(160deg,#2a1408,#1a0d04); border:3px solid #8B5E3C; border-radius:20px; padding:28px 32px; max-width:480px; width:92%; max-height:80vh; overflow-y:auto; color:#fff; box-shadow:0 0 40px rgba(200,100,0,0.3); }
 </style>
 </head>
 <body>
@@ -122,6 +126,16 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div id="joystick-zone"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
   <div id="attack-btn">⚔️</div>
   <div id="jump-btn">🦘</div>
+<div id="barn-prompt">🏠 [E] Enter Barn</div>
+<div id="barn-overlay" class="hidden">
+  <div id="barn-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="color:#c8781a;font-size:22px">🏠 Barn Interior</h2>
+      <button onclick="exitBarn()" style="background:#5c3317;color:#fff;border:none;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:15px">🚪 Leave</button>
+    </div>
+    <div id="barn-interior-content"></div>
+  </div>
+</div>
 <div id="wave-start-btn">▶ START WAVE</div>
 <div id="event-banner"><span id="event-text"></span><div id="event-timer-bar-wrap"><div id="event-timer-bar"></div></div></div>
 
@@ -332,6 +346,25 @@ arch.rotation.z = Math.PI/2; arch.position.set(0, 3.2, 3.08); barnGrp.add(arch);
   chim.position.set(x, 8.2, 0); barnGrp.add(chim);
 });
 scene.add(barnGrp);
+const _barnCannonPositions = [
+  [0, 3.5, 3.8, 0],
+  [-4.0, 3.2, 0, -Math.PI/2],
+  [4.0, 3.2, 0, Math.PI/2],
+];
+const _barnCannonMeshes = [];
+function addBarnCannonMesh(lvl) {
+  if (_barnCannonMeshes[lvl-1]) return;
+  const [cx,cy,cz,cry] = _barnCannonPositions[lvl-1];
+  const cg = new THREE.Group();
+  const barrelMat = new THREE.MeshStandardMaterial({color:0x252525, roughness:0.45, metalness:0.9});
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.20, 1.6, 8), barrelMat);
+  barrel.rotation.x = Math.PI/2; barrel.position.z = 0.5; cg.add(barrel);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.55, 0.7), new THREE.MeshStandardMaterial({color:0x3a1500, roughness:0.8}));
+  cg.add(base);
+  cg.position.set(cx,cy,cz); cg.rotation.y = cry; cg.castShadow = true;
+  barnGrp.add(cg);
+  _barnCannonMeshes[lvl-1] = cg;
+}
 // Warm glow from barn windows
 const barnLight = new THREE.PointLight(0xff6611, 3.0, 18);
 barnLight.position.set(0, 3.5, 3.5);
@@ -839,6 +872,9 @@ const gs = {
   effects: [],
   floatingTexts: [],
   barnHP: 200, barnMaxHP: 200,
+  barnCannons: 0,
+  _barnCannonTimer: 0,
+  _barnRestedThisWave: false,
   wave: 0,
   waveActive: false,
   betweenWaves: true,
@@ -3416,6 +3452,17 @@ function renderShop() {
         <div class="ie">🔨</div><div class="in">Repair Barn</div><div class="id">Restore 50 barn HP</div><div class="ic">🌾 30</div></div>
       <div class="si ${gs.straw<80?'dim':''}" onclick="buyBarnUpgrade()">
         <div class="ie">🏰</div><div class="in">Upgrade Barn</div><div class="id">+100 max barn HP</div><div class="ic">🌾 80</div></div>
+      <div style="grid-column:1/-1;color:#aaa;font-size:12px;margin:8px 0 2px">🔫 Barn Armaments (${gs.barnCannons}/3 cannons)</div>
+      ${gs.barnCannons >= 3
+        ? `<div class="si owned"><div class="ie">🔫</div><div class="in">Fully Armed</div><div class="id">All 3 cannons active!</div><div class="ic">✅ Max</div></div>`
+        : (() => {
+            const cannonCosts=[80,150,240]; const lvl=gs.barnCannons;
+            return `<div class="si ${gs.straw<cannonCosts[lvl]?'dim':''}" onclick="buyBarnCannon()">
+              <div class="ie">🔫</div><div class="in">Arm Cannon ${lvl+1}</div>
+              <div class="id">Auto-fires at enemies within ${12+lvl*3} range every ${(2.8-(lvl+1)*0.5).toFixed(1)}s</div>
+              <div class="ic">🌾 ${cannonCosts[lvl]}</div></div>`;
+          })()
+      }
       <div style="grid-column:1/-1;color:#aaa;font-size:12px;margin:8px 0 2px">🌾 Land Expansions (${gs.farmExpansions}/${MAX_FARM_EXPANSIONS}) — Current radius: ${FARM_R}</div>
       ${gs.farmExpansions >= MAX_FARM_EXPANSIONS
         ? `<div class="si owned"><div class="ie">🏞️</div><div class="in">Maximum Land</div><div class="id">Farm fully expanded!</div><div class="ic">✅ Max</div></div>`
@@ -3532,6 +3579,19 @@ function buyBarnUpgrade() {
   if (gs.straw < 80) return;
   gs.straw -= 80; gs.barnMaxHP += 100; gs.barnHP += 100;
   updateBarnRing(); showToast('Barn upgraded! 🏰'); renderShop(); saveGame();
+}
+
+function buyBarnCannon() {
+  const costs = [80, 150, 240];
+  const lvl = gs.barnCannons;
+  if (lvl >= 3) return;
+  const cost = costs[lvl];
+  if (gs.straw < cost) return;
+  gs.straw -= cost;
+  gs.barnCannons++;
+  addBarnCannonMesh(gs.barnCannons);
+  showToast('🔫 Barn Cannon ' + gs.barnCannons + ' armed!');
+  renderShop(); saveGame();
 }
 
 const LAND_COSTS = [150, 300, 500, 750];
@@ -3738,7 +3798,7 @@ function hasSave() { return !!localStorage.getItem(SAVE_KEY); }
 function saveGame() {
   localStorage.setItem(SAVE_KEY, JSON.stringify({
     straw: gs.straw, wave: gs.wave, skin: gs.skin,
-    barnHP: gs.barnHP, barnMaxHP: gs.barnMaxHP,
+    barnHP: gs.barnHP, barnMaxHP: gs.barnMaxHP, barnCannons: gs.barnCannons,
     playerHP: gs.playerHP, totalKills: gs.totalKills,
     ownedWeapons: [...gs.ownedWeapons], ownedPlaceables: [...gs.ownedPlaceables],
     hotbar: gs.hotbar, farmExpansions: gs.farmExpansions,
@@ -3750,6 +3810,8 @@ function loadGame() {
     const d = JSON.parse(localStorage.getItem(SAVE_KEY));
     gs.straw = d.straw || 0; gs.wave = d.wave || 0; gs.skin = d.skin || 'classic';
     gs.barnHP = d.barnHP || 200; gs.barnMaxHP = d.barnMaxHP || 200;
+    gs.barnCannons = d.barnCannons || 0;
+    for (let i = 1; i <= gs.barnCannons; i++) addBarnCannonMesh(i);
     gs.playerHP = d.playerHP || 100; gs.totalKills = d.totalKills || 0;
     gs.ownedWeapons = new Set(d.ownedWeapons || ['carrot']);
     gs.ownedPlaceables = new Set(d.ownedPlaceables || []);
@@ -3775,6 +3837,8 @@ function resetGame() {
   gs.playerPos.set(5, 0.75, 0); gs.playerVel.set(0, 0, 0); gs.playerJumpVel = 0; gs.playerOnGround = true;
   gs.wave = 0; gs.waveActive = false; gs.betweenWaves = true;
   gs.barnHP = 200; gs.barnMaxHP = 200;
+  gs.barnCannons = 0; gs._barnCannonTimer = 0; _barnCannonMeshes.forEach(m => { if(m) barnGrp.remove(m); }); _barnCannonMeshes.length = 0;
+  gs._barnRestedThisWave = false;
   const _starter = getActiveData().starter;
   gs.ownedWeapons = new Set([_starter]); gs.ownedPlaceables = new Set();
   gs.hotbar = [_starter, null, null, null, null]; gs.activeSlot = 0;
@@ -4088,6 +4152,22 @@ function loop(ts) {
       }
       updateEnemies(dt);
       checkWaveEnd();
+      // Barn cannon auto-fire
+      if (gs.barnCannons > 0) {
+        gs._barnCannonTimer -= dt;
+        if (gs._barnCannonTimer <= 0) {
+          gs._barnCannonTimer = Math.max(0.9, 2.8 - gs.barnCannons * 0.5);
+          const bOrigin = new THREE.Vector3(0, 3, 0);
+          const cannonRange = 12 + gs.barnCannons * 3;
+          const near = gs.enemies.filter(e => e.pos.length() < cannonRange).sort((a,b) => a.pos.length()-b.pos.length())[0];
+          if (near) {
+            const cdir = near.pos.clone().sub(bOrigin).setY(0).normalize();
+            spawnProj(bOrigin.clone(), cdir, 14, {kind:'heavy', dmg: 28 + gs.barnCannons * 12, color:0xff6600}, 'plant', 1.0);
+            spawnFX(bOrigin.clone(), 0xff6600, 0.18, 0.6);
+            sfxExplosion(0.25);
+          }
+        }
+      }
     }
     updateProjectiles(dt);
     updatePlacedPlants(dt);
