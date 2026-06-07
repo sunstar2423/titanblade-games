@@ -90,6 +90,9 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 #joystick-knob { position:absolute; width:62px; height:62px; border-radius:50%; background:rgba(255,255,255,0.44); top:39px; left:39px; box-shadow:0 0 18px rgba(255,255,255,0.22); pointer-events:none; }
 #attack-btn { position:absolute; bottom:24px; right:24px; width:90px; height:90px; border-radius:50%; background:rgba(220,50,50,0.55); border:3px solid rgba(255,110,110,0.7); font-size:34px; display:none; align-items:center; justify-content:center; pointer-events:all; touch-action:none; box-shadow:0 0 22px rgba(220,50,50,0.4); z-index:5; -webkit-user-select:none; user-select:none; }
 #jump-btn { position:absolute; bottom:130px; right:24px; width:70px; height:70px; border-radius:50%; background:rgba(50,140,220,0.55); border:3px solid rgba(110,180,255,0.7); font-size:28px; display:none; align-items:center; justify-content:center; pointer-events:all; touch-action:none; box-shadow:0 0 18px rgba(50,140,220,0.4); z-index:5; -webkit-user-select:none; user-select:none; }
+#zoom-in-btn,#zoom-out-btn { position:absolute; width:52px; height:52px; border-radius:50%; background:rgba(0,0,0,0.42); border:2px solid rgba(255,255,255,0.35); font-size:26px; display:none; align-items:center; justify-content:center; pointer-events:all; touch-action:none; z-index:5; -webkit-user-select:none; user-select:none; color:#fff; }
+#zoom-in-btn  { bottom:210px; right:30px; }
+#zoom-out-btn { bottom:154px; right:30px; }
 #wave-start-btn { position:absolute; bottom:250px; left:50%; transform:translateX(-50%); padding:15px 36px; background:rgba(76,175,80,0.92); border:3px solid rgba(76,175,80,0.8); border-radius:18px; color:#fff; font-size:21px; font-weight:bold; display:none; pointer-events:all; touch-action:none; white-space:nowrap; box-shadow:0 0 24px rgba(76,175,80,0.6); z-index:5; -webkit-user-select:none; user-select:none; }
 #c { touch-action:none; }
 @media (pointer: coarse) {
@@ -126,6 +129,8 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div id="joystick-zone"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
   <div id="attack-btn">⚔️</div>
   <div id="jump-btn">🦘</div>
+  <div id="zoom-in-btn">+</div>
+  <div id="zoom-out-btn">−</div>
 <div id="barn-prompt">🏠 [E] Enter Barn</div>
 <div id="barn-overlay" class="hidden">
   <div id="barn-box">
@@ -202,8 +207,9 @@ scene.fog = new THREE.FogExp2(0x0d1220, 0.009);
   window._skyMesh = sky; window._skyCanvas = c; window._skyCtx = ctx;
 })();
 
-const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 120);
+const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 200);
 const CAM_OFF = new THREE.Vector3(0, 20, 16);
+let camZoom = 1.0;
 camera.position.copy(CAM_OFF);
 camera.lookAt(0, 0, 0);
 
@@ -1169,6 +1175,8 @@ document.addEventListener('keydown', e => {
     if (barnOpen) exitBarn();
     else if (gs.playerPos.length() < 6) enterBarn();
   }
+  if (e.code === 'Minus')  camZoom = Math.min(3.0, camZoom + 0.15);
+  if (e.code === 'Equal')  camZoom = Math.max(0.5, camZoom - 0.15);
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 
@@ -1191,7 +1199,30 @@ if (isMobile) {
   document.getElementById('joystick-zone').style.display = 'block';
   document.getElementById('attack-btn').style.display = 'flex';
   document.getElementById('jump-btn').style.display = 'flex';
+  document.getElementById('zoom-in-btn').style.display = 'flex';
+  document.getElementById('zoom-out-btn').style.display = 'flex';
   document.getElementById('hotbar').style.bottom = '170px';
+}
+
+// Mouse wheel zoom
+window.addEventListener('wheel', e => {
+  camZoom = Math.max(0.5, Math.min(3.0, camZoom + e.deltaY * 0.0012));
+}, { passive: true });
+
+// Mobile zoom buttons
+{
+  let _ziInt = null, _zoInt = null;
+  const ziBtn = document.getElementById('zoom-in-btn');
+  const zoBtn = document.getElementById('zoom-out-btn');
+  ziBtn.addEventListener('touchstart', e => { e.preventDefault(); _ziInt = setInterval(() => { camZoom = Math.max(0.5, camZoom - 0.03); }, 50); }, { passive: false });
+  ziBtn.addEventListener('touchend',   () => { clearInterval(_ziInt); });
+  zoBtn.addEventListener('touchstart', e => { e.preventDefault(); _zoInt = setInterval(() => { camZoom = Math.min(3.0, camZoom + 0.03); }, 50); }, { passive: false });
+  zoBtn.addEventListener('touchend',   () => { clearInterval(_zoInt); });
+  // Also support mouse click on desktop for the buttons (show them always via keyboard)
+  ziBtn.addEventListener('mousedown', () => { _ziInt = setInterval(() => { camZoom = Math.max(0.5, camZoom - 0.03); }, 50); });
+  ziBtn.addEventListener('mouseup',   () => { clearInterval(_ziInt); });
+  zoBtn.addEventListener('mousedown', () => { _zoInt = setInterval(() => { camZoom = Math.min(3.0, camZoom + 0.03); }, 50); });
+  zoBtn.addEventListener('mouseup',   () => { clearInterval(_zoInt); });
 }
 
 {
@@ -4967,7 +4998,7 @@ function loop(ts) {
     updateArmy(dt);
 
     // Camera follows player
-    camera.position.lerp(gs.playerPos.clone().add(CAM_OFF), 0.06);
+    camera.position.lerp(gs.playerPos.clone().add(CAM_OFF.clone().multiplyScalar(camZoom)), 0.06);
     camera.lookAt(gs.playerPos);
     updateHUD();
   }
