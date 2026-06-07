@@ -4770,21 +4770,55 @@ function recruitUnit(id) {
   saveGame();
 }
 
+// Build wedge formation slots for N units.
+// Row 0 = tip (front, 1 unit), row 1 = 2 units, etc.
+// Cavalry go on outer flanks, heavy melee at tip, ranged at back.
+function buildFormationSlots(ids) {
+  const ROLE_PRIORITY = { knight:5, warrior:4, cavalry:3, battlemage:2, archer:1, bomber:0 };
+  const ROW_GAP = 2.4, COL_GAP = 2.2;
+  // Sort: highest priority → front tip
+  const sorted = [...ids].sort((a, b) => (ROLE_PRIORITY[b] || 0) - (ROLE_PRIORITY[a] || 0));
+  // Special: move cavalry to outermost slots of their row
+  const slots = [];
+  let placed = 0, row = 0;
+  while (placed < sorted.length) {
+    const rowSize = Math.min(row + 1, sorted.length - placed, 5);
+    for (let c = 0; c < rowSize; c++) {
+      slots.push({ x: (c - (rowSize - 1) / 2) * COL_GAP, z: row * ROW_GAP });
+    }
+    placed += rowSize; row++;
+  }
+  return { sortedIds: sorted, slots };
+}
+
 function sendArmy() {
   if (gs.recruits.length === 0) { showToast('Recruit units first!'); return; }
   if (gs.waveActive) { showToast("Can't send army during a wave!"); return; }
-  const baseZ = -95;
-  gs.recruits.forEach((id, i) => {
+  const { sortedIds, slots } = buildFormationSlots(gs.recruits);
+  // Formation center starts just south of barn
+  gs._formationCenter = new THREE.Vector3(0, 0, 4);
+  sortedIds.forEach((id, i) => {
     const data = ARMY_UNITS.find(u => u.id === id);
     if (!data) return;
     const mesh = buildArmyUnitMesh(data);
-    const offset = (i - (gs.recruits.length - 1) / 2) * 1.8;
-    const startPos = new THREE.Vector3(offset, 0, 2);
+    const slot = slots[i];
+    const startPos = new THREE.Vector3(
+      gs._formationCenter.x + slot.x,
+      0,
+      gs._formationCenter.z + slot.z
+    );
     mesh.position.copy(startPos);
     scene.add(mesh);
-    gs.activeArmy.push({ mesh, data, pos: startPos.clone(), hp: data.hp, maxHp: data.hp, timer: 0 });
+    gs.activeArmy.push({
+      mesh, data, pos: startPos.clone(),
+      hp: data.hp, maxHp: data.hp,
+      timer: 0,
+      slot,          // offset from formation center
+      inCombat: false,
+      _bobPhase: Math.random() * Math.PI * 2,
+    });
   });
-  showToast(`⚔️ Army of ${gs.recruits.length} units marching to attack!`, 3000);
+  showToast(`⚔️ Army of ${gs.recruits.length} units advancing in formation!`, 3000);
   gs.recruits = [];
   renderShop();
   saveGame();
@@ -4792,35 +4826,65 @@ function sendArmy() {
 
 function updateArmy(dt) {
   const BASE_Z = -95;
+  const FORM_SPD = 4.0; // formation advance speed (z units/s)
+  const UNIT_STEER = 8.0; // how fast units chase their slot
+
+  if (!gs._formationCenter) gs._formationCenter = new THREE.Vector3(0, 0, 4);
+
+  // Count units in combat
+  const combatCount = gs.activeArmy.filter(u => u.inCombat).length;
+  // Advance formation center if fewer than half are in combat
+  if (gs.activeArmy.length > 0 && combatCount < gs.activeArmy.length * 0.5) {
+    gs._formationCenter.z -= FORM_SPD * dt;
+    gs._formationCenter.z = Math.max(BASE_Z + 14, gs._formationCenter.z);
+  }
+
   gs.activeArmy = gs.activeArmy.filter(u => {
     if (u.hp <= 0) { scene.remove(u.mesh); return false; }
     u.timer -= dt;
-    // Attack nearby enemies first
-    const near = gs.enemies.filter(e => Math.hypot(u.pos.x-e.pos.x, u.pos.z-e.pos.z) < u.data.range + 0.8);
-    if (near.length > 0 && u.timer <= 0) {
+    u._bobPhase += dt;
+
+    // Check for nearby enemies
+    const near = gs.enemies.filter(e => Math.hypot(u.pos.x - e.pos.x, u.pos.z - e.pos.z) < u.data.range + 0.8);
+    u.inCombat = near.length > 0;
+
+    if (u.inCombat && u.timer <= 0) {
+      // Attack
       u.timer = 1.1;
-      near.slice(0, u.data.id==='bomber'?3:1).forEach(e => {
-        dmgEnemy(e, u.data.dmg * (u.data.id==='bomber'?1:1));
-        spawnImpact(e.pos.clone().add(new THREE.Vector3(0,1,0)), u.data.color);
+      near.slice(0, u.data.id === 'bomber' ? 3 : 1).forEach(e => {
+        dmgEnemy(e, u.data.dmg);
+        spawnImpact(e.pos.clone().add(new THREE.Vector3(0, 1, 0)), u.data.color);
       });
+      // Face nearest enemy
+      const foe = near[0];
+      u.mesh.rotation.y = Math.atan2(foe.pos.x - u.pos.x, foe.pos.z - u.pos.z);
       if (u.data.id === 'bomber') {
-        spawnFX(u.pos.clone().add(new THREE.Vector3(0,1,0)), 0xff8800, 0.6, 2.5);
+        spawnFX(u.pos.clone().add(new THREE.Vector3(0, 1, 0)), 0xff8800, 0.6, 2.5);
         sfxExplosion && sfxExplosion(0.5);
         u.hp = 0; return false;
       }
     } else {
-      // March toward base
-      const toBase = new THREE.Vector3(u.pos.x * -0.05, 0, BASE_Z - u.pos.z).normalize();
-      u.pos.x += toBase.x * u.data.spd * dt;
-      u.pos.z += toBase.z * u.data.spd * dt;
-      u.mesh.position.set(u.pos.x, 0, u.pos.z);
-      u.mesh.rotation.y = Math.atan2(toBase.x, toBase.z);
-      // Bob cavalry
-      if (u.data.id === 'cavalry') u.mesh.position.y = Math.abs(Math.sin(Date.now()*0.008))*0.1;
+      // Steer toward formation slot
+      const targetX = gs._formationCenter.x + u.slot.x;
+      const targetZ = gs._formationCenter.z + u.slot.z;
+      const dx = targetX - u.pos.x, dz = targetZ - u.pos.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 0.25) {
+        const spd = Math.min(u.data.spd, UNIT_STEER) * dt;
+        const nx = dx / dist, nz = dz / dist;
+        u.pos.x += nx * spd;
+        u.pos.z += nz * spd;
+        u.mesh.rotation.y = Math.atan2(nx, nz);
+      }
+      // Cavalry gallop bob
+      const yOff = u.data.id === 'cavalry' ? Math.abs(Math.sin(u._bobPhase * 5)) * 0.18 : 0;
+      u.mesh.position.set(u.pos.x, yOff, u.pos.z);
     }
-    // Reached enemy base
-    if (u.pos.z < BASE_Z + 8) {
-      const dmg = u.data.dmg * (u.data.id==='bomber'?4:3);
+    if (!u.inCombat) u.mesh.position.set(u.pos.x, u.mesh.position.y, u.pos.z);
+
+    // Reached enemy base — strike it
+    if (u.pos.z < BASE_Z + 10) {
+      const dmg = u.data.dmg * (u.data.id === 'bomber' ? 4 : 3);
       gs._enemyBaseHP = Math.max(0, gs._enemyBaseHP - dmg);
       const reward = Math.ceil(dmg * 0.35);
       gs.straw += reward;
@@ -4834,9 +4898,9 @@ function updateArmy(dt) {
       }
       scene.remove(u.mesh); return false;
     }
-    // Take splash damage from nearby enemies attacking them
+    // Splash damage from nearby enemies
     gs.enemies.forEach(e => {
-      if (Math.hypot(u.pos.x-e.pos.x, u.pos.z-e.pos.z) < 1.8) u.hp -= e.data.dmg * 0.3 * dt;
+      if (Math.hypot(u.pos.x - e.pos.x, u.pos.z - e.pos.z) < 1.8) u.hp -= e.data.dmg * 0.3 * dt;
     });
     return true;
   });
@@ -4871,7 +4935,7 @@ function resetGame() {
   gs.enemies = []; gs.projectiles = []; gs.placedPlants = [];
   gs.defenses = []; gs.effects = []; gs.floatingTexts = [];
   gs.wildBirds.forEach(b => scene.remove(b.mesh)); gs.wildBirds = []; gs._wildBirdTimer = 15;
-  gs.activeArmy.forEach(u => scene.remove(u.mesh)); gs.activeArmy = []; gs.recruits = [];
+  gs.activeArmy.forEach(u => scene.remove(u.mesh)); gs.activeArmy = []; gs.recruits = []; gs._formationCenter = null;
   gs._enemyBaseHP = gs._enemyBaseMaxHP;
   gs.playerHP = 100; gs.playerMaxHP = 100; gs.straw = 25;
   gs.playerPos.set(5, 0.75, 0); gs.playerVel.set(0, 0, 0); gs.playerJumpVel = 0; gs.playerOnGround = true;
