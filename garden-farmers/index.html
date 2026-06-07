@@ -588,10 +588,16 @@ const ANIMALS = [
   { id:'horse',  name:'Kick Horse',   emoji:'🐴', cost:65, kind:'animal', attack:'kick',    dmg:55, range:3.5, cd:3.0, hp:110, color:0x8b6914, desc:'Powerful kick — wide arc, hits multiple' },
   { id:'llama',  name:'Spitting Llama',emoji:'🦙',cost:55, kind:'animal', attack:'spit',    dmg:20, range:11,  cd:2.5, hp:80,  color:0xd4b896, desc:'Spits — long range, poisons enemies' },
   { id:'rooster',name:'War Rooster',  emoji:'🐓', cost:45, kind:'animal', attack:'crow',  dmg:8,  range:5.5, cd:6.0, hp:65,  color:0xcc2200, desc:'Battle crow — stuns all nearby enemies' },
-  { id:'falcon', name:'War Falcon',   emoji:'🦅', cost:60, kind:'animal', attack:'egg',   dmg:50, range:12,  cd:3.0, hp:70,  color:0x8b5914, desc:'Hurls talons — long range, high damage', flying:true },
-  { id:'parrot', name:'Guard Parrot', emoji:'🦜', cost:40, kind:'animal', attack:'water', dmg:14, range:8,   cd:2.0, hp:55,  color:0x22aa33, desc:'Squawks + splash — slows nearby enemies', flying:true },
-  { id:'owl',    name:'Scout Owl',    emoji:'🦉', cost:50, kind:'animal', attack:'crow',  dmg:10, range:9,   cd:4.5, hp:65,  color:0x7a5010, desc:'Hoot — stuns all nearby enemies', flying:true },
-  { id:'pigeon', name:'Carrier Pigeon',emoji:'🕊️',cost:30, kind:'animal', attack:'egg',  dmg:10, range:6,   cd:2.5, hp:45,  color:0xdddddd, desc:'Quick peck at nearby enemies', flying:true },
+  { id:'falcon', name:'War Falcon',    emoji:'🦅', cost:60, kind:'animal', attack:'egg',   dmg:50, range:12, cd:3.0, hp:70,  color:0x8b5914, desc:'Hurls talons — long range, high damage', flying:true },
+  { id:'parrot', name:'Guard Parrot',  emoji:'🦜', cost:40, kind:'animal', attack:'water', dmg:14, range:8,  cd:2.0, hp:55,  color:0x22aa33, desc:'Squawks + splash — slows nearby enemies', flying:true },
+  { id:'owl',    name:'Scout Owl',     emoji:'🦉', cost:50, kind:'animal', attack:'crow',  dmg:10, range:9,  cd:4.5, hp:65,  color:0x7a5010, desc:'Hoot — stuns all nearby enemies', flying:true },
+  { id:'pigeon', name:'Carrier Pigeon',emoji:'🕊️',cost:30, kind:'animal', attack:'egg',   dmg:10, range:6,  cd:2.5, hp:45,  color:0xdddddd, desc:'Quick peck at nearby enemies', flying:true },
+  { id:'swan',   name:'Healing Swan',  emoji:'🦢', cost:60, kind:'animal', attack:'water', dmg:6,  range:7,  cd:2.5, hp:80,  color:0xffffff, desc:'Splash — heals nearby placed friends 12 HP', flying:true },
+  { id:'peacock',name:'Guard Peacock', emoji:'🦚', cost:65, kind:'animal', attack:'crow',  dmg:15, range:9,  cd:5.0, hp:75,  color:0x0066cc, desc:'Fan display — stuns all nearby enemies', flying:true },
+  { id:'flamingo',name:'Kick Flamingo',emoji:'🦩', cost:50, kind:'animal', attack:'kick',  dmg:40, range:5,  cd:3.0, hp:70,  color:0xff6699, desc:'Powerful leg kick — huge knockback', flying:true },
+  { id:'crow',   name:'Poison Crow',   emoji:'🪶', cost:40, kind:'animal', attack:'spit',  dmg:12, range:9,  cd:2.0, hp:50,  color:0x334455, desc:'Toxic beak — poisons nearby enemies', flying:true },
+  { id:'hawk',   name:'Battle Hawk',   emoji:'🦅', cost:75, kind:'animal', attack:'egg',   dmg:65, range:13, cd:2.8, hp:85,  color:0xcc5500, desc:'Razor talons — fast powerful dive attack', flying:true },
+  { id:'pelican',name:'Dive Pelican',  emoji:'🐦', cost:55, kind:'animal', attack:'egg',   dmg:50, range:10, cd:4.0, hp:90,  color:0xdddddd, desc:'Aerial dive bomb — massive impact', flying:true },
 ];
 
 const RANDOM_EVENTS = [
@@ -3048,6 +3054,145 @@ function buildPlantMesh(data) {
       // Feet
       add(new THREE.CylinderGeometry(0.025,0.02,0.18,5), S(0xdd8888), 0.09,  0.07, 0.04);
       add(new THREE.CylinderGeometry(0.025,0.02,0.18,5), S(0xdd8888), 0.09, -0.07, 0.04);
+      break;
+    }
+    case 'swan': {
+      // Large white body
+      add(new THREE.SphereGeometry(0.38,10,8), S(0xffffff), 0.52);
+      // Long curved neck — two segments
+      add(new THREE.CylinderGeometry(0.07,0.09,0.42,7), S(0xffffff), 0.92, 0, 0.14, 0.55,0,0);
+      add(new THREE.CylinderGeometry(0.06,0.07,0.28,7), S(0xffffff), 1.20, 0, 0.28, 0.85,0,0);
+      // Head
+      add(new THREE.SphereGeometry(0.13,8,8), S(0xffffff), 1.30, 0, 0.38);
+      // Orange beak (with black tip)
+      add(new THREE.BoxGeometry(0.06,0.07,0.18), S(0xff8800), 1.29, 0, 0.54);
+      add(new THREE.BoxGeometry(0.05,0.05,0.06), S(0x111111), 1.29, 0, 0.64);
+      // Black mask
+      add(new THREE.SphereGeometry(0.04,5,5), S(0x111111), 1.34,  0.10, 0.44);
+      add(new THREE.SphereGeometry(0.04,5,5), S(0x111111), 1.34, -0.10, 0.44);
+      // Wide arched wings
+      const sw1 = add(new THREE.BoxGeometry(0.78,0.06,0.30), S(0xf5f5f5), 0.58,  0.56, 0); sw1.rotation.y=-0.3; sw1.rotation.z= 0.18;
+      const sw2 = add(new THREE.BoxGeometry(0.78,0.06,0.30), S(0xf5f5f5), 0.58, -0.56, 0); sw2.rotation.y= 0.3; sw2.rotation.z=-0.18;
+      g._w1 = sw1; g._w2 = sw2;
+      // Short tail
+      add(new THREE.ConeGeometry(0.12,0.24,5), S(0xeeeeee), 0.44, 0,-0.42, -Math.PI/2,0,0);
+      break;
+    }
+    case 'peacock': {
+      // Teal body
+      add(new THREE.SphereGeometry(0.30,10,8), S(0x005588), 0.52);
+      // Head with crest
+      add(new THREE.SphereGeometry(0.16,8,8), S(0x006699), 0.86, 0, 0.22);
+      add(new THREE.CylinderGeometry(0.025,0.04,0.22,5), S(0x00aaff), 1.06, 0, 0.18);
+      // Beak
+      add(new THREE.ConeGeometry(0.04,0.12,5), S(0xbbaa44), 0.84, 0, 0.40, Math.PI/2,0,0);
+      // Eyes
+      add(new THREE.SphereGeometry(0.04,5,5), S(0xffff88), 0.92,  0.10, 0.32);
+      add(new THREE.SphereGeometry(0.04,5,5), S(0xffff88), 0.92, -0.10, 0.32);
+      // Wings
+      const pcw1 = add(new THREE.BoxGeometry(0.60,0.06,0.22), S(0x007799), 0.56,  0.44, 0); pcw1.rotation.y=-0.3;
+      const pcw2 = add(new THREE.BoxGeometry(0.60,0.06,0.22), S(0x007799), 0.56, -0.44, 0); pcw2.rotation.y= 0.3;
+      g._w1 = pcw1; g._w2 = pcw2;
+      // Fan tail — colorful spread (green/gold eye-spots)
+      for (let i = 0; i < 7; i++) {
+        const ta = (i / 6 - 0.5) * 1.4;
+        const tf = add(new THREE.ConeGeometry(0.04,0.52,4), S([0x00aa44,0x0077cc,0x558800,0xaa6600,0x006644][i%5]), 0.52+Math.cos(ta)*0.06, Math.sin(ta)*0.28, -0.52, -Math.PI/2+0.2,0,ta*0.5);
+        // Eye-spot
+        add(new THREE.SphereGeometry(0.055,5,5), S(0xffcc00), 0.52+Math.cos(ta)*0.06+0.26*Math.cos(-Math.PI/2+0.2), Math.sin(ta)*0.28+0.26*Math.sin(ta*0.5), -0.52+0.26*(-1));
+      }
+      break;
+    }
+    case 'flamingo': {
+      // Pink body
+      add(new THREE.SphereGeometry(0.26,10,8), S(0xff6699), 0.78);
+      // Long thin neck
+      add(new THREE.CylinderGeometry(0.045,0.06,0.44,6), S(0xff88aa), 1.10, 0, 0.08, -0.3,0,0);
+      // Small rounded head
+      add(new THREE.SphereGeometry(0.11,8,8), S(0xff6699), 1.30, 0, 0.12);
+      // Curved beak (pink+black tip)
+      add(new THREE.BoxGeometry(0.05,0.06,0.16), S(0xffaa88), 1.30, 0, 0.28);
+      add(new THREE.BoxGeometry(0.04,0.05,0.08), S(0x222222), 1.28, 0, 0.38);
+      // Eye
+      add(new THREE.SphereGeometry(0.03,5,5), S(0xffff00), 1.35,  0.09, 0.20);
+      add(new THREE.SphereGeometry(0.03,5,5), S(0xffff00), 1.35, -0.09, 0.20);
+      // Wings (folded, bright pink)
+      const flw1 = add(new THREE.BoxGeometry(0.56,0.07,0.24), S(0xff44aa), 0.82,  0.38, 0); flw1.rotation.y=-0.2; flw1.rotation.z= 0.2;
+      const flw2 = add(new THREE.BoxGeometry(0.56,0.07,0.24), S(0xff44aa), 0.82, -0.38, 0); flw2.rotation.y= 0.2; flw2.rotation.z=-0.2;
+      g._w1 = flw1; g._w2 = flw2;
+      // Long legs
+      add(new THREE.CylinderGeometry(0.03,0.025,0.72,5), S(0xff8899), 0.36, 0.10, 0.06);
+      add(new THREE.CylinderGeometry(0.03,0.025,0.72,5), S(0xff8899), 0.36,-0.10, 0.06);
+      break;
+    }
+    case 'crow': {
+      // Dark body
+      add(new THREE.SphereGeometry(0.26,10,8), S(0x1a1a2e), 0.48);
+      // Head
+      add(new THREE.SphereGeometry(0.15,8,8), S(0x222244), 0.80, 0, 0.18);
+      // Sharp beak
+      add(new THREE.ConeGeometry(0.04,0.18,4), S(0x111111), 0.80, 0, 0.40, Math.PI/2,0,0);
+      // Bright eyes (intelligent look)
+      add(new THREE.SphereGeometry(0.04,5,5), S(0x44bbff), 0.86,  0.10, 0.28);
+      add(new THREE.SphereGeometry(0.04,5,5), S(0x44bbff), 0.86, -0.10, 0.28);
+      // Glossy dark wings with slight blue sheen
+      const crw1 = add(new THREE.BoxGeometry(0.60,0.06,0.22), S(0x0a0a22), 0.52,  0.44, 0); crw1.rotation.y=-0.25;
+      const crw2 = add(new THREE.BoxGeometry(0.60,0.06,0.22), S(0x0a0a22), 0.52, -0.44, 0); crw2.rotation.y= 0.25;
+      g._w1 = crw1; g._w2 = crw2;
+      // Wedge tail
+      add(new THREE.ConeGeometry(0.08,0.32,4), S(0x111133), 0.38, 0,-0.34, -Math.PI/2,0,Math.PI/4);
+      // Talons
+      add(new THREE.CylinderGeometry(0.025,0.02,0.18,4), S(0x444444), 0.09,  0.07, 0.04);
+      add(new THREE.CylinderGeometry(0.025,0.02,0.18,4), S(0x444444), 0.09, -0.07, 0.04);
+      break;
+    }
+    case 'hawk': {
+      // Muscular orange-brown body
+      add(new THREE.SphereGeometry(0.33,10,8), S(0xcc5500), 0.54);
+      add(new THREE.SphereGeometry(0.16,8,8),  S(0x882200), 0.92, 0, 0.24);
+      // Hooked raptor beak
+      add(new THREE.ConeGeometry(0.06,0.14,5), S(0xffcc00), 0.90, 0, 0.46, Math.PI/2,0,0);
+      add(new THREE.ConeGeometry(0.05,0.08,4), S(0xee9900), 0.84, 0, 0.48, -Math.PI/2+0.5,0,0);
+      // Fierce eyes
+      add(new THREE.SphereGeometry(0.05,6,6), S(0xffaa00), 0.98,  0.12, 0.36);
+      add(new THREE.SphereGeometry(0.05,6,6), S(0xffaa00), 0.98, -0.12, 0.36);
+      add(new THREE.SphereGeometry(0.026,5,5), S(0x111111), 0.98,  0.12, 0.38);
+      add(new THREE.SphereGeometry(0.026,5,5), S(0x111111), 0.98, -0.12, 0.38);
+      // Broad powerful wings
+      const hkw1 = add(new THREE.BoxGeometry(0.80,0.07,0.32), S(0xaa4400), 0.58,  0.58, 0); hkw1.rotation.y=-0.3; hkw1.rotation.z= 0.12;
+      const hkw2 = add(new THREE.BoxGeometry(0.80,0.07,0.32), S(0xaa4400), 0.58, -0.58, 0); hkw2.rotation.y= 0.3; hkw2.rotation.z=-0.12;
+      g._w1 = hkw1; g._w2 = hkw2;
+      // Banded tail
+      add(new THREE.ConeGeometry(0.13,0.34,5), S(0x882200), 0.40, 0,-0.40, -Math.PI/2,0,0);
+      add(new THREE.ConeGeometry(0.11,0.32,5), S(0xcc6600), 0.42, 0,-0.38, -Math.PI/2,0,0);
+      // Talons
+      add(new THREE.CylinderGeometry(0.04,0.03,0.26,5), S(0x888855), 0.12,  0.12, 0.08);
+      add(new THREE.CylinderGeometry(0.04,0.03,0.26,5), S(0x888855), 0.12, -0.12, 0.08);
+      break;
+    }
+    case 'pelican': {
+      // Large round white body
+      add(new THREE.SphereGeometry(0.40,10,8), S(0xeeeeee), 0.56);
+      // Short neck
+      add(new THREE.CylinderGeometry(0.09,0.11,0.24,7), S(0xfafafa), 0.88, 0, 0.14, 0.3,0,0);
+      // Head
+      add(new THREE.SphereGeometry(0.16,8,8), S(0xffffff), 1.02, 0, 0.26);
+      // Long flat beak (upper)
+      add(new THREE.BoxGeometry(0.07,0.08,0.40), S(0xffaa44), 1.00, 0, 0.52);
+      // Throat pouch (lower beak) — big orange sack
+      add(new THREE.SphereGeometry(0.12,7,6), S(0xff8800), 0.88, 0, 0.52);
+      add(new THREE.BoxGeometry(0.06,0.07,0.36), S(0xff8800), 0.86, 0, 0.44);
+      // Eyes
+      add(new THREE.SphereGeometry(0.04,5,5), S(0x44ccff), 1.08,  0.13, 0.34);
+      add(new THREE.SphereGeometry(0.04,5,5), S(0x44ccff), 1.08, -0.13, 0.34);
+      // Wide wings
+      const plw1 = add(new THREE.BoxGeometry(0.84,0.07,0.34), S(0xdddddd), 0.60,  0.62, 0); plw1.rotation.y=-0.25; plw1.rotation.z= 0.1;
+      const plw2 = add(new THREE.BoxGeometry(0.84,0.07,0.34), S(0xdddddd), 0.60, -0.62, 0); plw2.rotation.y= 0.25; plw2.rotation.z=-0.1;
+      g._w1 = plw1; g._w2 = plw2;
+      // Black wingtips
+      add(new THREE.BoxGeometry(0.22,0.065,0.30), S(0x111111), 0.60,  0.98, 0);
+      add(new THREE.BoxGeometry(0.22,0.065,0.30), S(0x111111), 0.60, -0.98, 0);
+      // Stubby tail
+      add(new THREE.ConeGeometry(0.10,0.18,5), S(0xdddddd), 0.44, 0,-0.42, -Math.PI/2,0,0);
       break;
     }
     default: {
