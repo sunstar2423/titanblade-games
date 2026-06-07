@@ -153,6 +153,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
         <div class="shop-tab" onclick="shopTab('defenses')">🏰 Defenses</div>
         <div class="shop-tab" onclick="shopTab('animals')">🐾 Animals</div>
         <div class="shop-tab" onclick="shopTab('barn')">🏚️ Barn</div>
+        <div class="shop-tab" onclick="shopTab('army')">⚔️ Army</div>
       </div>
       <div id="shop-content" class="shop-grid"></div>
     </div>
@@ -514,6 +515,72 @@ let windmillBlades = null;
   grp.position.set(x, 0, z); grp.rotation.y = Math.random() * Math.PI; scene.add(grp);
 });
 
+// ─── Flower patches inside farm ───────────────────────────────
+(function() {
+  const flowerColors = [0xff4466, 0xffee00, 0xff8800, 0xcc44ff, 0x44ff88, 0xff66cc, 0x00ddff];
+  [[8,-6],[12,14],[-14,8],[-5,18],[18,-12],[-10,-16],[22,6],[-18,-6]].forEach(([fx,fz]) => {
+    const grp = new THREE.Group();
+    for (let i = 0; i < 7; i++) {
+      const a = i/7*Math.PI*2, r = 0.2 + Math.random()*0.55;
+      const col = flowerColors[Math.floor(Math.random()*flowerColors.length)];
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.32,4), new THREE.MeshStandardMaterial({color:0x228b22,roughness:0.9}));
+      stem.position.set(Math.cos(a)*r, 0.16, Math.sin(a)*r); grp.add(stem);
+      const bloom = new THREE.Mesh(new THREE.SphereGeometry(0.095,6,5), new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:0.18,roughness:0.7}));
+      bloom.position.set(Math.cos(a)*r, 0.38, Math.sin(a)*r); grp.add(bloom);
+      const center = new THREE.Mesh(new THREE.SphereGeometry(0.04,5,5), new THREE.MeshStandardMaterial({color:0xffee00,roughness:0.6}));
+      center.position.set(Math.cos(a)*r, 0.40, Math.sin(a)*r); grp.add(center);
+    }
+    grp.position.set(fx, 0, fz); scene.add(grp);
+  });
+})();
+
+// ─── Decorative pond ──────────────────────────────────────────
+(function() {
+  const pondMat = new THREE.MeshStandardMaterial({color:0x2255cc,roughness:0.04,metalness:0.45,transparent:true,opacity:0.82});
+  const pond = new THREE.Mesh(new THREE.CircleGeometry(3.8,20), pondMat);
+  pond.rotation.x = -Math.PI/2; pond.position.set(-17, 0.012, 17); scene.add(pond);
+  const lilyCols = [0x228b22, 0x116611, 0x33aa44];
+  for (let i = 0; i < 4; i++) {
+    const a = i/4*Math.PI*2+0.4, r = 1.4+Math.random()*1.8;
+    const lily = new THREE.Mesh(new THREE.CircleGeometry(0.35+Math.random()*0.25,8), new THREE.MeshStandardMaterial({color:lilyCols[i%3],roughness:0.8}));
+    lily.rotation.x = -Math.PI/2; lily.position.set(-17+Math.cos(a)*r, 0.022, 17+Math.sin(a)*r); scene.add(lily);
+    if (Math.random()<0.5) {
+      const flower = new THREE.Mesh(new THREE.SphereGeometry(0.1,5,5), new THREE.MeshStandardMaterial({color:0xff66aa,emissive:0xff44aa,emissiveIntensity:0.3}));
+      flower.position.set(-17+Math.cos(a)*r, 0.13, 17+Math.sin(a)*r); scene.add(flower);
+    }
+  }
+})();
+
+// ─── Vegetable rows ───────────────────────────────────────────
+(function() {
+  const rowCols = [0x228b22, 0xff2200, 0xff8800, 0xffd700];
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 5; col++) {
+      const vegMat = new THREE.MeshStandardMaterial({color:rowCols[row],roughness:0.8});
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,0.44,6), vegMat);
+      stem.position.set(26+col*1.4, 0.22, -8+row*1.6); stem.castShadow=true; scene.add(stem);
+      const top = new THREE.Mesh(new THREE.SphereGeometry(0.13+Math.random()*0.06,6,5), vegMat);
+      top.position.set(26+col*1.4, 0.58, -8+row*1.6); top.castShadow=true; scene.add(top);
+    }
+  }
+})();
+
+// ─── Fence lanterns ───────────────────────────────────────────
+(function() {
+  const lanternAngles = [0, Math.PI/2, Math.PI, -Math.PI/2];
+  lanternAngles.forEach(angle => {
+    const lx = Math.cos(angle)*FARM_R, lz = Math.sin(angle)*FARM_R;
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.9,5), new THREE.MeshStandardMaterial({color:0x5c3317,roughness:0.8}));
+    post.position.set(lx, 1.7, lz); scene.add(post);
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.32,0.36,0.32), new THREE.MeshStandardMaterial({color:0x664400,roughness:0.7}));
+    box.position.set(lx, 2.22, lz); scene.add(box);
+    const glow = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.22,0.18), new THREE.MeshStandardMaterial({color:0xffcc44,emissive:0xffaa00,emissiveIntensity:1.2,roughness:0.5}));
+    glow.position.set(lx, 2.22, lz); scene.add(glow);
+    const ptLight = new THREE.PointLight(0xffaa00, 0.8, 8);
+    ptLight.position.set(lx, 2.5, lz); scene.add(ptLight);
+  });
+})();
+
 // Dirt path from barn south to fence
 (function() {
   _pathMat = new THREE.MeshStandardMaterial({ color: 0x8a6010, roughness: 0.97 });
@@ -599,6 +666,79 @@ const ANIMALS = [
   { id:'hawk',   name:'Battle Hawk',   emoji:'🦅', cost:75, kind:'animal', attack:'egg',   dmg:65, range:13, cd:2.8, hp:85,  color:0xcc5500, desc:'Razor talons — fast powerful dive attack', flying:true },
   { id:'pelican',name:'Dive Pelican',  emoji:'🐦', cost:55, kind:'animal', attack:'egg',   dmg:50, range:10, cd:4.0, hp:90,  color:0xdddddd, desc:'Aerial dive bomb — massive impact', flying:true },
 ];
+
+const ARMY_UNITS = [
+  { id:'warrior',    name:'Farm Warrior', emoji:'⚔️', cost:25, dmg:30,  hp:100, spd:5.0, range:2.2, color:0x8b5e3c, desc:'Tough melee fighter — charges at enemies' },
+  { id:'archer',     name:'Archer',       emoji:'🏹', cost:35, dmg:22,  hp:55,  spd:4.5, range:11,  color:0x228b22, desc:'Long-range arrow sniper' },
+  { id:'knight',     name:'Knight',       emoji:'🛡️', cost:65, dmg:55,  hp:220, spd:3.0, range:2.5, color:0x778899, desc:'Heavy armor — extreme HP tank' },
+  { id:'battlemage', name:'Battle Mage',  emoji:'🔮', cost:55, dmg:42,  hp:65,  spd:4.0, range:9,   color:0x9900cc, desc:'Magic blasts — medium range AoE' },
+  { id:'cavalry',    name:'Cavalry',      emoji:'🐎', cost:80, dmg:70,  hp:160, spd:8.0, range:2.8, color:0xcc8800, desc:'Fast horse charge — huge impact' },
+  { id:'bomber',     name:'Bomber',       emoji:'💣', cost:50, dmg:90,  hp:45,  spd:3.5, range:5,   color:0x222222, desc:'Explodes on contact — massive AoE' },
+];
+
+let enemyBaseGrp = null;
+function buildEnemyBase() {
+  enemyBaseGrp = new THREE.Group();
+  const dm = (col, emCol=null, emInt=0, rough=0.85) => {
+    const m = new THREE.MeshStandardMaterial({color:col,roughness:rough,metalness:0});
+    if (emCol !== null) { m.emissive.setHex(emCol); m.emissiveIntensity = emInt; }
+    return m;
+  };
+  // Dark stone base foundation
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(6.5,7,2.5,8), dm(0x1a1008));
+  base.position.y = 1.25; base.castShadow=true; enemyBaseGrp.add(base);
+  // Main central tower
+  const tower = new THREE.Mesh(new THREE.CylinderGeometry(4,5,13,8), dm(0x2a1810));
+  tower.position.y = 8.5; tower.castShadow=true; enemyBaseGrp.add(tower);
+  // Battlements ring
+  for (let i = 0; i < 8; i++) {
+    const a = i/8*Math.PI*2;
+    const merlon = new THREE.Mesh(new THREE.BoxGeometry(1.3,2.2,1.3), dm(0x1a0a00));
+    merlon.position.set(Math.cos(a)*4.2, 15.6, Math.sin(a)*4.2); merlon.castShadow=true; enemyBaseGrp.add(merlon);
+  }
+  // Corner turrets
+  for (let i = 0; i < 4; i++) {
+    const a = i/4*Math.PI*2 + Math.PI/4;
+    const turret = new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.6,9,7), dm(0x220e04));
+    turret.position.set(Math.cos(a)*5.8, 5, Math.sin(a)*5.8); turret.castShadow=true; enemyBaseGrp.add(turret);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(1.6,2.5,7), dm(0x440000));
+    cap.position.set(Math.cos(a)*5.8, 10.8, Math.sin(a)*5.8); cap.castShadow=true; enemyBaseGrp.add(cap);
+  }
+  // Red glowing windows
+  for (let i = 0; i < 5; i++) {
+    const a = i/5*Math.PI*2;
+    const win = new THREE.Mesh(new THREE.BoxGeometry(0.7,1.4,0.3), dm(0xff1100, 0xff1100, 1.5, 0.3));
+    win.position.set(Math.cos(a)*4.1, 9, Math.sin(a)*4.1); win.rotation.y=a; enemyBaseGrp.add(win);
+  }
+  // Giant scarecrow skull/face on top
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(2.2,10,8), dm(0x3a1800));
+  skull.position.y = 18; skull.castShadow=true; enemyBaseGrp.add(skull);
+  skull.scale.set(1,1.1,1);
+  // Evil eyes
+  [[-0.8,0],[0.8,0]].forEach(([ex]) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.42,7,6), dm(0xff2200,0xff0000,2.5,0.2));
+    eye.position.set(ex, 18.4, 2.1); eye._isEye=true; enemyBaseGrp.add(eye);
+  });
+  // Horns
+  [-0.9,0.9].forEach(hx => {
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.35,2.4,6), dm(0x5a2a00));
+    horn.position.set(hx, 20.5, 0); horn.rotation.z = hx < 0 ? 0.4 : -0.4; enemyBaseGrp.add(horn);
+  });
+  // Dark flags
+  for (let i = 0; i < 3; i++) {
+    const a = i/3*Math.PI*2;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,5,5), dm(0x4a2a10));
+    pole.position.set(Math.cos(a)*3.5, 17, Math.sin(a)*3.5); enemyBaseGrp.add(pole);
+    const flag = new THREE.Mesh(new THREE.BoxGeometry(2,1.1,0.06), dm(0x880000,0x440000,0.4));
+    flag.position.set(Math.cos(a)*3.5+1, 19.3, Math.sin(a)*3.5); enemyBaseGrp.add(flag);
+  }
+  // Eerie red glow at base
+  const glow = new THREE.PointLight(0xff1100, 2.5, 22);
+  glow.position.y = 4; enemyBaseGrp.add(glow);
+  enemyBaseGrp.position.set(0, 0, -95);
+  scene.add(enemyBaseGrp);
+}
+buildEnemyBase();
 
 const RANDOM_EVENTS = [
   // Good events
@@ -885,6 +1025,10 @@ const gs = {
   floatingTexts: [],
   wildBirds: [],
   _wildBirdTimer: 15,
+  recruits: [],
+  activeArmy: [],
+  _enemyBaseHP: 600,
+  _enemyBaseMaxHP: 600,
   barnHP: 200, barnMaxHP: 200,
   barnCannons: 0,
   _barnCannonTimer: 0,
@@ -2334,6 +2478,9 @@ function checkWaveEnd() {
   gs.waveActive = false; gs.betweenWaves = true;
   const bonus = gs.wave * 10;
   gs.straw += bonus;
+  // Enemy base slowly regenerates
+  gs._enemyBaseHP = Math.min(gs._enemyBaseMaxHP, gs._enemyBaseHP + 40);
+  gs._barnRestedThisWave = false;
   showToast('Wave ' + gs.wave + ' cleared! +' + bonus + ' straw bonus! 🎉', 3000);
   if (gs.wave >= getActiveData().waves.length) setTimeout(() => { stopBattleTheme(); showScreen('victory'); }, 2000);
   saveGame();
@@ -3789,7 +3936,7 @@ function toggleShop(forceClose) {
 function shopTab(tab) {
   currentShopTab = tab;
   document.querySelectorAll('.shop-tab').forEach((el, i) => {
-    el.classList.toggle('active', ['weapons', 'plants', 'defenses', 'animals', 'barn'][i] === tab);
+    el.classList.toggle('active', ['weapons', 'plants', 'defenses', 'animals', 'barn', 'army'][i] === tab);
   });
   renderShop();
 }
@@ -3802,6 +3949,41 @@ function renderShop() {
   if (_st) _st.textContent = gs.biome === 'jungle' ? '🌿 Jungle Shop' : gs.biome === 'snow' ? '❄️ Tundra Shop' : '🛒 Farm Shop';
   const c = document.getElementById('shop-content');
   c.innerHTML = '';
+
+  if (currentShopTab === 'army') {
+    const bpct = gs._enemyBaseHP / gs._enemyBaseMaxHP;
+    const bpctPx = Math.round(bpct * 200);
+    const recruitList = gs.recruits.map(id => {
+      const u = ARMY_UNITS.find(x => x.id === id);
+      return u ? `<span style="background:rgba(255,255,255,0.1);border-radius:6px;padding:2px 8px;margin:2px;display:inline-block">${u.emoji} ${u.name}</span>` : '';
+    }).join('');
+    c.innerHTML = `
+      <div style="grid-column:1/-1;margin-bottom:10px">
+        <div style="color:#ff4444;font-weight:bold;font-size:15px;margin-bottom:4px">⚔️ Enemy Base HP: ${Math.ceil(gs._enemyBaseHP)} / ${gs._enemyBaseMaxHP}</div>
+        <div style="background:#330000;border-radius:6px;height:14px;width:200px;overflow:hidden;margin-bottom:8px">
+          <div style="background:linear-gradient(90deg,#ff2200,#ff6600);height:100%;width:${bpctPx}px;border-radius:6px;transition:width 0.3s"></div>
+        </div>
+        <div style="color:#aaa;font-size:12px">Destroy the enemy base to earn 150 straw! It's at the north edge of the map. Base regenerates 40 HP per wave.</div>
+      </div>
+      <div style="grid-column:1/-1;color:#ccc;font-size:13px;margin:4px 0">
+        <b>🪖 Recruited units (${gs.recruits.length}):</b><br>
+        ${recruitList || '<span style="color:#555">None yet — recruit below!</span>'}
+      </div>
+      <div style="grid-column:1/-1">
+        <button onclick="sendArmy()" style="background:${gs.recruits.length>0&&!gs.waveActive?'linear-gradient(135deg,#cc2200,#ff4400)':'#333'};color:#fff;border:none;padding:10px 28px;border-radius:10px;font-size:16px;font-weight:bold;cursor:pointer;width:100%;margin-bottom:10px" ${gs.recruits.length===0||gs.waveActive?'disabled':''}>
+          ⚔️ ${gs.waveActive ? 'WAIT FOR WAVE TO END' : gs.recruits.length===0 ? 'RECRUIT UNITS BELOW' : 'SEND ARMY! ('+gs.recruits.length+' units)'}
+        </button>
+      </div>
+      <div style="grid-column:1/-1;color:#aaa;font-size:12px;margin:4px 0 8px">─── Recruit Units ───</div>
+      ${ARMY_UNITS.map(u => `
+        <div class="si ${gs.straw<u.cost?'dim':''}" onclick="recruitUnit('${u.id}')">
+          <div class="ie">${u.emoji}</div>
+          <div class="in">${u.name}</div>
+          <div class="id">${u.desc}<br><small>HP:${u.hp} DMG:${u.dmg} SPD:${u.spd}</small></div>
+          <div class="ic">🌾 ${u.cost}</div>
+        </div>`).join('')}`;
+    return;
+  }
 
   if (currentShopTab === 'barn') {
     c.innerHTML = `
@@ -4270,6 +4452,159 @@ function loadGame() {
   } catch (e) { console.error('Load error', e); }
 }
 
+// ═══════════════════════════════════════
+//  ARMY SYSTEM
+// ═══════════════════════════════════════
+function buildArmyUnitMesh(data) {
+  const g = new THREE.Group();
+  const M = (col, rough=0.7, emCol=null, emInt=0) => {
+    const m = new THREE.MeshStandardMaterial({color:col, roughness:rough, metalness:0});
+    if (emCol !== null) { m.emissive.setHex(emCol); m.emissiveIntensity = emInt; }
+    return m;
+  };
+  const col = data.color;
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.27,0.72,7), M(col));
+  body.position.y = 0.56; body.castShadow=true; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.19,8,7), M(0xf4a460));
+  head.position.y = 1.12; head.castShadow=true; g.add(head);
+  if (data.id === 'warrior') {
+    const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.21,0.16,7), M(col));
+    hat.position.y = 1.28; g.add(hat);
+    const sword = new THREE.Mesh(new THREE.BoxGeometry(0.06,0.62,0.04), M(0xcccccc,0.3));
+    sword.position.set(0.30,0.92,0); sword.rotation.z=0.2; g.add(sword);
+  } else if (data.id === 'archer') {
+    const hood = new THREE.Mesh(new THREE.ConeGeometry(0.21,0.32,7), M(col));
+    hood.position.y = 1.30; g.add(hood);
+    const bow = new THREE.Mesh(new THREE.TorusGeometry(0.24,0.03,5,12,Math.PI), M(0x5c3317));
+    bow.position.set(-0.28,0.92,0); bow.rotation.y=Math.PI/2; g.add(bow);
+  } else if (data.id === 'knight') {
+    const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.24,0.32,8), M(col,0.3));
+    helm.position.y = 1.22; g.add(helm);
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.08,0.1), M(0x445566));
+    visor.position.set(0,1.22,0.23); g.add(visor);
+    const shield = new THREE.Mesh(new THREE.BoxGeometry(0.42,0.56,0.06), M(col,0.3));
+    shield.position.set(-0.36,0.7,0.1); g.add(shield);
+    const cross = new THREE.Mesh(new THREE.BoxGeometry(0.04,0.36,0.07), M(0xff2200));
+    cross.position.set(-0.36,0.7,0.14); g.add(cross);
+  } else if (data.id === 'battlemage') {
+    const hat = new THREE.Mesh(new THREE.ConeGeometry(0.18,0.46,7), M(0x4b0082));
+    hat.position.y = 1.44; g.add(hat);
+    const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,1.1,6), M(0x5c3317));
+    staff.position.set(0.30,0.96,0); g.add(staff);
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.10,7,7), M(col,0.2,col,1.2));
+    orb.position.set(0.30,1.56,0); g.add(orb);
+  } else if (data.id === 'cavalry') {
+    const horse = new THREE.Mesh(new THREE.SphereGeometry(0.44,9,7), M(0x8b5e3c));
+    horse.position.y = 0.44; horse.scale.set(1,0.7,1.5); horse.castShadow=true; g.add(horse);
+    const hhead = new THREE.Mesh(new THREE.SphereGeometry(0.2,7,6), M(0x7a4e2c));
+    hhead.position.set(0,0.72,0.58); g.add(hhead);
+    const rider = new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.2,0.55,7), M(col));
+    rider.position.y = 1.05; g.add(rider);
+    const rhead = new THREE.Mesh(new THREE.SphereGeometry(0.15,7,6), M(0xf4a460));
+    rhead.position.y = 1.48; g.add(rhead);
+    const lance = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,1.2,5), M(0x8b6914));
+    lance.position.set(0.22,1.0,0); lance.rotation.z=0.25; g.add(lance);
+  } else if (data.id === 'bomber') {
+    const bsuit = new THREE.Mesh(new THREE.SphereGeometry(0.3,8,7), M(0x333333));
+    bsuit.position.y = 0.65; bsuit.castShadow=true; g.add(bsuit);
+    const bhead = new THREE.Mesh(new THREE.SphereGeometry(0.18,7,6), M(0x222222));
+    bhead.position.y = 1.08; g.add(bhead);
+    const bomb = new THREE.Mesh(new THREE.SphereGeometry(0.18,7,7), M(0x111111));
+    bomb.position.set(0,0.68,0.28); g.add(bomb);
+    const fuse = new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.2,4), M(0x888844));
+    fuse.position.set(0,0.86,0.28); g.add(fuse);
+    const spark = new THREE.Mesh(new THREE.SphereGeometry(0.05,5,5), M(0xffcc00,0.2,0xffcc00,2));
+    spark.position.set(0,0.96,0.28); g.add(spark);
+  }
+  return g;
+}
+
+function recruitUnit(id) {
+  const unit = ARMY_UNITS.find(u => u.id === id);
+  if (!unit || gs.straw < unit.cost) return;
+  gs.straw -= unit.cost;
+  gs.recruits.push(id);
+  renderShop();
+  saveGame();
+}
+
+function sendArmy() {
+  if (gs.recruits.length === 0) { showToast('Recruit units first!'); return; }
+  if (gs.waveActive) { showToast("Can't send army during a wave!"); return; }
+  const baseZ = -95;
+  gs.recruits.forEach((id, i) => {
+    const data = ARMY_UNITS.find(u => u.id === id);
+    if (!data) return;
+    const mesh = buildArmyUnitMesh(data);
+    const offset = (i - (gs.recruits.length - 1) / 2) * 1.8;
+    const startPos = new THREE.Vector3(offset, 0, 2);
+    mesh.position.copy(startPos);
+    scene.add(mesh);
+    gs.activeArmy.push({ mesh, data, pos: startPos.clone(), hp: data.hp, maxHp: data.hp, timer: 0 });
+  });
+  showToast(`⚔️ Army of ${gs.recruits.length} units marching to attack!`, 3000);
+  gs.recruits = [];
+  renderShop();
+  saveGame();
+}
+
+function updateArmy(dt) {
+  const BASE_Z = -95;
+  gs.activeArmy = gs.activeArmy.filter(u => {
+    if (u.hp <= 0) { scene.remove(u.mesh); return false; }
+    u.timer -= dt;
+    // Attack nearby enemies first
+    const near = gs.enemies.filter(e => Math.hypot(u.pos.x-e.pos.x, u.pos.z-e.pos.z) < u.data.range + 0.8);
+    if (near.length > 0 && u.timer <= 0) {
+      u.timer = 1.1;
+      near.slice(0, u.data.id==='bomber'?3:1).forEach(e => {
+        dmgEnemy(e, u.data.dmg * (u.data.id==='bomber'?1:1));
+        spawnImpact(e.pos.clone().add(new THREE.Vector3(0,1,0)), u.data.color);
+      });
+      if (u.data.id === 'bomber') {
+        spawnFX(u.pos.clone().add(new THREE.Vector3(0,1,0)), 0xff8800, 0.6, 2.5);
+        sfxExplosion && sfxExplosion(0.5);
+        u.hp = 0; return false;
+      }
+    } else {
+      // March toward base
+      const toBase = new THREE.Vector3(u.pos.x * -0.05, 0, BASE_Z - u.pos.z).normalize();
+      u.pos.x += toBase.x * u.data.spd * dt;
+      u.pos.z += toBase.z * u.data.spd * dt;
+      u.mesh.position.set(u.pos.x, 0, u.pos.z);
+      u.mesh.rotation.y = Math.atan2(toBase.x, toBase.z);
+      // Bob cavalry
+      if (u.data.id === 'cavalry') u.mesh.position.y = Math.abs(Math.sin(Date.now()*0.008))*0.1;
+    }
+    // Reached enemy base
+    if (u.pos.z < BASE_Z + 8) {
+      const dmg = u.data.dmg * (u.data.id==='bomber'?4:3);
+      gs._enemyBaseHP = Math.max(0, gs._enemyBaseHP - dmg);
+      const reward = Math.ceil(dmg * 0.35);
+      gs.straw += reward;
+      spawnFX(new THREE.Vector3(u.pos.x, 3, BASE_Z + 4), 0xff2200, 1.2, 3.0);
+      showToast(`💥 Base hit for ${dmg}! +${reward} straw`, 2000);
+      if (gs._enemyBaseHP <= 0) {
+        gs._enemyBaseHP = gs._enemyBaseMaxHP;
+        gs.straw += 150;
+        showToast('🏆 Enemy Base DESTROYED! +150 straw!', 5000);
+        spawnFX(new THREE.Vector3(0, 5, BASE_Z), 0xff4400, 3.0, 5.0);
+      }
+      scene.remove(u.mesh); return false;
+    }
+    // Take splash damage from nearby enemies attacking them
+    gs.enemies.forEach(e => {
+      if (Math.hypot(u.pos.x-e.pos.x, u.pos.z-e.pos.z) < 1.8) u.hp -= e.data.dmg * 0.3 * dt;
+    });
+    return true;
+  });
+  // Enemy base eyes pulse
+  if (enemyBaseGrp) {
+    const t = Date.now() * 0.003;
+    enemyBaseGrp.children.forEach(c => { if (c._isEye && c.material) c.material.emissiveIntensity = 1.8 + Math.sin(t) * 0.8; });
+  }
+}
+
 function resetGame() {
   gs.enemies.forEach(e => scene.remove(e.mesh));
   gs.projectiles.forEach(p => scene.remove(p.mesh));
@@ -4280,6 +4615,8 @@ function resetGame() {
   gs.enemies = []; gs.projectiles = []; gs.placedPlants = [];
   gs.defenses = []; gs.effects = []; gs.floatingTexts = [];
   gs.wildBirds.forEach(b => scene.remove(b.mesh)); gs.wildBirds = []; gs._wildBirdTimer = 15;
+  gs.activeArmy.forEach(u => scene.remove(u.mesh)); gs.activeArmy = []; gs.recruits = [];
+  gs._enemyBaseHP = gs._enemyBaseMaxHP;
   gs.playerHP = 100; gs.playerMaxHP = 100; gs.straw = 25;
   gs.playerPos.set(5, 0.75, 0); gs.playerVel.set(0, 0, 0); gs.playerJumpVel = 0; gs.playerOnGround = true;
   gs.wave = 0; gs.waveActive = false; gs.betweenWaves = true;
@@ -4627,6 +4964,7 @@ function loop(ts) {
       gs._wildBirdTimer = 18 + Math.random() * 22;
       spawnWildBird();
     }
+    updateArmy(dt);
 
     // Camera follows player
     camera.position.lerp(gs.playerPos.clone().add(CAM_OFF), 0.06);
