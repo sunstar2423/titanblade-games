@@ -685,62 +685,273 @@ const ARMY_UNITS = [
 let enemyBaseGrp = null;
 function buildEnemyBase() {
   enemyBaseGrp = new THREE.Group();
-  const dm = (col, emCol=null, emInt=0, rough=0.85) => {
-    const m = new THREE.MeshStandardMaterial({color:col,roughness:rough,metalness:0});
+  const dm = (col, emCol=null, emInt=0, rough=0.85, metal=0) => {
+    const m = new THREE.MeshStandardMaterial({color:col, roughness:rough, metalness:metal});
     if (emCol !== null) { m.emissive.setHex(emCol); m.emissiveIntensity = emInt; }
     return m;
   };
-  // Dark stone base foundation
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(6.5,7,2.5,8), dm(0x1a1008));
-  base.position.y = 1.25; base.castShadow=true; enemyBaseGrp.add(base);
-  // Main central tower
-  const tower = new THREE.Mesh(new THREE.CylinderGeometry(4,5,13,8), dm(0x2a1810));
-  tower.position.y = 8.5; tower.castShadow=true; enemyBaseGrp.add(tower);
-  // Battlements ring
-  for (let i = 0; i < 8; i++) {
-    const a = i/8*Math.PI*2;
-    const merlon = new THREE.Mesh(new THREE.BoxGeometry(1.3,2.2,1.3), dm(0x1a0a00));
-    merlon.position.set(Math.cos(a)*4.2, 15.6, Math.sin(a)*4.2); merlon.castShadow=true; enemyBaseGrp.add(merlon);
+
+  // ── LAVA MOAT ──────────────────────────────────────────────
+  const moat = new THREE.Mesh(new THREE.RingGeometry(9, 15.5, 36), dm(0x2a0900, 0xff3300, 0.25));
+  moat.rotation.x = -Math.PI/2; moat.position.y = 0.04; enemyBaseGrp.add(moat);
+  for (let i = 0; i < 18; i++) {
+    const a = i/18*Math.PI*2 + Math.random()*0.3;
+    const r = 10 + Math.random()*4.5;
+    const rock = new THREE.Mesh(new THREE.SphereGeometry(0.25+Math.random()*0.5, 5, 4), dm(0xff4400, 0xff2200, 1.4));
+    rock.position.set(Math.cos(a)*r, 0.12, Math.sin(a)*r);
+    rock._isMoatRock = true; enemyBaseGrp.add(rock);
   }
-  // Corner turrets
+
+  // ── SKULL PIKES (outer perimeter) ──────────────────────────
+  for (let i = 0; i < 14; i++) {
+    const a = i/14*Math.PI*2;
+    const pike = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.12, 4, 4), dm(0x2a1000));
+    pike.position.set(Math.cos(a)*15, 2, Math.sin(a)*15); enemyBaseGrp.add(pike);
+    const sk = new THREE.Mesh(new THREE.SphereGeometry(0.32, 6, 5), dm(0x4a2200));
+    sk.position.set(Math.cos(a)*15, 4.2, Math.sin(a)*15); sk.scale.set(1,1.2,1); enemyBaseGrp.add(sk);
+    [[-0.12],[0.12]].forEach(([ex]) => {
+      const pe = new THREE.Mesh(new THREE.SphereGeometry(0.07, 4, 3), dm(0xff1100, 0xff0000, 2.0));
+      pe.position.set(Math.cos(a)*15+ex, 4.32, Math.sin(a)*15+0.27); pe._isEye=true; enemyBaseGrp.add(pe);
+    });
+  }
+
+  // ── OUTER CURTAIN WALL (octagonal) ─────────────────────────
+  for (let i = 0; i < 8; i++) {
+    const a0 = i/8*Math.PI*2, a1 = (i+1)/8*Math.PI*2, ma = (a0+a1)/2;
+    const wx = Math.cos(ma)*12, wz = Math.sin(ma)*12;
+    if (i === 6) continue;
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(9.5, 6, 1.2), dm(0x130800));
+    wall.position.set(wx, 3, wz); wall.rotation.y = ma; wall.castShadow=true; enemyBaseGrp.add(wall);
+    for (let j = 0; j < 6; j++) {
+      const perp = ma + Math.PI/2, off = (j-2.5)*1.4;
+      const merlon = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.8, 1.0), dm(0x0d0600));
+      merlon.position.set(wx + Math.cos(perp)*off, 6.9, wz + Math.sin(perp)*off); enemyBaseGrp.add(merlon);
+    }
+    if (i % 2 === 0) {
+      const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.5, 0.2), dm(0x3a1500));
+      bracket.position.set(wx*0.88, 5, wz*0.88); enemyBaseGrp.add(bracket);
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 5), dm(0xff4400, 0xff2200, 2.8, 0.1));
+      flame.position.set(wx*0.88, 5.55, wz*0.88); flame._isTorchFlame=true; enemyBaseGrp.add(flame);
+      const tl = new THREE.PointLight(0xff3300, 0.8, 7); tl.position.set(wx*0.88, 5.6, wz*0.88); enemyBaseGrp.add(tl);
+    }
+  }
+
+  // ── GATE ARCH ──────────────────────────────────────────────
+  const gateZ = 12.5;
+  [-1.8, 1.8].forEach(ox => {
+    const gp = new THREE.Mesh(new THREE.BoxGeometry(1.5, 8.5, 1.6), dm(0x130800));
+    gp.position.set(ox, 4.25, gateZ); gp.castShadow=true; enemyBaseGrp.add(gp);
+  });
+  const archBar = new THREE.Mesh(new THREE.BoxGeometry(5.1, 1.8, 1.6), dm(0x130800));
+  archBar.position.set(0, 8.9, gateZ); enemyBaseGrp.add(archBar);
+  const keystone = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.0, 1.8), dm(0x1a0900));
+  keystone.position.set(0, 8.1, gateZ); enemyBaseGrp.add(keystone);
+  for (let gi = -1; gi <= 1; gi++) {
+    const vbar = new THREE.Mesh(new THREE.BoxGeometry(0.2, 6.2, 0.2), dm(0x3a1a00, null, 0, 0.6, 0.4));
+    vbar.position.set(gi*0.9, 4, gateZ+0.1); enemyBaseGrp.add(vbar);
+  }
+  for (let gi = 0; gi < 5; gi++) {
+    const hbar = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.2, 0.2), dm(0x3a1a00, null, 0, 0.6, 0.4));
+    hbar.position.set(0, 1.2+gi*1.3, gateZ+0.1); enemyBaseGrp.add(hbar);
+  }
+  const gsk = new THREE.Mesh(new THREE.SphereGeometry(0.85, 8, 7), dm(0x3a1500));
+  gsk.position.set(0, 10.8, gateZ); gsk.scale.set(1,1.2,1); enemyBaseGrp.add(gsk);
+  [[-0.32],[0.32]].forEach(([gex]) => {
+    const ge = new THREE.Mesh(new THREE.SphereGeometry(0.18, 5, 4), dm(0xff1100, 0xff0000, 2.5));
+    ge.position.set(gex, 11.05, gateZ+0.78); ge._isEye=true; enemyBaseGrp.add(ge);
+  });
+  for (let ci = -1; ci <= 1; ci += 2) {
+    for (let cj = 0; cj < 6; cj++) {
+      const link = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.065, 4, 6), dm(0x2a1500, null, 0, 0.5, 0.3));
+      link.position.set(ci*1.0, 8.5-cj*1.0, gateZ+0.2); link.rotation.x = cj%2===0 ? Math.PI/2 : 0; enemyBaseGrp.add(link);
+    }
+  }
+
+  // ── OUTER CORNER WATCHTOWERS ────────────────────────────────
+  for (let i = 0; i < 8; i++) {
+    const a = i/8*Math.PI*2 + Math.PI/8;
+    const tx = Math.cos(a)*12.8, tz = Math.sin(a)*12.8;
+    const wt = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.6, 9.5, 7), dm(0x110700));
+    wt.position.set(tx, 4.75, tz); wt.castShadow=true; enemyBaseGrp.add(wt);
+    const wcap = new THREE.Mesh(new THREE.ConeGeometry(1.7, 2.8, 7), dm(0x5a0000));
+    wcap.position.set(tx, 10.15, tz); enemyBaseGrp.add(wcap);
+    for (let j = 0; j < 6; j++) {
+      const ba = j/6*Math.PI*2;
+      const bm = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.2, 0.55), dm(0x0d0500));
+      bm.position.set(tx+Math.cos(ba)*1.45, 9.8, tz+Math.sin(ba)*1.45); enemyBaseGrp.add(bm);
+    }
+    const slit = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.1, 0.22), dm(0xff0800, 0xff0800, 1.8, 0.2));
+    slit.position.set(tx*0.89, 6, tz*0.89); slit.rotation.y = a; slit._isEye=true; enemyBaseGrp.add(slit);
+  }
+
+  // ── INNER RING WALL ─────────────────────────────────────────
+  for (let i = 0; i < 8; i++) {
+    const a0 = i/8*Math.PI*2, a1 = (i+1)/8*Math.PI*2, ma = (a0+a1)/2;
+    const wx = Math.cos(ma)*7, wz = Math.sin(ma)*7;
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(5.6, 5, 1.0), dm(0x0f0600));
+    wall.position.set(wx, 2.5, wz); wall.rotation.y = ma; wall.castShadow=true; enemyBaseGrp.add(wall);
+  }
+
+  // ── STEPPED FOUNDATION ──────────────────────────────────────
+  [[6.8, 7.5, 2.5],[5.5, 6.5, 2.0],[4.5, 5.5, 2.0]].forEach(([r1,r2,h], idx) => {
+    const f = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, 8), dm(0x0d0500));
+    f.position.y = 1.25 + idx*2; f.castShadow=true; enemyBaseGrp.add(f);
+  });
+
+  // ── MAIN KEEP (3-stage tower) ────────────────────────────────
+  const keep1 = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 5.0, 12, 8), dm(0x130800));
+  keep1.position.y = 12.5; keep1.castShadow=true; enemyBaseGrp.add(keep1);
+  const ledge = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.6, 0.5, 8), dm(0x0d0500));
+  ledge.position.y = 18.75; enemyBaseGrp.add(ledge);
+  const keep2 = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 4.0, 10, 8), dm(0x1a0900));
+  keep2.position.y = 24.5; keep2.castShadow=true; enemyBaseGrp.add(keep2);
+  const ledge2 = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 0.5, 8), dm(0x0d0500));
+  ledge2.position.y = 29.75; enemyBaseGrp.add(ledge2);
+  const keep3 = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 3.0, 8, 8), dm(0x220e04));
+  keep3.position.y = 34; keep3.castShadow=true; enemyBaseGrp.add(keep3);
+  const spire = new THREE.Mesh(new THREE.ConeGeometry(2.2, 5, 8), dm(0x770000));
+  spire.position.y = 40.5; enemyBaseGrp.add(spire);
+
+  // ── GLOWING WINDOWS ─────────────────────────────────────────
+  [[4.3, 8, 8],[3.4, 6, 22],[2.4, 5, 32]].forEach(([r, count, y]) => {
+    for (let i = 0; i < count; i++) {
+      const a = i/count*Math.PI*2;
+      const win = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.1, 0.28), dm(0xff0800, 0xff0000, 2.2, 0.2));
+      win.position.set(Math.cos(a)*r, y, Math.sin(a)*r); win.rotation.y = a;
+      win._isEye = true; enemyBaseGrp.add(win);
+    }
+  });
+
+  // ── INNER CORNER TURRETS ─────────────────────────────────────
   for (let i = 0; i < 4; i++) {
     const a = i/4*Math.PI*2 + Math.PI/4;
-    const turret = new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.6,9,7), dm(0x220e04));
-    turret.position.set(Math.cos(a)*5.8, 5, Math.sin(a)*5.8); turret.castShadow=true; enemyBaseGrp.add(turret);
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(1.6,2.5,7), dm(0x440000));
-    cap.position.set(Math.cos(a)*5.8, 10.8, Math.sin(a)*5.8); cap.castShadow=true; enemyBaseGrp.add(cap);
+    const tx = Math.cos(a)*6.2, tz = Math.sin(a)*6.2;
+    const turret = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 2.0, 18, 7), dm(0x130700));
+    turret.position.set(tx, 9, tz); turret.castShadow=true; enemyBaseGrp.add(turret);
+    const tcap = new THREE.Mesh(new THREE.ConeGeometry(2.1, 4.0, 7), dm(0x660000));
+    tcap.position.set(tx, 19.0, tz); enemyBaseGrp.add(tcap);
+    for (let j = 0; j < 7; j++) {
+      const ba = j/7*Math.PI*2;
+      const bm = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.4, 0.6), dm(0x0d0500));
+      bm.position.set(tx+Math.cos(ba)*1.85, 18.5, tz+Math.sin(ba)*1.85); enemyBaseGrp.add(bm);
+    }
+    for (let lv = 0; lv < 4; lv++) {
+      const slit = new THREE.Mesh(new THREE.BoxGeometry(0.32, 1.0, 0.22), dm(0xff0800, 0xff0000, 2.0, 0.2));
+      slit.position.set(tx*0.87, 4+lv*3.5, tz*0.87); slit.rotation.y = a; slit._isEye=true; enemyBaseGrp.add(slit);
+    }
+    const tf = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.5, 5), dm(0xff4400, 0xff2200, 3.0, 0.1));
+    tf.position.set(tx, 20.2, tz); tf._isTorchFlame=true; enemyBaseGrp.add(tf);
+    const tl2 = new THREE.PointLight(0xff2200, 1.0, 8); tl2.position.set(tx, 20.5, tz); enemyBaseGrp.add(tl2);
   }
-  // Red glowing windows
-  for (let i = 0; i < 5; i++) {
-    const a = i/5*Math.PI*2;
-    const win = new THREE.Mesh(new THREE.BoxGeometry(0.7,1.4,0.3), dm(0xff1100, 0xff1100, 1.5, 0.3));
-    win.position.set(Math.cos(a)*4.1, 9, Math.sin(a)*4.1); win.rotation.y=a; enemyBaseGrp.add(win);
+
+  // ── LOWER & UPPER BATTLEMENTS ────────────────────────────────
+  for (let i = 0; i < 14; i++) {
+    const a = i/14*Math.PI*2;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.8, 1.1), dm(0x0d0500));
+    m.position.set(Math.cos(a)*4.5, 20, Math.sin(a)*4.5); enemyBaseGrp.add(m);
   }
-  // Giant scarecrow skull/face on top
-  const skull = new THREE.Mesh(new THREE.SphereGeometry(2.2,10,8), dm(0x3a1800));
-  skull.position.y = 18; skull.castShadow=true; enemyBaseGrp.add(skull);
-  skull.scale.set(1,1.1,1);
-  // Evil eyes
-  [[-0.8,0],[0.8,0]].forEach(([ex]) => {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.42,7,6), dm(0xff2200,0xff0000,2.5,0.2));
-    eye.position.set(ex, 18.4, 2.1); eye._isEye=true; enemyBaseGrp.add(eye);
+  for (let i = 0; i < 10; i++) {
+    const a = i/10*Math.PI*2;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.85, 2.2, 0.85), dm(0x130800));
+    m.position.set(Math.cos(a)*3.3, 31, Math.sin(a)*3.3); enemyBaseGrp.add(m);
+  }
+
+  // ── SKULL FACE ───────────────────────────────────────────────
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(2.8, 14, 10), dm(0x1e0900));
+  skull.position.y = 44; skull.scale.set(1, 1.2, 0.85); skull.castShadow=true; enemyBaseGrp.add(skull);
+  [[-1.05],[1.05]].forEach(([ex]) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.6, 9, 7), dm(0xff2200, 0xff0000, 3.5, 0.1));
+    eye.position.set(ex, 44.7, 2.2); eye._isEye=true; enemyBaseGrp.add(eye);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.28, 6, 5), dm(0xffffff, 0xffaaaa, 4.0, 0.0));
+    pupil.position.set(ex, 44.7, 2.7); pupil._isEye=true; enemyBaseGrp.add(pupil);
   });
-  // Horns
-  [-0.9,0.9].forEach(hx => {
-    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.35,2.4,6), dm(0x5a2a00));
-    horn.position.set(hx, 20.5, 0); horn.rotation.z = hx < 0 ? 0.4 : -0.4; enemyBaseGrp.add(horn);
+  [[-0.38],[0.38]].forEach(([nx]) => {
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.22, 5, 4), dm(0x080200));
+    nose.position.set(nx, 44.0, 2.5); enemyBaseGrp.add(nose);
   });
-  // Dark flags
-  for (let i = 0; i < 3; i++) {
-    const a = i/3*Math.PI*2;
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,5,5), dm(0x4a2a10));
-    pole.position.set(Math.cos(a)*3.5, 17, Math.sin(a)*3.5); enemyBaseGrp.add(pole);
-    const flag = new THREE.Mesh(new THREE.BoxGeometry(2,1.1,0.06), dm(0x880000,0x440000,0.4));
-    flag.position.set(Math.cos(a)*3.5+1, 19.3, Math.sin(a)*3.5); enemyBaseGrp.add(flag);
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.55, 1.6), dm(0x150700));
+  jaw.position.set(0, 42.8, 1.8); enemyBaseGrp.add(jaw);
+  for (let i = 0; i < 6; i++) {
+    const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.85, 4), dm(0x4a2200));
+    tooth.position.set(-1.5+i*0.6, 42.25, 2.2); tooth.rotation.x = Math.PI; enemyBaseGrp.add(tooth);
   }
-  // Eerie red glow at base
-  const glow = new THREE.PointLight(0xff1100, 2.5, 22);
-  glow.position.y = 4; enemyBaseGrp.add(glow);
+  [[-1.0],[1.0]].forEach(([hx]) => {
+    const h1 = new THREE.Mesh(new THREE.ConeGeometry(0.5, 3.8, 6), dm(0x3a1000));
+    h1.position.set(hx*2.5, 47.8, 0.2); h1.rotation.z = hx < 0 ? 0.45 : -0.45; enemyBaseGrp.add(h1);
+    const h2 = new THREE.Mesh(new THREE.ConeGeometry(0.33, 2.6, 5), dm(0x2a0c00));
+    h2.position.set(hx*3.7, 46.5, 0.4); h2.rotation.z = hx < 0 ? 0.65 : -0.65; enemyBaseGrp.add(h2);
+    const h3 = new THREE.Mesh(new THREE.ConeGeometry(0.2, 1.5, 5), dm(0x1e0800));
+    h3.position.set(hx*4.5, 45.0, 0.2); h3.rotation.z = hx < 0 ? 0.85 : -0.85; enemyBaseGrp.add(h3);
+  });
+
+  // ── FLAGS & BANNERS ──────────────────────────────────────────
+  for (let i = 0; i < 6; i++) {
+    const a = i/6*Math.PI*2;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 7, 5), dm(0x2a1000));
+    pole.position.set(Math.cos(a)*3.5, 23, Math.sin(a)*3.5); enemyBaseGrp.add(pole);
+    const flag = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.4, 0.08), dm(0xaa0000, 0x550000, 0.3));
+    flag.position.set(Math.cos(a)*3.5+1.3, 26.2, Math.sin(a)*3.5); enemyBaseGrp.add(flag);
+    const sym = new THREE.Mesh(new THREE.SphereGeometry(0.26, 5, 4), dm(0x200a00));
+    sym.position.set(Math.cos(a)*3.5+1.3, 26.3, Math.sin(a)*3.5-0.1); enemyBaseGrp.add(sym);
+  }
+
+  // ── GARGOYLES on inner turret ledges ────────────────────────
+  for (let i = 0; i < 4; i++) {
+    const a = i/4*Math.PI*2 + Math.PI/4;
+    const gx = Math.cos(a)*5.5, gz = Math.sin(a)*5.5;
+    const gb = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.8), dm(0x1a0800));
+    gb.position.set(gx, 20.3, gz); gb.rotation.y = a; enemyBaseGrp.add(gb);
+    const gh = new THREE.Mesh(new THREE.SphereGeometry(0.35, 6, 5), dm(0x1a0800));
+    gh.position.set(gx + Math.cos(a)*0.35, 21.1, gz + Math.sin(a)*0.35); enemyBaseGrp.add(gh);
+    [-1,1].forEach(side => {
+      const gw = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 1.0), dm(0x130700));
+      const wa = a + Math.PI/2;
+      gw.position.set(gx + Math.cos(wa)*side*0.7, 20.5, gz + Math.sin(wa)*side*0.7);
+      gw.rotation.y = a; enemyBaseGrp.add(gw);
+    });
+    [[-0.13],[0.13]].forEach(([eo]) => {
+      const ge = new THREE.Mesh(new THREE.SphereGeometry(0.09, 4, 3), dm(0xff0800, 0xff0000, 2.5));
+      ge.position.set(gx+Math.cos(a)*0.35+Math.cos(a+Math.PI/2)*eo, 21.2, gz+Math.sin(a)*0.35+Math.sin(a+Math.PI/2)*eo);
+      ge._isEye = true; enemyBaseGrp.add(ge);
+    });
+  }
+
+  // ── SMOKE STACKS ─────────────────────────────────────────────
+  [[-2.8, 2.5],[2.8, 2.5],[0, -3.0]].forEach(([sx, sz]) => {
+    const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.7, 5, 6), dm(0x0a0400));
+    stack.position.set(sx, 7, sz); enemyBaseGrp.add(stack);
+    const smoke = new THREE.Mesh(new THREE.SphereGeometry(0.7, 5, 4), dm(0x1a1010, 0x331111, 0.2));
+    smoke.position.set(sx, 10.5, sz); smoke._isSmokeCloud=true; smoke.scale.set(1,0.6,1); enemyBaseGrp.add(smoke);
+  });
+
+  // ── SACRIFICIAL ALTAR ────────────────────────────────────────
+  const altar = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.7, 2.0), dm(0x0d0500));
+  altar.position.set(0, 7.35, 0.5); enemyBaseGrp.add(altar);
+  const altarTop = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.25, 1.6), dm(0x1a0500, 0xff0000, 0.15));
+  altarTop.position.set(0, 7.73, 0.5); enemyBaseGrp.add(altarTop);
+  [[-1.2, 0],[1.2, 0],[0, -0.5],[0, 0.5]].forEach(([cx, cz]) => {
+    const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.6, 5), dm(0x2a1500));
+    candle.position.set(cx, 7.9, 0.5+cz); enemyBaseGrp.add(candle);
+    const cflame = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.22, 4), dm(0xff4400, 0xff2200, 3.0, 0.1));
+    cflame.position.set(cx, 8.22, 0.5+cz); cflame._isTorchFlame=true; enemyBaseGrp.add(cflame);
+  });
+
+  // ── INNER WALL TORCHES ───────────────────────────────────────
+  for (let i = 0; i < 6; i++) {
+    const a = i/6*Math.PI*2;
+    const torch = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.55, 0.22), dm(0x2a1000));
+    torch.position.set(Math.cos(a)*7.3, 5.5, Math.sin(a)*7.3); enemyBaseGrp.add(torch);
+    const tflame = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.48, 5), dm(0xff4400, 0xff2200, 2.8, 0.1));
+    tflame.position.set(Math.cos(a)*7.3, 6.08, Math.sin(a)*7.3); tflame._isTorchFlame=true; enemyBaseGrp.add(tflame);
+    const tl = new THREE.PointLight(0xff3300, 0.7, 6); tl.position.set(Math.cos(a)*7.3, 6.1, Math.sin(a)*7.3); enemyBaseGrp.add(tl);
+  }
+
+  // ── AMBIENT EVIL LIGHTS ──────────────────────────────────────
+  const glow = new THREE.PointLight(0xff1100, 3.5, 35); glow.position.y = 5; enemyBaseGrp.add(glow);
+  const glow2 = new THREE.PointLight(0xff4400, 2.0, 25); glow2.position.y = 22; enemyBaseGrp.add(glow2);
+  const glow3 = new THREE.PointLight(0xff2200, 1.5, 20); glow3.position.y = 40; enemyBaseGrp.add(glow3);
+  const moatGlow = new THREE.PointLight(0xff3300, 2.5, 22); moatGlow.position.set(0, 0.4, 0); enemyBaseGrp.add(moatGlow);
+
   enemyBaseGrp.position.set(0, 0, -95);
   scene.add(enemyBaseGrp);
 }
@@ -4629,10 +4840,24 @@ function updateArmy(dt) {
     });
     return true;
   });
-  // Enemy base eyes pulse
+  // Enemy base animations
   if (enemyBaseGrp) {
     const t = Date.now() * 0.003;
-    enemyBaseGrp.children.forEach(c => { if (c._isEye && c.material) c.material.emissiveIntensity = 1.8 + Math.sin(t) * 0.8; });
+    enemyBaseGrp.children.forEach(c => {
+      if (!c.material) return;
+      if (c._isEye) c.material.emissiveIntensity = 2.0 + Math.sin(t * 1.3) * 1.0;
+      if (c._isTorchFlame) {
+        const flicker = 2.2 + Math.sin(t * 7 + c.position.x) * 0.8 + Math.sin(t * 11.3 + c.position.z) * 0.4;
+        c.material.emissiveIntensity = flicker;
+        c.scale.set(1 + Math.sin(t*9+c.position.x)*0.12, 1 + Math.sin(t*13)*0.15, 1 + Math.sin(t*9+c.position.z)*0.12);
+      }
+      if (c._isSmokeCloud) {
+        c.position.y += 0.005;
+        if (c.position.y > 14) c.position.y = 10;
+        c.material.opacity = Math.max(0, 0.25 + Math.sin(t*0.5+c.position.x)*0.15);
+        if (!c.material.transparent) c.material.transparent = true;
+      }
+    });
   }
 }
 
