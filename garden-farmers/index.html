@@ -4836,7 +4836,7 @@ function updateArmy(dt) {
   // Advance formation center if fewer than half are in combat
   if (gs.activeArmy.length > 0 && combatCount < gs.activeArmy.length * 0.5) {
     gs._formationCenter.z -= FORM_SPD * dt;
-    gs._formationCenter.z = Math.max(BASE_Z + 14, gs._formationCenter.z);
+    gs._formationCenter.z = Math.max(BASE_Z + 2, gs._formationCenter.z);
   }
 
   gs.activeArmy = gs.activeArmy.filter(u => {
