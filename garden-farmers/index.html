@@ -1199,6 +1199,76 @@ const WAVES_SNOW = [
   [{t:'glacier',n:5},{t:'snow_boss',n:8},{t:'yeti',n:4},{t:'snow_armor',n:10},{t:'snow_shadow',n:8}],
 ];
 
+// ═══════════════════════════════════════
+// DEEP SEA BIOME
+// ═══════════════════════════════════════
+const WEAPONS_DEEPSEA = [
+  { id:'trident',      name:'Trident',       emoji:'🔱', cost:0,  desc:'⚔️ Powerful stab — stuns briefly',             kind:'melee',  dmg:22, range:2.5, cd:0.5,  color:0x00aacc, stun:0.6 },
+  { id:'bubble_gun',   name:'Bubble Gun',    emoji:'🫧', cost:20, desc:'⚔️ Rapid bubbles — light but very fast',        kind:'dart',   dmg:11, range:11,  cd:0.22, color:0x88ddff },
+  { id:'harpoon',      name:'Harpoon',       emoji:'🎣', cost:30, desc:'⚔️ Long spear — PULLS enemies toward you',      kind:'throw',  dmg:30, range:14,  cd:1.4,  color:0x6688aa, pull:true },
+  { id:'coral_blade',  name:'Coral Blade',   emoji:'🪸', cost:25, desc:'⚔️ Cleave arc — hits 3 enemies at once',       kind:'melee',  dmg:28, range:2.8, cd:0.7,  color:0xff6688, aoe:1.8 },
+  { id:'eel_staff',    name:'Eel Staff',     emoji:'⚡', cost:45, desc:'⚔️ Chain lightning — jumps 3 enemies',         kind:'throw',  dmg:20, range:10,  cd:0.9,  color:0xffee22, chain:3 },
+  { id:'depth_charge', name:'Depth Charge',  emoji:'💣', cost:55, desc:'⚔️ Massive AoE explosion + knockback',         kind:'throw',  dmg:65, range:12,  cd:2.0,  color:0x225577, aoe:4.0 },
+  { id:'sonar_pulse',  name:'Sonar Pulse',   emoji:'🔊', cost:50, desc:'⚔️ Shockwave — damages & slows all nearby',   kind:'melee',  dmg:18, range:5.5, cd:1.2,  color:0x44ffcc, slow:0.5, aoe:5.5 },
+  { id:'ink_blast',    name:'Ink Blast',     emoji:'🦑', cost:35, desc:'⚔️ Ink cloud — poisons group of enemies',     kind:'dart',   dmg:12, range:9,   cd:0.6,  color:0x220044, poison:true, aoe:2.5 },
+];
+const PLACEABLES_DEEPSEA = [
+  { id:'coral_cannon', name:'Coral Cannon',  emoji:'🪸', cost:30, desc:'⚔️ Fires coral shards at enemies',             kind:'turret', dmg:20, range:8,   cd:1.0, hp:70,  color:0xff6688 },
+  { id:'anemone',      name:'Sea Anemone',   emoji:'🌸', cost:20, desc:'⚔️ Stings enemies within close range',         kind:'turret', dmg:14, range:3.0, cd:0.7, hp:55,  color:0xff88aa },
+  { id:'deep_vent',    name:'Hydro Vent',    emoji:'💨', cost:35, desc:'⚔️ Steam burn — damages nearby 5/s',           kind:'turret', dmg:5,  range:3.5, cd:0.2, hp:60,  color:0x99ccff, burn:5 },
+  { id:'torpedo_fish', name:'Torpedo Fish',  emoji:'🐡', cost:45, desc:'⚔️ Launches torpedoes at distant enemies',     kind:'turret', dmg:35, range:12,  cd:1.8, hp:60,  color:0x55aadd },
+  { id:'elec_kelp',    name:'Electric Kelp', emoji:'🌿', cost:40, desc:'⚔️ Electric pulse — chains to 4 enemies',     kind:'turret', dmg:18, range:6,   cd:1.5, hp:50,  color:0xaaff44, chain:4 },
+  { id:'clam_trap',    name:'Giant Clam',    emoji:'🐚', cost:25, desc:'⚔️ Snaps shut — stuns + big damage',          kind:'turret', dmg:40, range:2.2, cd:3.5, hp:90,  color:0xffeedd },
+  { id:'angler_lure',  name:'Angler Lure',   emoji:'💡', cost:30, desc:'Slows + lures enemies toward it',             kind:'passive',dmg:0,  range:7,   cd:99,  hp:80,  color:0xffff44, slow:0.35 },
+  { id:'heal_coral',   name:'Healing Coral', emoji:'🌊', cost:50, desc:'Heals nearby allies 1.5 HP/s',                kind:'passive',dmg:0,  range:5,   cd:99,  hp:120, color:0x44ffcc, support:true },
+];
+const DEFENSES_DEEPSEA = [
+  { id:'kelp_wall',    name:'Kelp Wall',     emoji:'🌿', cost:10, desc:'Dense kelp — blocks enemies',                  type:'fence',    hp:70,  color:0x226633 },
+  { id:'sea_mine',     name:'Sea Mine',      emoji:'💥', cost:18, desc:'Explodes for 80 AoE damage on trigger',        type:'mine',     hp:999, dmg:80, range:3.0, color:0x445566 },
+  { id:'barnacle',     name:'Barnacles',     emoji:'🪨', cost:12, desc:'Slows enemies crossing heavily',              type:'moat',     hp:999, slow:0.7, color:0x557755 },
+  { id:'whirlpool',    name:'Whirlpool',     emoji:'🌀', cost:25, desc:'Spins + slows enemies in area',               type:'moat',     hp:999, slow:0.55, color:0x3388cc },
+  { id:'ink_cloud',    name:'Ink Cloud',     emoji:'🦑', cost:15, desc:'Blinds enemies — they wander off',            type:'campfire', hp:999, dmg:2,  range:3.5, color:0x220044 },
+  { id:'urchin_spike', name:'Spike Urchin',  emoji:'🦔', cost:20, desc:'Damages + slows enemies that cross',          type:'mine',     hp:999, dmg:25, range:1.5, color:0x885544 },
+];
+const ENEMY_TYPES_DEEPSEA = [
+  { id:'clownfish',  name:'Clown Fish',      hp:35,  spd:2.8, dmg:4,  straw:4,   sz:0.8,  color:0xff6622 },
+  { id:'crab',       name:'Shore Crab',       hp:70,  spd:1.6, dmg:9,  straw:8,   sz:1,    color:0xcc4400, armor:0.15 },
+  { id:'jellyfish',  name:'Jellyfish',        hp:45,  spd:1.9, dmg:8,  straw:7,   sz:0.9,  color:0xcc88ff, ranged:true },
+  { id:'anglerfish', name:'Anglerfish',       hp:90,  spd:1.5, dmg:14, straw:15,  sz:1.1,  color:0x223344 },
+  { id:'seahorse',   name:'Sea Knight',       hp:110, spd:1.3, dmg:16, straw:20,  sz:1,    color:0x66aacc, armor:0.2 },
+  { id:'eel',        name:'Electric Eel',     hp:60,  spd:2.2, dmg:11, straw:12,  sz:1,    color:0xaaee22, ranged:true },
+  { id:'shark',      name:'Bull Shark',       hp:130, spd:3.0, dmg:22, straw:25,  sz:1.2,  color:0x5577aa },
+  { id:'pufferfish', name:'Puffer Fish',      hp:75,  spd:1.4, dmg:18, straw:14,  sz:1,    color:0xccee44 },
+  { id:'mermaid',    name:'Dark Mermaid',     hp:80,  spd:2.6, dmg:13, straw:18,  sz:1,    color:0x226688, ranged:true },
+  { id:'nautilus',   name:'Nautilus Guard',   hp:160, spd:1.1, dmg:15, straw:30,  sz:1.15, color:0xddcc99, armor:0.35 },
+  { id:'deep_boss',  name:'Kraken',           hp:450, spd:1.0, dmg:22, straw:100, sz:2.0,  color:0x220044 },
+  { id:'giant_crab', name:'Giant Crab',       hp:320, spd:0.9, dmg:20, straw:60,  sz:1.8,  color:0xaa3300, armor:0.3 },
+  { id:'leviathan',  name:'Leviathan',        hp:800, spd:0.6, dmg:30, straw:140, sz:3.0,  color:0x001133 },
+  { id:'ghost_fish', name:'Ghost Fish',       hp:40,  spd:5.0, dmg:6,  straw:8,   sz:0.75, color:0x88ccee },
+];
+const WAVES_DEEPSEA = [
+  [{t:'clownfish',n:5}],
+  [{t:'clownfish',n:4},{t:'crab',n:2}],
+  [{t:'crab',n:3},{t:'jellyfish',n:3}],
+  [{t:'jellyfish',n:4},{t:'clownfish',n:4}],
+  [{t:'anglerfish',n:3},{t:'crab',n:3},{t:'deep_boss',n:1}],
+  [{t:'clownfish',n:6},{t:'eel',n:3},{t:'jellyfish',n:3}],
+  [{t:'seahorse',n:4},{t:'anglerfish',n:3}],
+  [{t:'shark',n:3},{t:'mermaid',n:4}],
+  [{t:'crab',n:5},{t:'nautilus',n:2},{t:'eel',n:3}],
+  [{t:'deep_boss',n:2},{t:'anglerfish',n:4},{t:'jellyfish',n:5}],
+  [{t:'shark',n:5},{t:'ghost_fish',n:8},{t:'mermaid',n:3}],
+  [{t:'pufferfish',n:5},{t:'giant_crab',n:1},{t:'seahorse',n:4}],
+  [{t:'nautilus',n:4},{t:'deep_boss',n:2},{t:'eel',n:5}],
+  [{t:'ghost_fish',n:10},{t:'shark',n:4},{t:'mermaid',n:4}],
+  [{t:'leviathan',n:1},{t:'deep_boss',n:3},{t:'anglerfish',n:6}],
+  [{t:'giant_crab',n:3},{t:'nautilus',n:5},{t:'shark',n:6}],
+  [{t:'leviathan',n:2},{t:'deep_boss',n:3},{t:'ghost_fish',n:10}],
+  [{t:'shark',n:8},{t:'nautilus',n:6},{t:'giant_crab',n:3},{t:'mermaid',n:6}],
+  [{t:'leviathan',n:2},{t:'giant_crab',n:4},{t:'deep_boss',n:5},{t:'nautilus',n:6}],
+  [{t:'leviathan',n:3},{t:'deep_boss',n:6},{t:'giant_crab',n:5},{t:'ghost_fish',n:12}],
+];
+
 function getActiveData() {
   if (gs.biome === 'jungle') return {
     weapons: WEAPONS_JUNGLE, placeables: PLACEABLES_JUNGLE, defenses: DEFENSES_JUNGLE, animals: ANIMALS,
@@ -1209,6 +1279,11 @@ function getActiveData() {
     weapons: WEAPONS_SNOW, placeables: PLACEABLES_SNOW, defenses: DEFENSES_SNOW, animals: ANIMALS,
     enemies: ENEMY_TYPES_SNOW, waves: WAVES_SNOW,
     starter: 'ice_pick', resourceEmoji: '❄️', enemyName: 'snowmen',
+  };
+  if (gs.biome === 'deepsea') return {
+    weapons: WEAPONS_DEEPSEA, placeables: PLACEABLES_DEEPSEA, defenses: DEFENSES_DEEPSEA, animals: ANIMALS,
+    enemies: ENEMY_TYPES_DEEPSEA, waves: WAVES_DEEPSEA,
+    starter: 'trident', resourceEmoji: '🐚', enemyName: 'sea creatures',
   };
   return {
     weapons: WEAPONS, placeables: PLACEABLES, defenses: DEFENSE_ITEMS, animals: ANIMALS,
@@ -2228,6 +2303,171 @@ function spawnSnowman(data, pos) {
   _addEnemyToScene(g, pos, data, sz);
 }
 
+function spawnSeaCreature(data, pos) {
+  const sz = data.sz || 1;
+  const id = data.id;
+  const col = data.color;
+  const g = new THREE.Group();
+  const S = (c, rough=0.65, met=0, emC=0, emI=0) => {
+    const m = new THREE.MeshStandardMaterial({color:c, roughness:rough, metalness:met});
+    if (emI > 0) { m.emissive.setHex(emC); m.emissiveIntensity = emI; }
+    return m;
+  };
+  const mk = (geo, c, py=0, px=0, pz=0, rx=0, ry=0, rz=0, rough=0.65, met=0, emC=0, emI=0) => {
+    const m = new THREE.Mesh(geo, S(c, rough, met, emC, emI));
+    m.position.set(px, py, pz); m.rotation.set(rx, ry, rz); m.castShadow = true; g.add(m); return m;
+  };
+
+  if (id === 'jellyfish') {
+    mk(new THREE.SphereGeometry(0.5*sz, 10, 8, 0, Math.PI*2, 0, Math.PI/2), col, 1.05*sz, 0,0, 0,0,0, 0.4, 0, col, 0.7);
+    for (let i = 0; i < 8; i++) {
+      const a = i/8*Math.PI*2;
+      mk(new THREE.CylinderGeometry(0.022*sz, 0.008*sz, (0.6+Math.random()*0.35)*sz, 4), col, 0.5*sz, Math.cos(a)*0.28*sz, Math.sin(a)*0.28*sz, 0,0,0, 0.4, 0, col, 0.3);
+    }
+    mk(new THREE.SphereGeometry(0.18*sz, 7, 7), 0xffffff, 0.88*sz, 0,0, 0,0,0, 0.15, 0, col, 1.2);
+
+  } else if (id === 'crab' || id === 'giant_crab') {
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.5*sz, 9, 7), S(col, 0.55, 0.2));
+    body.scale.set(1.5, 0.45, 1); body.position.y = 0.38*sz; body.castShadow = true; g.add(body);
+    [-0.95*sz, 0.95*sz].forEach((x, si) => {
+      mk(new THREE.CylinderGeometry(0.08*sz, 0.12*sz, 0.55*sz, 6), col, 0.38*sz, x, 0, 0, 0, si===0?0.75:-0.75);
+      mk(new THREE.SphereGeometry(0.24*sz, 7, 6), col, 0.36*sz, x*1.52, 0.12*sz, 0,0,0, 0.4, 0.3);
+      mk(new THREE.ConeGeometry(0.1*sz, 0.28*sz, 5), col, 0.48*sz, x*1.66, 0.24*sz, si===0?0.8:-0.8, 0, 0);
+      mk(new THREE.ConeGeometry(0.1*sz, 0.26*sz, 5), col, 0.48*sz, x*1.66, 0.05*sz, si===0?-0.8:0.8, 0, 0);
+    });
+    [-1,1].forEach(side => { for (let l = 0; l < 4; l++) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035*sz, 0.025*sz, 0.55*sz, 5), S(col, 0.7));
+      leg.position.set(side*0.65*sz, 0.14*sz, (-0.3+l*0.2)*sz); leg.rotation.z = side*(0.35+l*0.04); g.add(leg);
+    }});
+    [-0.22*sz, 0.22*sz].forEach(x => {
+      mk(new THREE.CylinderGeometry(0.03*sz, 0.03*sz, 0.2*sz, 5), col, 0.65*sz, x, 0.5*sz);
+      mk(new THREE.SphereGeometry(0.09*sz, 6, 6), 0x111111, 0.7*sz, x, 0.58*sz);
+    });
+
+  } else if (id === 'shark') {
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.42*sz, 10, 8), S(col, 0.7));
+    body.scale.set(0.68, 0.48, 1.85); body.position.y = 0.55*sz; body.castShadow = true; g.add(body);
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(0.32*sz, 8, 6), S(0xddeeff, 0.8));
+    belly.scale.set(0.55, 0.38, 1.5); belly.position.set(0, 0.5*sz, 0.08*sz); g.add(belly);
+    mk(new THREE.ConeGeometry(0.14*sz, 0.42*sz, 3), col, 1.0*sz, 0, -0.08*sz);
+    [-0.58*sz, 0.58*sz].forEach((x, i) => mk(new THREE.ConeGeometry(0.1*sz, 0.42*sz, 3), col, 0.54*sz, x, 0, 0, 0, i===0?-1.2:1.2));
+    mk(new THREE.ConeGeometry(0.18*sz, 0.38*sz, 3), col, 0.54*sz, 0, -0.82*sz, Math.PI/2, 0, 0);
+    [-0.14*sz, 0.14*sz].forEach(x => mk(new THREE.SphereGeometry(0.06*sz, 5, 5), 0x111111, 0.61*sz, x, 0.58*sz));
+    for (let i = 0; i < 5; i++) mk(new THREE.ConeGeometry(0.03*sz, 0.1*sz, 4), 0xffffff, 0.41*sz, (-0.18+i*0.09)*sz, 0.55*sz, Math.PI, 0, 0);
+
+  } else if (id === 'eel') {
+    for (let s = 0; s < 7; s++) {
+      const wave = Math.sin(s * 0.75) * 0.14 * sz;
+      mk(new THREE.SphereGeometry((0.2-s*0.014)*sz, 7, 6), col, (0.55+s*0.28)*sz, wave, 0, 0,0,0, 0.6, 0, col, 0.08);
+    }
+    mk(new THREE.SphereGeometry(0.23*sz, 8, 7), col, 0.55*sz, 0, 0.4*sz);
+    [-0.09*sz, 0.09*sz].forEach(x => mk(new THREE.SphereGeometry(0.07*sz, 5, 5), 0xffee00, 0.6*sz, x, 0.52*sz, 0,0,0, 0.3, 0, 0xffee00, 1.6));
+    for (let f = 0; f < 5; f++) mk(new THREE.BoxGeometry(0.025*sz, 0.14*sz, 0.14*sz), col, (0.66+f*0.28)*sz, Math.sin(f*0.75)*0.14*sz+0.01*sz, 0);
+
+  } else if (id === 'anglerfish') {
+    mk(new THREE.SphereGeometry(0.55*sz, 10, 9), col, 0.65*sz);
+    mk(new THREE.SphereGeometry(0.4*sz, 8, 7), col, 0.42*sz, 0, 0.44*sz);
+    for (let i = 0; i < 6; i++) {
+      mk(new THREE.ConeGeometry(0.04*sz, 0.22*sz, 4), 0xffffff, 0.6*sz, (-0.25+i*0.1)*sz, 0.72*sz, Math.PI, 0, 0);
+      if (i < 5) mk(new THREE.ConeGeometry(0.035*sz, 0.18*sz, 4), 0xeeeedd, 0.44*sz, (-0.2+i*0.1)*sz, 0.72*sz);
+    }
+    mk(new THREE.CylinderGeometry(0.03*sz, 0.03*sz, 0.5*sz, 5), 0x4a3a00, 1.3*sz, 0, 0.1*sz, 0.4, 0, 0);
+    mk(new THREE.SphereGeometry(0.1*sz, 7, 7), 0xffff44, 1.46*sz, 0.2*sz, 0.15*sz, 0,0,0, 0.2, 0, 0xffff00, 2.8);
+    [-0.22*sz, 0.22*sz].forEach(x => mk(new THREE.SphereGeometry(0.12*sz, 6, 6), 0xffeecc, 0.82*sz, x, 0.46*sz, 0,0,0, 0.4, 0, 0xffeecc, 0.5));
+    [-0.6*sz, 0.6*sz].forEach((x, i) => mk(new THREE.ConeGeometry(0.12*sz, 0.5*sz, 4), col, 0.65*sz, x, 0, 0, 0, i===0?-1.0:1.0));
+
+  } else if (id === 'pufferfish') {
+    mk(new THREE.SphereGeometry(0.48*sz, 10, 10), col, 0.62*sz, 0,0, 0,0,0, 0.5);
+    [[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0.7,0.7,0],[0.7,-0.7,0],[-0.7,0.7,0],[-0.7,-0.7,0],[0,0.7,0.7],[0,0.7,-0.7],[0.7,0,0.7],[-0.7,0,0.7],[0.7,0,-0.7],[-0.7,0,-0.7]].forEach(([dx,dy,dz]) => {
+      const d = Math.hypot(dx,dy,dz);
+      const sp = new THREE.Mesh(new THREE.ConeGeometry(0.04*sz, 0.28*sz, 4), S(0xddcc44, 0.55));
+      sp.position.set(dx/d*0.52*sz, 0.62*sz+dy/d*0.52*sz, dz/d*0.52*sz);
+      const qup = new THREE.Vector3(0,1,0), qdir = new THREE.Vector3(dx/d, dy/d, dz/d);
+      sp.quaternion.setFromUnitVectors(qup, qdir); g.add(sp);
+    });
+    [-0.18*sz, 0.18*sz].forEach(x => mk(new THREE.SphereGeometry(0.08*sz, 5, 5), 0x111111, 0.72*sz, x, 0.44*sz));
+
+  } else if (id === 'mermaid') {
+    mk(new THREE.SphereGeometry(0.28*sz, 8, 8), 0xffddcc, 1.4*sz);
+    mk(new THREE.CylinderGeometry(0.22*sz, 0.28*sz, 0.6*sz, 7), 0xffddcc, 1.0*sz);
+    [-0.38*sz, 0.38*sz].forEach((x, i) => mk(new THREE.CylinderGeometry(0.07*sz, 0.09*sz, 0.48*sz, 6), 0xffddcc, 1.0*sz, x, 0, 0, 0, i===0?0.5:-0.5));
+    mk(new THREE.SphereGeometry(0.3*sz, 8, 7), col, 1.42*sz, 0, -0.1*sz);
+    mk(new THREE.CylinderGeometry(0.18*sz, 0.28*sz, 0.7*sz, 8), col, 0.45*sz, 0, 0, 0.22, 0, 0);
+    mk(new THREE.SphereGeometry(0.22*sz, 7, 7), col, 0.08*sz);
+    mk(new THREE.ConeGeometry(0.28*sz, 0.35*sz, 5), col, -0.12*sz, 0, 0.08*sz, Math.PI/2, 0, 0);
+    [-0.1*sz, 0.1*sz].forEach(x => mk(new THREE.SphereGeometry(0.05*sz, 5, 5), 0x111133, 1.46*sz, x, 0.26*sz));
+    mk(new THREE.CylinderGeometry(0.025*sz, 0.025*sz, 0.95*sz, 5), 0x888888, 1.18*sz, 0.48*sz, 0);
+    [-0.07*sz, 0, 0.07*sz].forEach(tx => mk(new THREE.ConeGeometry(0.025*sz, 0.16*sz, 4), 0xaaaaaa, 1.7*sz, 0.48*sz+tx, 0));
+
+  } else if (id === 'seahorse') {
+    for (let s = 0; s < 7; s++) {
+      const a = s/6*0.9, bx = Math.sin(a)*0.35*sz, by = (1.2-s*0.18)*sz;
+      mk(new THREE.SphereGeometry((0.22-s*0.018)*sz, 7, 6), col, by, bx, 0);
+    }
+    mk(new THREE.SphereGeometry(0.26*sz, 8, 7), col, 1.35*sz, 0, 0.2*sz);
+    mk(new THREE.CylinderGeometry(0.07*sz, 0.04*sz, 0.38*sz, 6), col, 1.32*sz, 0, 0.52*sz, Math.PI/2, 0, 0);
+    for (let i = 0; i < 4; i++) mk(new THREE.ConeGeometry(0.04*sz, 0.17*sz, 5), col, 1.62*sz, (i-1.5)*0.08*sz, 0.1*sz);
+    mk(new THREE.BoxGeometry(0.18*sz, 0.48*sz, 0.04*sz), col, 1.0*sz, -0.24*sz, 0);
+    mk(new THREE.SphereGeometry(0.07*sz, 6, 6), 0x111111, 1.38*sz, 0.12*sz, 0.42*sz);
+
+  } else if (id === 'nautilus') {
+    for (let r = 0; r < 4; r++) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry((0.55-r*0.1)*sz, (0.14-r*0.02)*sz, 7, 20), S(col, 0.45, 0.25));
+      ring.rotation.x = Math.PI/2; ring.position.y = (0.6+r*0.12)*sz; ring.castShadow = true; g.add(ring);
+    }
+    for (let i = 0; i < 6; i++) {
+      const a = i/6*Math.PI*2;
+      mk(new THREE.CylinderGeometry(0.025*sz, 0.015*sz, 0.28*sz, 4), 0xffddcc, 0.56*sz, Math.cos(a)*0.22*sz, Math.sin(a)*0.22*sz);
+    }
+    [-0.1*sz, 0.1*sz].forEach(x => mk(new THREE.SphereGeometry(0.05*sz, 5, 5), 0x111111, 0.62*sz, x, 0.55*sz));
+
+  } else if (id === 'deep_boss') {
+    mk(new THREE.SphereGeometry(0.78*sz, 12, 10), col, 1.05*sz, 0,0, 0,0,0, 0.55, 0, 0x440088, 0.35);
+    [-0.26*sz, 0.26*sz].forEach(x => mk(new THREE.SphereGeometry(0.18*sz, 7, 7), 0xff2200, 1.22*sz, x, 0.7*sz, 0,0,0, 0.2, 0, 0xff0000, 2.8));
+    mk(new THREE.ConeGeometry(0.12*sz, 0.3*sz, 5), 0xeecca0, 0.84*sz, 0, 0.72*sz, -Math.PI/2, 0, 0);
+    for (let i = 0; i < 8; i++) {
+      const a = i/8*Math.PI*2;
+      for (let seg = 0; seg < 3; seg++) {
+        const r = (0.7+seg*0.38)*sz, wave = Math.sin(seg)*0.16*sz;
+        mk(new THREE.SphereGeometry((0.12-seg*0.025)*sz, 6, 5), col, (0.15+seg*0.24)*sz, Math.cos(a)*r, Math.sin(a)*r*0.55+wave, 0,0,0, 0.6, 0, 0x440088, 0.12);
+      }
+      mk(new THREE.SphereGeometry(0.04*sz, 4, 4), 0xaa66aa, 0.12*sz, Math.cos(a)*0.76*sz, Math.sin(a)*0.55*sz);
+    }
+    const aura = new THREE.Mesh(new THREE.TorusGeometry(1.12*sz, 0.08*sz, 6, 20), new THREE.MeshStandardMaterial({color:0x8800ff, emissive:0x6600cc, emissiveIntensity:1.5}));
+    aura.rotation.x = Math.PI/2; aura.position.y = 0.2*sz; g.add(aura);
+
+  } else if (id === 'leviathan') {
+    for (let s = 0; s < 8; s++) {
+      const wave = Math.sin(s*0.7)*0.26*sz;
+      mk(new THREE.SphereGeometry((0.55-s*0.03)*sz, 9, 8), col, (0.6+s*0.3)*sz, wave, 0, 0,0,0, 0.7, 0, 0x001133, 0.1);
+    }
+    mk(new THREE.SphereGeometry(0.66*sz, 12, 10), col, 0.65*sz, 0, 0.82*sz);
+    for (let i = 0; i < 4; i++) {
+      mk(new THREE.ConeGeometry(0.07*sz, 0.34*sz, 5), 0xeeeeff, 0.45*sz, (-0.18+i*0.12)*sz, 1.24*sz, Math.PI, 0, 0);
+      mk(new THREE.ConeGeometry(0.07*sz, 0.28*sz, 5), 0xeeeeff, 0.86*sz, (-0.18+i*0.12)*sz, 1.22*sz);
+    }
+    [-0.22*sz, 0.22*sz].forEach(x => mk(new THREE.SphereGeometry(0.14*sz, 8, 7), 0xff4400, 0.78*sz, x, 1.22*sz, 0,0,0, 0.1, 0, 0xff2200, 3.2));
+    for (let s = 0; s < 6; s++) mk(new THREE.ConeGeometry(0.05*sz, 0.28*sz, 5), 0x334466, (0.9+s*0.3)*sz, Math.sin(s*0.7)*0.26*sz, 0);
+    const aura2 = new THREE.Mesh(new THREE.TorusGeometry(1.5*sz, 0.1*sz, 6, 24), new THREE.MeshStandardMaterial({color:0x0033aa, emissive:0x0011ff, emissiveIntensity:1.2}));
+    aura2.rotation.x = Math.PI/2; aura2.position.y = 0.2*sz; g.add(aura2);
+
+  } else {
+    // Default fish (clownfish, ghost_fish)
+    const isGhost = id === 'ghost_fish';
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.35*sz, 9, 8), S(col, 0.6, 0, isGhost ? col : 0, isGhost ? 0.55 : 0));
+    body.scale.set(0.65, 0.48, 1.22); body.position.y = 0.5*sz; body.castShadow = true; g.add(body);
+    mk(new THREE.ConeGeometry(0.22*sz, 0.34*sz, 4), col, 0.5*sz, 0, -0.46*sz, Math.PI/2, 0, 0);
+    mk(new THREE.ConeGeometry(0.08*sz, 0.24*sz, 3), col, 0.8*sz, 0, 0, 0, 0, 0.18);
+    [-0.37*sz, 0.37*sz].forEach((x, i) => mk(new THREE.ConeGeometry(0.07*sz, 0.22*sz, 3), col, 0.5*sz, x, 0, 0, 0, i===0?-0.9:0.9));
+    [-0.12*sz, 0.12*sz].forEach(x => mk(new THREE.SphereGeometry(0.07*sz, 5, 5), 0x111111, 0.55*sz, x, 0.35*sz));
+    if (id === 'clownfish') {
+      const stripe = new THREE.Mesh(new THREE.SphereGeometry(0.2*sz, 7, 6), S(0xffffff, 0.6));
+      stripe.scale.set(0.25, 0.5, 0.7); stripe.position.set(0, 0.5*sz, 0.06*sz); g.add(stripe);
+    }
+  }
+  _addEnemyToScene(g, pos, data, sz);
+}
+
 function spawnEnemy(typeId, atPos = null) {
   const data = getActiveData().enemies.find(e => e.id === typeId);
   if (!data) return;
@@ -2239,8 +2479,9 @@ function spawnEnemy(typeId, atPos = null) {
     const r = FARM_R + 2 + Math.random() * 3;
     pos = new THREE.Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r);
   }
-  if (gs.biome === 'jungle') { spawnMonkey(data, pos); return; }
-  if (gs.biome === 'snow')   { spawnSnowman(data, pos); return; }
+  if (gs.biome === 'jungle')  { spawnMonkey(data, pos); return; }
+  if (gs.biome === 'snow')    { spawnSnowman(data, pos); return; }
+  if (gs.biome === 'deepsea') { spawnSeaCreature(data, pos); return; }
   const sz = data.sz || 1;
   const g = new THREE.Group();
   const smat = (col, rough=0.85, met=0, emCol=0, emInt=0) => {
@@ -3583,6 +3824,72 @@ function buildPlantMesh(data) {
       add(new THREE.ConeGeometry(0.10,0.18,5), S(0xdddddd), 0.44, 0,-0.42, -Math.PI/2,0,0);
       break;
     }
+    // ── Deep Sea plants ─────────────────────────────
+    case 'coral_cannon': {
+      add(new THREE.CylinderGeometry(0.22,0.28,0.38,8), new THREE.MeshStandardMaterial({color:0xff6688, roughness:0.5}), 0.19);
+      add(new THREE.SphereGeometry(0.24,8,8), new THREE.MeshStandardMaterial({color:0xff88aa, roughness:0.5}), 0.62);
+      add(new THREE.CylinderGeometry(0.07,0.09,0.48,7), new THREE.MeshStandardMaterial({color:0xdd4466, roughness:0.4}), 0.62, 0,0, Math.PI/2,0,0);
+      for (let i=0;i<5;i++){const a=i/5*Math.PI*2; add(new THREE.ConeGeometry(0.05,0.18,4), new THREE.MeshStandardMaterial({color:0xff4466}), 0.8, Math.cos(a)*0.26, Math.sin(a)*0.26);}
+      break;
+    }
+    case 'anemone': {
+      add(new THREE.CylinderGeometry(0.18,0.22,0.28,8), new THREE.MeshStandardMaterial({color:0xee6699}), 0.14);
+      for (let i=0;i<8;i++){const a=i/8*Math.PI*2; add(new THREE.ConeGeometry(0.06,0.38,5), new THREE.MeshStandardMaterial({color:0xff88bb,roughness:0.5}), 0.56, Math.cos(a)*0.16, Math.sin(a)*0.16, -0.25,0,a);}
+      add(new THREE.SphereGeometry(0.14,7,7), new THREE.MeshStandardMaterial({color:0xffaacc,emissive:0xff88aa,emissiveIntensity:0.4}), 0.28);
+      break;
+    }
+    case 'deep_vent': {
+      add(new THREE.CylinderGeometry(0.26,0.34,0.42,8), new THREE.MeshStandardMaterial({color:0x555566}), 0.21);
+      add(new THREE.CylinderGeometry(0.16,0.22,0.32,8), new THREE.MeshStandardMaterial({color:0x666677}), 0.58);
+      add(new THREE.SphereGeometry(0.2,7,7), new THREE.MeshStandardMaterial({color:0x99ccff,emissive:0x88bbff,emissiveIntensity:0.8,transparent:true,opacity:0.85}), 0.9);
+      for(let i=0;i<3;i++){const a=i/3*Math.PI*2; add(new THREE.SphereGeometry(0.08,5,5), new THREE.MeshStandardMaterial({color:0xaaddff,transparent:true,opacity:0.6}), 1.05+i*0.1, Math.cos(a)*0.12, Math.sin(a)*0.1);}
+      break;
+    }
+    case 'torpedo_fish': {
+      add(new THREE.CylinderGeometry(0.18,0.24,0.3,8), new THREE.MeshStandardMaterial({color:0x335566}), 0.15);
+      const tb = new THREE.Mesh(new THREE.SphereGeometry(0.28,9,8), new THREE.MeshStandardMaterial({color:data.color,roughness:0.55}));
+      tb.scale.set(0.65,0.55,1.3); tb.position.set(0,0.55,0); g.add(tb);
+      add(new THREE.ConeGeometry(0.1,0.35,5), new THREE.MeshStandardMaterial({color:0x55aadd}), 0.55, 0, 0.45, Math.PI/2,0,0);
+      add(new THREE.ConeGeometry(0.1,0.22,4), new THREE.MeshStandardMaterial({color:0x335566}), 0.55, 0, -0.35, -Math.PI/2,0,0);
+      break;
+    }
+    case 'elec_kelp': {
+      for(let i=0;i<3;i++){
+        const ox=(i-1)*0.22;
+        add(new THREE.CylinderGeometry(0.05,0.07,0.7+i*0.12,6), new THREE.MeshStandardMaterial({color:0x33bb33}), 0.35+i*0.06, ox, 0, Math.sin(i)*0.2);
+        add(new THREE.BoxGeometry(0.28,0.12,0.04), new THREE.MeshStandardMaterial({color:0x55dd55,emissive:0x33bb33,emissiveIntensity:0.3}), 0.75+i*0.12, ox, 0, 0,0,Math.sin(i*1.2)*0.35);
+      }
+      add(new THREE.SphereGeometry(0.1,6,6), new THREE.MeshStandardMaterial({color:0xffff44,emissive:0xffff00,emissiveIntensity:1.2}), 1.1);
+      break;
+    }
+    case 'clam_trap': {
+      add(new THREE.SphereGeometry(0.38,9,6, 0,Math.PI*2, 0,Math.PI/2), new THREE.MeshStandardMaterial({color:0xffeedd,roughness:0.4,metalness:0.15}), 0.0, 0,0, Math.PI,0,0);
+      add(new THREE.SphereGeometry(0.38,9,6, 0,Math.PI*2, 0,Math.PI/2), new THREE.MeshStandardMaterial({color:0xffeedd,roughness:0.4,metalness:0.15}), 0.38, 0,0, 0,0,0);
+      add(new THREE.SphereGeometry(0.14,7,7), new THREE.MeshStandardMaterial({color:0xffaaff,emissive:0xff88ff,emissiveIntensity:0.5}), 0.36);
+      for(let i=0;i<5;i++) add(new THREE.ConeGeometry(0.03,0.14,4), new THREE.MeshStandardMaterial({color:0xffd0cc}), 0.38, (-0.2+i*0.1), 0.35, Math.PI/2,0,0);
+      break;
+    }
+    case 'angler_lure': {
+      add(new THREE.CylinderGeometry(0.04,0.04,0.55,5), new THREE.MeshStandardMaterial({color:0x4a3a00}), 0.28, 0.12, 0, 0.35,0,0);
+      add(new THREE.SphereGeometry(0.16,8,8), new THREE.MeshStandardMaterial({color:0xffff44,emissive:0xffff00,emissiveIntensity:2.0}), 0.62, 0.22, 0);
+      add(new THREE.CylinderGeometry(0.12,0.16,0.22,7), new THREE.MeshStandardMaterial({color:0x223344}), 0.11);
+      break;
+    }
+    case 'heal_coral': {
+      for(let i=0;i<5;i++){const a=i/5*Math.PI*2; add(new THREE.CylinderGeometry(0.06,0.1,0.5+Math.random()*0.25,6), new THREE.MeshStandardMaterial({color:0x44ffcc,roughness:0.5}), 0.28, Math.cos(a)*0.2, Math.sin(a)*0.2, 0,0,Math.random()*0.5-0.25);}
+      add(new THREE.SphereGeometry(0.18,8,8), new THREE.MeshStandardMaterial({color:0x44ffcc,emissive:0x00ffcc,emissiveIntensity:0.6}), 0.82);
+      break;
+    }
+    case 'kelp_wall': {
+      for(let i=0;i<3;i++){const ox=(i-1)*0.32; add(new THREE.CylinderGeometry(0.07,0.1,1.2+Math.random()*0.3,6), new THREE.MeshStandardMaterial({color:0x226633}), 0.6+Math.random()*0.15, ox, 0, Math.sin(i)*0.18);}
+      for(let i=0;i<4;i++){const a=Math.random()*Math.PI*2; add(new THREE.BoxGeometry(0.3,0.1,0.04), new THREE.MeshStandardMaterial({color:0x2d8844}), 0.5+Math.random()*0.5, (Math.random()-0.5)*0.5, 0, 0,0,a*0.5);}
+      break;
+    }
+    case 'barnacle': case 'whirlpool': case 'ink_cloud': case 'urchin_spike': case 'sea_mine': {
+      add(new THREE.CylinderGeometry(0.35,0.42,0.16,8), new THREE.MeshStandardMaterial({color:data.color||0x445566}), 0.08);
+      add(new THREE.SphereGeometry(0.28,9,9), new THREE.MeshStandardMaterial({color:data.color||0x445566,emissive:data.color||0x445566,emissiveIntensity:0.15}), 0.42);
+      break;
+    }
     default: {
       add(new THREE.CylinderGeometry(0.1,0.15,0.8,8), S(0x228B22), 0.4);
       add(new THREE.SphereGeometry(0.38,10,10), S(data.color||0x00ff00), 0.9);
@@ -4500,6 +4807,11 @@ function showScreen(id) {
           <div class="sc-n" style="font-size:13px;font-weight:bold;color:#88ccff">Snowy Tundra</div>
           <div style="font-size:10px;color:#aaa;margin-top:5px">Fight snowmen!<br>Icy & treacherous</div>
         </div>
+        <div class="skin-card" id="biome-deepsea" onclick="selectBiome('deepsea')" style="width:140px;padding:16px">
+          <div class="sc-e">🌊</div>
+          <div class="sc-n" style="font-size:13px;font-weight:bold;color:#44aadd">Deep Sea Abyss</div>
+          <div style="font-size:10px;color:#aaa;margin-top:5px">Fight sea creatures!<br>Dark & mysterious</div>
+        </div>
       </div>
       <button class="bbtn gray" onclick="showScreen('menu')">Back</button>`;
     // highlight current
@@ -4528,7 +4840,7 @@ function showScreen(id) {
   } else if (id === 'victory') {
     const totalW = getActiveData().waves.length;
     inn.innerHTML = `<div class="stitle">🏆 YOU WIN!</div>
-      <div class="ssub">You survived all ${totalW} waves in the ${gs.biome === 'snow' ? 'Snowy Tundra' : gs.biome === 'jungle' ? 'Jungle Forest' : 'Garden Farm'}!</div>
+      <div class="ssub">You survived all ${totalW} waves in the ${gs.biome === 'snow' ? 'Snowy Tundra' : gs.biome === 'jungle' ? 'Jungle Forest' : gs.biome === 'deepsea' ? 'Deep Sea Abyss' : 'Garden Farm'}!</div>
       <div style="color:#FFD700;font-size:20px;margin:10px">${getActiveData().resourceEmoji} ${gs.straw} | 💀 ${gs.totalKills} ${getActiveData().enemyName} defeated</div>
       <button class="bbtn" onclick="showScreen('menu')">Main Menu</button>`;
   }
@@ -4570,6 +4882,22 @@ function applyBiomeTheme(biome) {
       ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
       window._skyMesh.material.map.needsUpdate = true;
     }
+  } else if (biome === 'deepsea') {
+    scene.fog.color.setHex(0x002244);
+    scene.fog.near = 18; scene.fog.far = 55;
+    hemiLight.color.setHex(0x004466);
+    hemiLight.groundColor.setHex(0x001a33);
+    sun.color.setHex(0x2288bb);
+    if (window._skyCtx) {
+      const ctx = window._skyCtx, c = window._skyCanvas;
+      const g = ctx.createLinearGradient(0, 0, 0, 256);
+      g.addColorStop(0,    '#000408');
+      g.addColorStop(0.35, '#000d1a');
+      g.addColorStop(0.7,  '#001a33');
+      g.addColorStop(1,    '#002244');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
+      window._skyMesh.material.map.needsUpdate = true;
+    }
   } else {
     scene.fog.color.setHex(0x3a5a78);
     hemiLight.color.setHex(0x6688bb);
@@ -4596,7 +4924,7 @@ function startGame() {
   document.getElementById('screen').classList.add('hidden');
   gameStarted = true;
   buildPlayerMesh(); buildHotbar(); updateHUD();
-  const biomeMsg = gs.biome === 'jungle' ? '🌿 Welcome to the Jungle! Watch out for monkeys!' : gs.biome === 'snow' ? '❄️ Brr! Defend against the snowmen!' : '🌾 Welcome! Press SPACE to start Wave 1!';
+  const biomeMsg = gs.biome === 'jungle' ? '🌿 Welcome to the Jungle! Watch out for monkeys!' : gs.biome === 'snow' ? '❄️ Brr! Defend against the snowmen!' : gs.biome === 'deepsea' ? '🌊 You descend into the Deep! Beware the sea creatures!' : '🌾 Welcome! Press SPACE to start Wave 1!';
   showToast(isMobile ? 'Tap ▶ START WAVE to begin!' : biomeMsg, 4000);
 }
 
