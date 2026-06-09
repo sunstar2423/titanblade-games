@@ -5,15 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes, shrink-to-fit=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://cdn.jsdelivr.net https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io; worker-src blob:; frame-ancestors 'none';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
     <title>Isle of Adventure</title>
     
     <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ELX1WWLJN8"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{GOOGLE_ANALYTICS_ID}}"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', 'G-ELX1WWLJN8', {
+        gtag('config', '{{GOOGLE_ANALYTICS_ID}}', {
             page_title: 'Isle of Adventure',
             custom_map: {'custom_parameter': 'game_events'}
         });
@@ -139,14 +143,14 @@
             integrations: [
                 Sentry.browserTracingIntegration(),
                 Sentry.replayIntegration({
-                    maskAllText: false,
-                    blockAllMedia: false,
+                    maskAllText: true,
+                    blockAllMedia: true,
                 }),
             ],
             environment: "production",
             release: "isle-of-adventure@1.0.0",
-            tracesSampleRate: 1.0,
-            replaysSessionSampleRate: 0.1,
+            tracesSampleRate: 0.1,
+            replaysSessionSampleRate: 0.05,
             replaysOnErrorSampleRate: 1.0,
         });
         
