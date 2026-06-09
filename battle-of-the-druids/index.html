@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes, shrink-to-fit=no, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://cdn.jsdelivr.net https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io; worker-src blob:; frame-ancestors 'none';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
     <title>Battle of the Druids - Free Online RPG Game</title>
     <meta name="description" content="Play Battle of the Druids - A free turn-based RPG with 4 character classes, tactical combat, equipment progression, and 9 unique locations. Play instantly in your browser!">
     <meta name="keywords" content="free online rpg, browser game, turn-based combat, fantasy rpg, character classes, online game">
@@ -13,7 +17,7 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="Battle of the Druids - Free Online RPG">
     <meta property="og:description" content="Epic turn-based RPG with character classes, magical spells, and tactical combat. Play free in your browser!">
-    <meta property="og:url" content="http://battle-of-the-druids-web.s3-website-ap-southeast-2.amazonaws.com/">
+    <meta property="og:url" content="https://www.titanbladegames.com/battle-of-the-druids/">
     
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
@@ -192,14 +196,14 @@
             integrations: [
                 Sentry.browserTracingIntegration(),
                 Sentry.replayIntegration({
-                    maskAllText: false,
-                    blockAllMedia: false,
+                    maskAllText: true,
+                    blockAllMedia: true,
                 }),
             ],
             environment: "production",
             release: "battle-of-the-druids@1.0.0",
-            tracesSampleRate: 1.0,
-            replaysSessionSampleRate: 0.1,
+            tracesSampleRate: 0.1,
+            replaysSessionSampleRate: 0.05,
             replaysOnErrorSampleRate: 1.0,
         });
         

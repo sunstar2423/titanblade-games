@@ -147,16 +147,22 @@ window.addEventListener('load', () => {
         
         const gameContainer = document.getElementById('game-container');
         if (gameContainer) {
-            gameContainer.innerHTML = `
-                <div style="color: white; text-align: center; padding: 50px;">
-                    <h2>Game Initialization Failed</h2>
-                    <p>Error: ${error.message}</p>
-                    <p style="font-size: 12px;">Check console for details</p>
-                    <button onclick="location.reload()" style="padding: 10px 20px; font-size: 16px;">
-                        Try Again
-                    </button>
-                </div>
-            `;
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'color: white; text-align: center; padding: 50px;';
+            const heading = document.createElement('h2');
+            heading.textContent = 'Game Initialization Failed';
+            const msg = document.createElement('p');
+            msg.textContent = `Error: ${error.message}`;
+            const hint = document.createElement('p');
+            hint.style.fontSize = '12px';
+            hint.textContent = 'Check console for details';
+            const btn = document.createElement('button');
+            btn.style.cssText = 'padding: 10px 20px; font-size: 16px;';
+            btn.textContent = 'Try Again';
+            btn.addEventListener('click', () => location.reload());
+            wrapper.append(heading, msg, hint, btn);
+            gameContainer.textContent = '';
+            gameContainer.appendChild(wrapper);
         }
     }
 });
