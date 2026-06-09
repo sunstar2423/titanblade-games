@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=0.5, user-scalable=yes, shrink-to-fit=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src blob:; frame-ancestors 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src blob:; frame-ancestors 'none';">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
     <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
@@ -137,49 +137,11 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js" integrity="sha384-p8ty80jSFxlN0Y9ZlHjOYGzfXmOSD9FkIOdP+Yc3XeiDUfkSmkd7H2bQBvZrt7AC" crossorigin="anonymous"></script>
     <!-- Sentry temporarily removed for debugging -->
     
     <!-- Mobile touch gesture handling -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            function enableTouchGestures() {
-                const elements = ['body', '#game-container', 'canvas'];
-                elements.forEach(selector => {
-                    const el = document.querySelector(selector);
-                    if (el) {
-                        el.style.touchAction = 'auto';
-                        el.style.pointerEvents = 'auto';
-                        el.style.webkitTouchCallout = 'default';
-                        el.style.webkitUserSelect = 'auto';
-                    }
-                });
-                
-                const observer = new MutationObserver(function(mutations) {
-                    mutations.forEach(function(mutation) {
-                        if (mutation.addedNodes) {
-                            mutation.addedNodes.forEach(function(node) {
-                                if (node.tagName === 'CANVAS') {
-                                    node.style.touchAction = 'auto';
-                                    node.style.pointerEvents = 'auto';
-                                    console.log('Doom Riders canvas configured for mobile touch');
-                                }
-                            });
-                        }
-                    });
-                });
-                
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                });
-            }
-            
-            enableTouchGestures();
-            setTimeout(enableTouchGestures, 1000);
-            setTimeout(enableTouchGestures, 3000);
-        });
-    </script>
+    <script src="js/touch-init.js"></script>
     
     <script type="module" src="js/Game.js"></script>
 </body>

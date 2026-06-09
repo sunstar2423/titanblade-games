@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes, shrink-to-fit=no, viewport-fit=cover">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://cdn.jsdelivr.net https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io; worker-src blob:; frame-ancestors 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://cdn.jsdelivr.net https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io; worker-src blob:; frame-ancestors 'none';">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
     <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
@@ -26,26 +26,7 @@
     
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id={{GOOGLE_ANALYTICS_ID}}"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', '{{GOOGLE_ANALYTICS_ID}}', {
-            page_title: 'Battle of the Druids',
-            custom_map: {'custom_parameter': 'game_events'}
-        });
-        
-        // Game-specific event tracking
-        function trackGameEvent(action, category = 'Game') {
-            gtag('event', action, {
-                event_category: category,
-                event_label: 'Battle of the Druids'
-            });
-        }
-        
-        // Make tracking function available globally
-        window.trackGameEvent = trackGameEvent;
-    </script>
+    <script src="js/analytics.js" data-ga-id="{{GOOGLE_ANALYTICS_ID}}"></script>
     <style>
         body {
             margin: 0;
@@ -190,34 +171,10 @@
 
     <!-- Sentry SDK -->
     <script src="https://browser.sentry-cdn.com/8.42.0/bundle.min.js" integrity="sha384-ojBBhiQvhkfZfAhojXYPuIYW8dxzV1I8R7YJlq9Tz7T4YOZQcTuUoCgGbCz5lWAE" crossorigin="anonymous"></script>
-    <script>
-        Sentry.init({
-            dsn: "https://5752f76100bc0ed5d17444652339d50f@o4509524111523840.ingest.us.sentry.io/4509524122075136",
-            integrations: [
-                Sentry.browserTracingIntegration(),
-                Sentry.replayIntegration({
-                    maskAllText: true,
-                    blockAllMedia: true,
-                }),
-            ],
-            environment: "production",
-            release: "battle-of-the-druids@1.0.0",
-            tracesSampleRate: 0.1,
-            replaysSessionSampleRate: 0.05,
-            replaysOnErrorSampleRate: 1.0,
-        });
-        
-        // Custom Sentry context for game
-        Sentry.setTag("game", "battle-of-the-druids");
-        Sentry.setContext("game_info", {
-            version: "web-1.0.0",
-            platform: "browser",
-            engine: "phaser3"
-        });
-    </script>
+    <script src="js/sentry-init.js"></script>
 
     <!-- Phaser.js from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js" integrity="sha384-p8ty80jSFxlN0Y9ZlHjOYGzfXmOSD9FkIOdP+Yc3XeiDUfkSmkd7H2bQBvZrt7AC" crossorigin="anonymous"></script>
     
     <!-- Game modules -->
     <script src="js/GameData.js"></script>
