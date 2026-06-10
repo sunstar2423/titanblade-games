@@ -2051,6 +2051,7 @@ function updateProjectiles(dt) {
           if (p.data.poison) { e.poisonTimer = 5; spawnFX(p.pos.clone(), 0x44ff00, 0.3, 0.8); }
           if (p.data.root) { e.rootTimer = 3.5; e.vel.set(0,0,0); spawnFX(e.pos.clone(), 0x228b22, 0.5, 1.5); showToast('🌿 Enemy rooted!', 1000); }
           if (p.data.hardFreeze) { e.slowTimer = 8; e.vel.set(0,0,0); spawnFX(e.pos.clone(), 0xaaddff, 0.45, 1.5); }
+          if (p.data.pull) { const pullDir = gs.playerPos.clone().sub(e.pos).setY(0).normalize(); e.vel.add(pullDir.multiplyScalar(12)); spawnFX(e.pos.clone().add(new THREE.Vector3(0,0.8,0)), 0x6688aa, 0.3, 0.8); }
           // AoE on impact — hardFreeze applies to all in AoE
           if (p.data.aoe) {
             gs.enemies.forEach(e2 => {
@@ -4807,7 +4808,55 @@ function showScreen(id) {
       <div class="ssub">Grow plants. Arm yourself. Defend your farm!</div>
       <button class="bbtn" onclick="showScreen('biome')">▶ New Game</button>
       ${hasSave() ? `<button class="bbtn" style="background:#1565c0" onclick="loadAndPlay()">📂 Continue</button>` : ''}
+      <button class="bbtn" style="background:#444" onclick="window._tutStep=0;showScreen('tutorial')">❓ How to Play</button>
       <br><div style="color:#555;font-size:12px;margin-top:18px">A Titan Blade Games game • Made by Oliver</div>`;
+  } else if (id === 'tutorial') {
+    const STEPS = [
+      { icon:'🌱', title:'Welcome to Garden Farmers!',
+        text:'Defend your barn from waves of enemies. Earn straw, buy weapons and plants, and build up your farm into an unstoppable fortress!' },
+      { icon:'🕹️', title:'Movement',
+        text:'<b>WASD</b> or <b>Arrow Keys</b> to walk.<br><b>Space</b> to jump.<br>On mobile: use the <b>joystick</b> in the bottom-left corner.<br>Scroll the <b>mouse wheel</b> (or +/− keys) to zoom the camera in and out.' },
+      { icon:'⚔️', title:'Attacking Enemies',
+        text:'<b>Left-click</b> (or tap the right side of the screen on mobile) to swing your equipped weapon.<br>Different weapons have different ranges, speeds, and special effects like poison, freeze, or knockback.' },
+      { icon:'🌊', title:'Enemy Waves',
+        text:'Press <b>SPACE</b> or the <b>▶ START WAVE</b> button to unleash the next wave of enemies. Each wave is tougher than the last. Survive all waves to win!' },
+      { icon:'🌾', title:'Straw = Your Currency',
+        text:'<b>Kill enemies</b> to earn straw 🌾. More enemies means more straw.<br>Use straw in the <b>Shop</b> to buy weapons, plants, animals, defenses, and more. Don\'t run out!' },
+      { icon:'🏪', title:'The Shop (Press B)',
+        text:'Press <b>B</b> to open the shop. It has 6 tabs:<br>🗡️ <b>Weapons</b> — buy & equip weapons<br>🌿 <b>Plants</b> — auto-attacking turret plants<br>🛡️ <b>Defenses</b> — walls, traps & mines<br>🐄 <b>Animals</b> — loyal farm companions<br>🏠 <b>Barn</b> — upgrade your base<br>⚔️ <b>Army</b> — recruit soldiers to attack!' },
+      { icon:'🌿', title:'Placing Plants & Defenses',
+        text:'In the Shop, click a plant or defense to select it. Your cursor shows a preview. Then <b>click on the ground</b> to place it.<br>Plants automatically fire at nearby enemies. Place them around your barn for maximum coverage!' },
+      { icon:'🐄', title:'Animals',
+        text:'Animals wander your farm and <b>auto-attack enemies</b> — hens throw eggs, cows charge, pigs sling mud, and more.<br>Flying birds orbit overhead and dive-bomb enemies from above. Buy them in the <b>Animals</b> tab!' },
+      { icon:'🏠', title:'Protect the Barn',
+        text:'Your <b>barn</b> sits at the center of the map. If enemies destroy it — game over!<br>In the <b>Barn</b> tab, upgrade its max HP and add cannons that automatically fire at approaching enemies.' },
+      { icon:'⚔️', title:'Send Your Army!',
+        text:'In the <b>Army</b> tab, recruit warriors, archers, knights, cavalry, mages, and bombers. Once you\'ve built your squad, click <b>Send Army</b> to march them in a <b>wedge formation</b> toward the enemy fortress to the north!' },
+      { icon:'🌍', title:'Four Biomes to Explore',
+        text:'Each biome has unique enemies, weapons, and plants:<br>🌱 <b>Garden</b> — scarecrows, classic farm weapons<br>🌿 <b>Jungle</b> — monkeys, blowdarts & banana bombs<br>❄️ <b>Tundra</b> — snowmen, ice weapons<br>🌊 <b>Deep Sea</b> — sharks, krakens & tridents!' },
+      { icon:'💡', title:'Tips & Tricks',
+        text:'• Place plants <b>in a ring</b> around the barn for overlapping fire zones.<br>• <b>Upgrade the barn</b> early — cannons are very strong.<br>• <b>Save often</b> — the game auto-saves between waves.<br>• Use <b>Kelp Walls / Ice Walls</b> to funnel enemies into kill zones.<br>• Check <b>random events</b> — some give huge bonuses!' },
+      { icon:'🎮', title:'Ready to Play!',
+        text:'That\'s everything! Start with the <b>Garden biome</b> if it\'s your first time.<br>Good luck defending your farm — the enemy base won\'t destroy itself!<br><br><i style="color:#aaa">Tip: Waves get much harder after wave 10. Build wisely!</i>', last:true },
+    ];
+    if (!window._tutStep) window._tutStep = 0;
+    const step = Math.max(0, Math.min(window._tutStep, STEPS.length - 1));
+    const s = STEPS[step];
+    const dots = STEPS.map((_, i) => `<span style="display:inline-block;width:${i===step?18:8}px;height:8px;border-radius:4px;background:${i===step?'#4CAF50':'#555'};margin:0 3px;transition:all 0.2s"></span>`).join('');
+    inn.innerHTML = `
+      <div style="max-width:500px;margin:0 auto;padding:8px">
+        <div style="font-size:64px;margin-bottom:8px;line-height:1">${s.icon}</div>
+        <div style="font-size:22px;font-weight:bold;color:#fff;margin-bottom:12px">${s.title}</div>
+        <div style="font-size:14px;color:#ccc;line-height:1.7;min-height:110px;text-align:left;background:rgba(255,255,255,0.05);border-radius:12px;padding:14px 18px">${s.text}</div>
+        <div style="margin:16px 0 12px">${dots}</div>
+        <div style="color:#666;font-size:11px;margin-bottom:14px">Step ${step+1} of ${STEPS.length}</div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          ${step > 0 ? `<button class="bbtn gray" style="padding:10px 22px;font-size:14px" onclick="window._tutStep=${step-1};showScreen('tutorial')">◀ Back</button>` : `<button class="bbtn gray" style="padding:10px 22px;font-size:14px" onclick="showScreen('menu')">✕ Close</button>`}
+          ${s.last
+            ? `<button class="bbtn" style="padding:10px 28px;font-size:15px;background:linear-gradient(135deg,#2e7d32,#4CAF50)" onclick="showScreen('biome')">▶ Start Playing!</button>`
+            : `<button class="bbtn" style="padding:10px 28px;font-size:14px" onclick="window._tutStep=${step+1};showScreen('tutorial')">Next ▶</button>`}
+        </div>
+      </div>`;
   } else if (id === 'biome') {
     inn.innerHTML = `<div class="stitle" style="font-size:36px">Choose Your Biome</div>
       <div class="ssub">Each biome has its own enemies, weapons and plants!</div>
