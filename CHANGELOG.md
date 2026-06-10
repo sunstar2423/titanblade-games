@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Battle of the Druids Web Edition** - Complete Phaser.js conversion from Python
 - **Isle of Adventure** - New point-and-click adventure game
 - **Doom Riders** - New action-adventure game (initial release)
-- AWS S3 static hosting with CloudFront CDN
+- GitHub Pages static hosting with custom domain
 - Responsive design supporting desktop and mobile
 - Enhanced visual effects with particle systems and screen shake
 - Session-based gameplay (no save persistence between sessions)
@@ -115,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Links
 
-- [Battle of the Druids Web](http://battle-of-the-druids-web.s3-website-ap-southeast-2.amazonaws.com/) - Play the latest web version
+- [Play All Games](https://www.titanbladegames.com/) - Play the latest web versions
 - [Repository](https://github.com/sunstar2423/titanblade-games) - Source code and development
 - [Issues](https://github.com/sunstar2423/titanblade-games/issues) - Bug reports and feature requests
 - [Releases](https://github.com/sunstar2423/titanblade-games/releases) - Download specific versions

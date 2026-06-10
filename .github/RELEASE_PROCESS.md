@@ -77,7 +77,7 @@ Release notes are automatically generated with this structure:
 - Automated list of commits since last release
 
 ### 🚀 Play the Games
-- [Battle of the Druids (Web)](http://battle-of-the-druids-web.s3-website-ap-southeast-2.amazonaws.com/)
+- [Play All Games](https://www.titanbladegames.com/)
 - [Download Python Version](download-link)
 
 ### 📥 Installation
@@ -251,12 +251,10 @@ git push origin v2.1.0-beta.1
 ### Documentation
 - [Semantic Versioning](https://semver.org/)
 - [GitHub Releases Guide](https://docs.github.com/en/repositories/releasing-projects-on-github)
-- [AWS S3 Static Hosting](https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteHosting.html)
 
 ### Tools
 - **GitHub Actions** - Automated release workflow
 - **GitHub CLI** - Manual release management
-- **AWS CLI** - Production deployment
 - **Lighthouse CI** - Performance testing
 
 ---

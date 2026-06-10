@@ -22,7 +22,6 @@
       "Bash(gh workflow run:*)",
       "Bash(gh run list:*)",
       "Bash(gh secret get:*)",
-      "Bash(aws route53:*)",
       "Bash(claude mcp add:*)",
       "Bash(claude mcp)",
       "Bash(npx @modelcontextprotocol/server-github:*)",

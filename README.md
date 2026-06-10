@@ -24,7 +24,7 @@ Fast-paced action-adventure game (in active development).
 
 ## 🎮 Play Now
 
-**[► Play Battle of the Druids](http://battle-of-the-druids-web.s3-website-ap-southeast-2.amazonaws.com/)**
+**[► Play All Games](https://www.titanbladegames.com/)**
 
 No downloads, no installation - just click and play!
 
@@ -94,7 +94,7 @@ No downloads, no installation - just click and play!
 ## 🔧 Technical Implementation
 
 - **Engine**: Phaser.js 3.70 with modular scene architecture
-- **Deployment**: AWS S3 static hosting with GitHub Actions CI/CD
+- **Deployment**: GitHub Pages with GitHub Actions CI/CD
 - **Performance**: Optimized asset loading with fallback systems
 - **Architecture**: Clean separation of concerns across multiple modules
 - **Responsive**: Automatic scaling for different screen sizes

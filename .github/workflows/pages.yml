@@ -38,7 +38,7 @@ jobs:
         export CONTACT_EMAIL="${{ secrets.CONTACT_EMAIL || 'contact@titanbladegames.com' }}"
         
         # Run build script to inject environment variables
-        node build-env.js
+        node temp-env-update/build-env.js
         
         # Verify the build worked
         echo "🔍 Checking for any remaining placeholders..."

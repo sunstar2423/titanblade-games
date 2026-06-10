@@ -16,7 +16,7 @@ We actively maintain and provide security updates for the following versions:
 - **Input validation** - All user inputs are sanitized
 - **Local storage only** - No sensitive data transmission
 - **HTTPS deployment** - Encrypted connections in production
-- **Static hosting** - Reduced attack surface via S3/CloudFront
+- **Static hosting** - Reduced attack surface via GitHub Pages
 
 ### Development Security
 - **Automated scanning** - CodeQL and dependency checks

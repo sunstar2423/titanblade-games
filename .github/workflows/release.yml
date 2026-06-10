@@ -16,10 +16,6 @@ on:
         type: boolean
         default: false
 
-env:
-  AWS_REGION: ap-southeast-2
-  S3_BUCKET: battle-of-the-druids-web
-
 jobs:
   create-release:
     runs-on: ubuntu-latest
@@ -65,7 +61,7 @@ jobs:
         $COMMITS
         
         ### 🚀 Play the Games
-        - [Battle of the Druids (Web)](http://battle-of-the-druids-web.s3-website-ap-southeast-2.amazonaws.com/)
+        - [Play All Games](https://www.titanbladegames.com/)
         - [Download Python Version](https://github.com/sunstar2423/titanblade-games/archive/refs/tags/${{ steps.vars.outputs.version }}.zip)
         
         ### 📥 Installation
@@ -140,32 +136,11 @@ jobs:
           sed -i 's/\[v[0-9]*\.[0-9]*\.[0-9]*\]/[${{ steps.vars.outputs.version }}]/' README.md
         fi
         
-    - name: Deploy release to production
-      if: '!steps.vars.outputs.prerelease'
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-        
-    - name: Sync release to S3
-      if: '!steps.vars.outputs.prerelease'
-      run: |
-        aws s3 sync battle-of-the-druids/ s3://${{ env.S3_BUCKET }}/ \
-          --delete \
-          --cache-control "public, max-age=31536000" \
-          --exclude "*.md" \
-          --exclude ".git/*" \
-          --exclude ".github/*"
-          
     - name: Notify release completion
       run: |
         echo "🎉 Release ${{ steps.vars.outputs.version }} created successfully!"
         echo "📦 Assets uploaded to GitHub Releases"
-        if [ "${{ steps.vars.outputs.prerelease }}" = "false" ]; then
-          echo "🌐 Production deployment completed"
-          echo "🎮 Live at: http://${{ env.S3_BUCKET }}.s3-website-${{ env.AWS_REGION }}.amazonaws.com/"
-        fi
+        echo "🌐 Live at: https://www.titanbladegames.com/"
         
   update-changelog:
     runs-on: ubuntu-latest

@@ -32,7 +32,7 @@ After 6 months of solo development, I just launched "Battle of the Druids" - a t
 **Tech Stack:**
 - Phaser.js 3.70
 - Vanilla JavaScript
-- AWS S3 hosting
+- GitHub Pages hosting
 - LocalStorage for saves
 
 **Key Challenges Solved:**
