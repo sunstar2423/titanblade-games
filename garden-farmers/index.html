@@ -5505,7 +5505,12 @@ function stopBattleTheme() {
 function _scheduleBattleLoop(t0) {
   if (!_battleActive) return;
   const ctx = _getCtx();
-  const end = _playBattleTheme(t0);
+  const biome = (typeof gs !== 'undefined') ? gs.biome : 'garden';
+  let end;
+  if      (biome === 'jungle')  end = _playBattleTheme_jungle(t0);
+  else if (biome === 'snow')    end = _playBattleTheme_snow(t0);
+  else if (biome === 'deepsea') end = _playBattleTheme_deepsea(t0);
+  else                          end = _playBattleTheme(t0);
   const msLeft = (end - ctx.currentTime) * 1000 - 200;
   _battleLoopTimeout = setTimeout(() => _scheduleBattleLoop(end), Math.max(0, msLeft));
 }
@@ -5624,6 +5629,228 @@ function _playBattleTheme(t0) {
     if (beat % 2 === 0) kick(bt2 + e8 * 1.5); // extra syncopated kick
     if (beat % 4 === 1 || beat % 4 === 3) snare(bt2);
     hihat(bt2); hihat(bt2 + e8);
+  }
+  return t0 + w * 8;
+}
+
+// ── Jungle battle theme — A minor pentatonic, 128 BPM, marimba + conga ──
+function _playBattleTheme_jungle(t0) {
+  const ctx = _getCtx();
+  const bg = _battleGain;
+  const BPM = 128, b = 60 / BPM;
+  const e8 = b / 2, q = b, h = b * 2, w = b * 4;
+  const N = {
+    A2:110.00, E3:164.81, G3:196.00, A3:220.00,
+    C4:261.63, D4:293.66, E4:329.63, G4:392.00, A4:440.00,
+    C5:523.25, D5:587.33, E5:659.25, G5:783.99, A5:880.00
+  };
+  function mar(freq, t, dur, vol=0.30) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = freq;
+    filt.type = 'lowpass'; filt.frequency.value = Math.min(freq * 4.5, 4000); filt.Q.value = 1.8;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(dur * 0.55, 0.30));
+    osc.connect(filt); filt.connect(g); g.connect(bg);
+    osc.start(t); osc.stop(t + Math.min(dur * 0.6, 0.32));
+  }
+  function bss(freq, t, dur) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = freq;
+    filt.type = 'lowpass'; filt.frequency.value = 520; filt.Q.value = 1.2;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.30, t + 0.022);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.72);
+    osc.connect(filt); filt.connect(g); g.connect(bg);
+    osc.start(t); osc.stop(t + dur * 0.76);
+  }
+  function conga(t, hi=false) {
+    if (!_battleActive) return;
+    const f = hi ? 320 : 215;
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f * 1.55, t); osc.frequency.exponentialRampToValueAtTime(f, t + 0.05);
+    g.gain.setValueAtTime(0.44, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    osc.connect(g); g.connect(bg); osc.start(t); osc.stop(t + 0.16);
+  }
+  function shaker(t) {
+    if (!_battleActive) return;
+    const sr = ctx.sampleRate, len = Math.ceil(sr * 0.025);
+    const buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter(); filt.type = 'highpass'; filt.frequency.value = 5500;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.07, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.022);
+    src.connect(filt); filt.connect(g); g.connect(bg); src.start(t); src.stop(t + 0.028);
+  }
+  // A minor pentatonic melody — 8 bars, 128 BPM
+  const melody = [
+    [N.A4,e8],[N.C5,e8],[N.D5,e8],[N.E5,e8],[N.D5,e8],[N.C5,e8],[N.A4,e8],[N.G4,e8],  // bar 1
+    [N.A4,q],[N.E5,q],[N.D5,q],[N.C5,q],                                                 // bar 2
+    [N.G4,e8],[N.A4,e8],[N.C5,e8],[N.D5,e8],[N.E5,e8],[N.G5,e8],[N.E5,q],               // bar 3
+    [N.D5,h],[N.C5,q],[N.A4,q],                                                          // bar 4
+    [N.E5,e8],[N.D5,e8],[N.C5,e8],[N.A4,e8],[N.G4,e8],[N.A4,e8],[N.C5,e8],[N.D5,e8],   // bar 5
+    [N.E5,q],[N.G5,e8],[N.E5,e8],[N.D5,q],[N.C5,q],                                     // bar 6
+    [N.A4,e8],[N.C5,e8],[N.D5,e8],[N.E5,e8],[N.D5,q],[N.C5,e8],[N.A4,e8],              // bar 7
+    [N.E4,q],[N.G4,q],[N.A4,h],                                                          // bar 8
+  ];
+  const bassLine = [
+    [N.A2,w],[N.A2,w],[N.E3,w],[N.A2,w],
+    [N.A2,w],[N.G3,w],[N.E3,w],[N.A2,w],
+  ];
+  let mt = t0; melody.forEach(([f,d]) => { mar(f, mt, d); mt += d; });
+  let bt = t0; bassLine.forEach(([f,d]) => { bss(f, bt, d); bt += d; });
+  for (let beat = 0; beat < 32; beat++) {
+    const bt2 = t0 + beat * q;
+    if (beat % 4 === 0)                            conga(bt2, false);
+    if (beat % 4 === 1) { conga(bt2, true);        conga(bt2 + e8, false); }
+    if (beat % 4 === 2)                            conga(bt2, false);
+    if (beat % 4 === 3) { conga(bt2, true);        conga(bt2 + e8 * 1.5, true); }
+    shaker(bt2); shaker(bt2 + e8);
+  }
+  return t0 + w * 8;
+}
+
+// ── Snow battle theme — E minor, 76 BPM, ice bells + soft pads ──
+function _playBattleTheme_snow(t0) {
+  const ctx = _getCtx();
+  const bg = _battleGain;
+  const BPM = 76, b = 60 / BPM;
+  const e8 = b / 2, q = b, h = b * 2, w = b * 4;
+  const N = {
+    E3:164.81, Fs3:185.00, G3:196.00, A3:220.00, B3:246.94,
+    C4:261.63, D4:293.66, E4:329.63, Fs4:369.99, G4:392.00,
+    A4:440.00, B4:493.88, C5:523.25, D5:587.33, E5:659.25,
+    Fs5:739.99, G5:783.99
+  };
+  function bell(freq, t, dur, vol=0.34) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(dur * 0.9, 1.3));
+    osc.connect(g); g.connect(bg); osc.start(t); osc.stop(t + Math.min(dur * 0.95, 1.38));
+    // bell shimmer overtone
+    const osc2 = ctx.createOscillator(), g2 = ctx.createGain();
+    osc2.type = 'sine'; osc2.frequency.value = freq * 2.756;
+    g2.gain.setValueAtTime(vol * 0.3, t);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(dur * 0.45, 0.5));
+    osc2.connect(g2); g2.connect(bg); osc2.start(t); osc2.stop(t + Math.min(dur * 0.5, 0.55));
+  }
+  function pad(freq, t, dur) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    filt.type = 'lowpass'; filt.frequency.value = 750; filt.Q.value = 0.8;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.12, t + 0.4);
+    g.gain.setValueAtTime(0.12, t + dur - 0.5);
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    osc.connect(filt); filt.connect(g); g.connect(bg);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+  function iceclick(t) {
+    if (!_battleActive) return;
+    const sr = ctx.sampleRate, len = Math.ceil(sr * 0.014);
+    const buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter(); filt.type = 'bandpass'; filt.frequency.value = 3800; filt.Q.value = 3;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.09, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.012);
+    src.connect(filt); filt.connect(g); g.connect(bg); src.start(t); src.stop(t + 0.018);
+  }
+  // E minor melody — sparse, ethereal, 8 bars at 76 BPM
+  const melody = [
+    [N.E5,h],[N.D5,q],[N.B4,q],          // bar 1
+    [N.C5,h],[N.B4,h],                   // bar 2
+    [N.A4,q],[N.B4,q],[N.C5,q],[N.B4,q], // bar 3
+    [N.E5,w],                            // bar 4
+    [N.G5,q],[N.Fs5,q],[N.E5,h],         // bar 5
+    [N.D5,q],[N.C5,q],[N.B4,q],[N.A4,q], // bar 6
+    [N.Fs4,q],[N.G4,q],[N.A4,q],[N.B4,q],// bar 7
+    [N.E4,w],                            // bar 8
+  ];
+  const pads = [
+    [N.E3,w],[N.A3,w],[N.G3,w],[N.B3,w],
+    [N.A3,w],[N.G3,w],[N.Fs3,w],[N.E3,w],
+  ];
+  let mt = t0; melody.forEach(([f,d]) => { bell(f, mt, d); mt += d; });
+  let pt = t0; pads.forEach(([f,d]) => { pad(f, pt, d); pt += d; });
+  for (let bar = 0; bar < 8; bar++) {
+    iceclick(t0 + bar * w);
+    iceclick(t0 + bar * w + h);
+    if (bar % 2 === 0) iceclick(t0 + bar * w + q);
+  }
+  return t0 + w * 8;
+}
+
+// ── Deep Sea battle theme — B minor pentatonic, 90 BPM, drones + bubbles ──
+function _playBattleTheme_deepsea(t0) {
+  const ctx = _getCtx();
+  const bg = _battleGain;
+  const BPM = 90, b = 60 / BPM;
+  const e8 = b / 2, q = b, h = b * 2, w = b * 4;
+  const N = {
+    Fs2:92.50, B2:123.47, D3:146.83, E3:164.81, Fs3:185.00,
+    A3:220.00, B3:246.94, D4:293.66, E4:329.63, Fs4:369.99,
+    A4:440.00, B4:493.88, D5:587.33, E5:659.25
+  };
+  function drone(freq, t, dur) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    filt.type = 'lowpass'; filt.frequency.value = 550; filt.Q.value = 2.5;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.34, t + 0.22);
+    g.gain.setValueAtTime(0.34, t + dur - 0.35);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(filt); filt.connect(g); g.connect(bg);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+  function eerie(freq, t, dur, vol=0.28) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq * 1.018, t);
+    osc.frequency.linearRampToValueAtTime(freq, t + 0.28);
+    filt.type = 'bandpass'; filt.frequency.value = freq * 2.1; filt.Q.value = 3.2;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.09);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(dur * 0.84, 0.95));
+    osc.connect(filt); filt.connect(g); g.connect(bg);
+    osc.start(t); osc.stop(t + Math.min(dur * 0.88, 1.0));
+  }
+  function bubble(t) {
+    if (!_battleActive) return;
+    const f0 = 380 + Math.random() * 340;
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f0, t); osc.frequency.exponentialRampToValueAtTime(f0 * 2.4, t + 0.065);
+    g.gain.setValueAtTime(0.055, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    osc.connect(g); g.connect(bg); osc.start(t); osc.stop(t + 0.08);
+  }
+  // B minor pentatonic melody — dark, slow, 8 bars at 90 BPM
+  const melody = [
+    [N.B4,h],[N.A4,q],[N.Fs4,q],           // bar 1
+    [N.E4,h],[N.D4,h],                      // bar 2
+    [N.Fs4,q],[N.E4,q],[N.D4,q],[N.B3,q],  // bar 3
+    [N.B3,w],                               // bar 4
+    [N.D5,q],[N.B4,q],[N.A4,h],             // bar 5
+    [N.E4,q],[N.Fs4,q],[N.A4,q],[N.B4,q],  // bar 6
+    [N.D5,e8],[N.E5,e8],[N.D5,q],[N.B4,q],[N.A4,q],  // bar 7
+    [N.B3,w],                               // bar 8
+  ];
+  const bassLine = [
+    [N.B2,w],[N.E3,w],[N.B2,w],[N.Fs2,w],
+    [N.A3,w],[N.D3,w],[N.B2,w],[N.B2,w],
+  ];
+  let mt = t0; melody.forEach(([f,d]) => { eerie(f, mt, d); mt += d; });
+  let bt = t0; bassLine.forEach(([f,d]) => { drone(f, bt, d); bt += d; });
+  for (let bar = 0; bar < 8; bar++) {
+    const bt2 = t0 + bar * w;
+    bubble(bt2 + q * (0.3 + Math.random() * 1.4));
+    if (Math.random() > 0.38) bubble(bt2 + h + q * (0.2 + Math.random() * 1.6));
   }
   return t0 + w * 8;
 }
