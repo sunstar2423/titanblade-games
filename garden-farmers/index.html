@@ -2047,6 +2047,7 @@ function updateProjectiles(dt) {
           if (p.data.poison) { e.poisonTimer = 5; spawnFX(p.pos.clone(), 0x44ff00, 0.3, 0.8); }
           if (p.data.root) { e.rootTimer = 3.5; e.vel.set(0,0,0); spawnFX(e.pos.clone(), 0x228b22, 0.5, 1.5); showToast('🌿 Enemy rooted!', 1000); }
           if (p.data.hardFreeze) { e.slowTimer = 8; e.vel.set(0,0,0); spawnFX(e.pos.clone(), 0xaaddff, 0.45, 1.5); }
+          if (p.data.pull) { const pullDir = gs.playerPos.clone().sub(e.pos).setY(0).normalize(); e.vel.add(pullDir.multiplyScalar(12)); spawnFX(e.pos.clone().add(new THREE.Vector3(0,0.8,0)), 0x6688aa, 0.3, 0.8); }
           // AoE on impact — hardFreeze applies to all in AoE
           if (p.data.aoe) {
             gs.enemies.forEach(e2 => {
