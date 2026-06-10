@@ -2687,8 +2687,9 @@ function updateEnemies(dt) {
   gs.enemies.forEach(e => {
     // Find nearest target: placed plant → barn → player
     let tgt = new THREE.Vector3(0, 0, 0); // barn default
-    let minD = e.pos.length();
-    gs.placedPlants.forEach(p => { const d = e.pos.distanceTo(p.pos); if (d < minD) { minD = d; tgt = p.pos.clone(); } });
+    let minDsq = e.pos.lengthSq(); // squared dist to barn
+    for (const p of gs.placedPlants) { const dsq = e.pos.distanceToSquared(p.pos); if (dsq < minDsq) { minDsq = dsq; tgt = p.pos.clone(); } }
+    const minD = Math.sqrt(minDsq); // one sqrt only
     const pd = e.pos.distanceTo(gs.playerPos);
     if (pd < minD - 2) { tgt = gs.playerPos.clone(); }
 
@@ -4001,45 +4002,60 @@ function placeAtMouse() {
   saveGame();
 }
 
+// O(n) nearest-enemy scan using squared distance — no sort, no array alloc
+function nearestEnemyInRange(pos, range) {
+  let best = null, bestDsq = range * range;
+  for (const e of gs.enemies) {
+    const dsq = e.pos.distanceToSquared(pos);
+    if (dsq < bestDsq) { best = e; bestDsq = dsq; }
+  }
+  return best;
+}
+
+// Throttle counter — heavy per-plant enemy scans run every 3rd frame
+let _plantThrottleFrame = 0;
+
 function updatePlacedPlants(dt) {
+  const tdt = dt * 3; // compensated dt for throttled (every-3rd-frame) work
+  const doThrottle = (++_plantThrottleFrame % 3 === 0);
+
   gs.placedPlants.forEach(p => {
     p.timer -= dt;
 
-    // Passive effects every frame
-    if (p.data.kind === 'freeze') {
-      gs.enemies.forEach(e => { if (e.pos.distanceTo(p.pos) < p.data.range) e.slowTimer = Math.max(e.slowTimer, 0.1 + dt); });
-    }
-    if (p.data.kind === 'heal') {
-      if (gs.playerPos.distanceTo(p.pos) < p.data.range) gs.playerHP = Math.min(gs.playerMaxHP, gs.playerHP + (p.data.heal || 5) * dt);
-    }
-    if (p.data.kind === 'passive') {
-      gs.enemies.forEach(e => {
-        if (e.pos.distanceTo(p.pos) < p.data.range) {
-          let dmg = p.data.dmg;
-          // campfire_plt in snow biome: 3x damage to snowmen (they melt fast)
-          if (p.data.id === 'campfire_plt') dmg *= 3;
-          e.hp -= dmg * dt; if (e.hp <= 0) killEnemy(e);
-          if (p.data.root) {
-            e.rootTimer = Math.max(e.rootTimer || 0, 0.5);
-          } else if (p.data.slow) {
-            e.slowTimer = Math.max(e.slowTimer || 0, 0.35);
+    // Passive effects — throttled to every 3rd frame
+    if (doThrottle) {
+      if (p.data.kind === 'freeze') {
+        for (const e of gs.enemies) { if (e.pos.distanceToSquared(p.pos) < p.data.range * p.data.range) e.slowTimer = Math.max(e.slowTimer, 0.1 + tdt); }
+      }
+      if (p.data.kind === 'heal') {
+        if (gs.playerPos.distanceToSquared(p.pos) < p.data.range * p.data.range) gs.playerHP = Math.min(gs.playerMaxHP, gs.playerHP + (p.data.heal || 5) * tdt);
+      }
+      if (p.data.kind === 'passive') {
+        for (const e of gs.enemies) {
+          if (e.pos.distanceToSquared(p.pos) < p.data.range * p.data.range) {
+            let dmg = p.data.dmg;
+            if (p.data.id === 'campfire_plt') dmg *= 3;
+            e.hp -= dmg * tdt; if (e.hp <= 0) killEnemy(e);
+            if (p.data.root) e.rootTimer = Math.max(e.rootTimer || 0, 0.5);
+            else if (p.data.slow) e.slowTimer = Math.max(e.slowTimer || 0, 0.35);
           }
         }
-      });
+      }
     }
+
     if (p.data.kind === 'mine') {
-      const near = gs.enemies.find(e => e.pos.distanceTo(p.pos) < 1.5);
+      const near = gs.enemies.find(e => e.pos.distanceToSquared(p.pos) < 1.5*1.5);
       if (near) {
-        gs.enemies.forEach(e => { if (e.pos.distanceTo(p.pos) < p.data.aoe) dmgEnemy(e, p.data.dmg); });
+        for (const e of gs.enemies) { if (e.pos.distanceToSquared(p.pos) < p.data.aoe*p.data.aoe) dmgEnemy(e, p.data.dmg); }
         spawnFX(p.pos.clone(), 0xff8800, 0.5, p.data.aoe * 0.5);
         scene.remove(p.mesh); gs.placedPlants = gs.placedPlants.filter(x => x !== p);
       }
     }
 
-    // Turret fire
+    // Turret fire — O(n) scan instead of sort+alloc
     if (p.data.kind === 'turret' && p.timer <= 0) {
-      const nearest = gs.enemies.slice().sort((a, b) => a.pos.distanceTo(p.pos) - b.pos.distanceTo(p.pos))[0];
-      if (nearest && nearest.pos.distanceTo(p.pos) < p.data.range) {
+      const nearest = nearestEnemyInRange(p.pos, p.data.range);
+      if (nearest) {
         p.timer = p.data.cd || 1;
         if (p.data.hardFreeze) {
           nearest.slowTimer = 8; nearest.vel.set(0,0,0);
@@ -4119,10 +4135,10 @@ function updatePlacedPlants(dt) {
       }
     }
 
-    // Animal attacks
+    // Animal attacks — O(n) scan, no sort
     if (p.data.kind === 'animal' && p.timer <= 0) {
-      const nearest = gs.enemies.slice().sort((a, b) => a.pos.distanceTo(p.pos) - b.pos.distanceTo(p.pos))[0];
-      if (nearest && nearest.pos.distanceTo(p.pos) < p.data.range) {
+      const nearest = nearestEnemyInRange(p.pos, p.data.range);
+      if (nearest) {
         p.timer = p.data.cd;
         const dir = nearest.pos.clone().sub(p.pos).setY(0).normalize();
         // Face the enemy when attacking
@@ -5626,7 +5642,7 @@ function loop(ts) {
   // Sway plants gently in the wind
   const t = Date.now() * 0.001;
   gs.placedPlants.forEach((p, i) => {
-    if (!p.mesh) return;
+    if (!p.mesh || p.data.kind === 'animal') return; // animals move themselves
     if (!p._swayPh)  p._swayPh  = i * 2.4 + Math.random() * 1.8;
     if (!p._swaySpd) p._swaySpd = 0.6 + (i % 5) * 0.16;
     const sp = p._swaySpd, ph = p._swayPh;
