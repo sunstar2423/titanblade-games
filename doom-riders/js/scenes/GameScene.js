@@ -21,7 +21,7 @@ export default class GameScene extends Phaser.Scene {
         return (typeof result === 'number' && !isNaN(result)) ? result : 0;
     }
     
-    clampValue(value, min = 0, max = 5000) {
+    clampValue(value, min = 0, max = 999999) {
         const num = (typeof value === 'number' && !isNaN(value)) ? value : 0;
         return Math.max(min, Math.min(max, num));
     }
@@ -54,7 +54,15 @@ export default class GameScene extends Phaser.Scene {
             
             // Victory sound protection
             this.victorySoundPlayed = false;
-            
+
+            // Guards so level completion / game over only trigger once
+            this.levelCompleted = false;
+            this.gameOverTriggered = false;
+            this.gameState.sessionMoneyEarned = 0;
+
+            // Race doesn't start until the countdown finishes
+            this.raceStarted = false;
+
             // Get current bike and weapon stats
             try {
                 this.bikeStats = BIKE_TYPES[this.gameState.currentBike];
@@ -77,7 +85,12 @@ export default class GameScene extends Phaser.Scene {
                 this.gameState.currentBike = 'BMX';
                 this.gameState.currentWeapon = 'BASIC_SHOT';
             }
-            
+
+            // ❤️ HEALTH SYSTEM - max health scales with bike durability
+            this.maxHealth = Math.round(100 * (this.bikeStats.durability || 1));
+            this.playerHealth = this.maxHealth;
+            this.damageInvulnUntil = 0; // Brief grace period between hits
+
             // Set physics constants first
             console.log('PHYSICS object:', PHYSICS);
             console.log('PHYSICS.GROUND_LEVEL:', PHYSICS.GROUND_LEVEL);
@@ -166,22 +179,92 @@ export default class GameScene extends Phaser.Scene {
         // Create a simple test obstacle to ensure something is visible (disabled)
         // this.createTestObstacle();
         
-        console.log('=== DOOM RIDERS DEBUG SUMMARY ===');
+        // 🏍️ Rival riders line up on the grid with you
+        this.spawnStartingPack();
+
+        // 🏁 Start the race countdown (3... 2... 1... GO!)
+        this.startCountdown();
+
         console.log('GameScene.create() completed successfully!');
-        console.log('Screen dimensions:', SCREEN_WIDTH, 'x', SCREEN_HEIGHT);
-        console.log('Player position:', this.player.x, this.player.y);
-        console.log('Player size:', this.player.displayWidth, 'x', this.player.displayHeight);
-        console.log('Ground level:', this.groundLevel);
-        console.log('Camera bounds:', this.cameras.main.getBounds());
-        console.log('Camera scroll:', this.cameras.main.scrollX, this.cameras.main.scrollY);
-        console.log('Expected objects:');
-        console.log('- Screen border (magenta)');
-        console.log('- Ground line (green) at Y=' + this.groundLevel);
-        console.log('- Center markers (yellow)');
-        console.log('- Corner squares: Red(TL), Green(TR), Blue(BL), Yellow(BR)');
-        console.log('- Player (orange) at screen center');
-        console.log('- Test obstacles (red/orange) near ground');
-        console.log('=== END DEBUG SUMMARY ===');
+    }
+
+    spawnStartingPack() {
+        // A pack of rival racers starts on the grid with the player.
+        // Only these count for the race standings - riders that spawn
+        // ahead mid-race are traffic, not competitors.
+        const packSize = 4;
+        const flagColors = ['#FF4444', '#44AAFF', '#FFE744', '#BB66FF'];
+
+        for (let i = 0; i < packSize; i++) {
+            const rival = this.spawnEnemy(25 + i * 38); // Behind the player (player starts at x=200)
+            if (!rival) continue;
+
+            rival.isRacer = true;
+            rival.body.setVelocityX(0); // Hold the grid until GO (AI is gated on raceStarted)
+
+            // Flag marker so rivals stand out from traffic
+            const flag = this.add.text(rival.x, rival.y - 50, '⚑', {
+                fontSize: '20px',
+                fill: flagColors[i % flagColors.length],
+                stroke: '#000000',
+                strokeThickness: 2
+            }).setOrigin(0.5).setDepth(50);
+
+            rival.racerFlag = flag;
+            rival.once('destroy', () => {
+                if (flag && flag.active) flag.destroy();
+            });
+        }
+    }
+
+    startCountdown() {
+        this.raceStarted = false;
+
+        const countText = this.add.text(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 80, '3', {
+            fontSize: '120px',
+            fill: '#FFD700',
+            fontFamily: 'Arial',
+            fontWeight: 'bold',
+            stroke: '#000000',
+            strokeThickness: 8
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(2000);
+
+        const pulse = () => {
+            countText.setScale(1.6);
+            this.tweens.add({
+                targets: countText,
+                scaleX: 1,
+                scaleY: 1,
+                duration: 350,
+                ease: 'Back.easeOut'
+            });
+        };
+        pulse();
+
+        let count = 3;
+        this.time.addEvent({
+            delay: 850,
+            repeat: 3,
+            callback: () => {
+                count--;
+                if (count > 0) {
+                    countText.setText(`${count}`);
+                    pulse();
+                } else if (count === 0) {
+                    countText.setText('GO!');
+                    countText.setFill('#00FF00');
+                    pulse();
+                    this.raceStarted = true;
+                } else {
+                    this.tweens.add({
+                        targets: countText,
+                        alpha: 0,
+                        duration: 300,
+                        onComplete: () => countText.destroy()
+                    });
+                }
+            }
+        });
     }
     
     createWorld() {
@@ -355,17 +438,24 @@ export default class GameScene extends Phaser.Scene {
         this.player.body.setCollideWorldBounds(true); // Prevent falling off the world
         console.log('Player collision with world bounds enabled');
         
-        // Add basic stats for movement
-        this.player.acceleration = 150;
-        this.player.maxSpeed = 250;
-        this.player.jumpPower = 300;
-        this.player.body.setMaxVelocityX(this.player.maxSpeed);
+        // Apply equipped bike stats so store upgrades actually matter
+        this.player.acceleration = this.bikeStats.acceleration;
+        this.player.maxSpeed = this.bikeStats.maxSpeed;
+        this.player.jumpPower = this.bikeStats.jumpPower;
+        this.player.handling = this.bikeStats.handling || 1;
+        // Generous cap so ramps and nitro can push past base speed
+        this.player.body.setMaxVelocityX(this.player.maxSpeed * 2.5);
 
-        // Initialize jump abilities
+        // Initialize jump abilities and trick state
         this.player.canDoubleJump = false;
         this.player.canTripleJump = false;
-        
-        console.log('Player setup completed with size and physics');
+        this.player.airTime = 0;
+        this.player.trickMultiplier = 1;
+        this.player.canAttack = true;
+        this.player.attackCooldown = 0;
+        this.player.flipRotation = 0;
+
+        console.log(`Player setup completed with ${this.gameState.currentBike} stats:`, this.bikeStats);
         
         // Set up camera and physics world bounds to match level length
         const worldWidth = this.currentLevelConfig.length + 200;
@@ -402,7 +492,12 @@ export default class GameScene extends Phaser.Scene {
         this.projectiles = this.physics.add.group({
             collideWorldBounds: false
         });
-        
+
+        this.coins = this.physics.add.group({
+            collideWorldBounds: false,
+            allowGravity: false
+        });
+
         // Create ground collision body across entire level
         this.groundBody = this.physics.add.staticGroup();
         const levelWidth = this.currentLevelConfig.length + 500; // Level length + buffer
@@ -427,6 +522,73 @@ export default class GameScene extends Phaser.Scene {
 
         // ⚔️ PLAYER ATTACK TRACKING ⚔️
         this.lastPlayerAttackTime = 0;
+
+        // 🪙 COIN TRAILS - scattered pickups along the whole track
+        this.createCoinTrails();
+    }
+
+    createCoinTrails() {
+        let x = 700;
+        const endX = this.currentLevelConfig.length - 400;
+
+        while (x < endX) {
+            const clusterSize = 3 + Math.floor(Math.random() * 3); // 3-5 coins
+            const isArc = Math.random() < 0.35; // Some clusters arc high - jump to collect
+
+            for (let i = 0; i < clusterSize; i++) {
+                const coinX = x + i * 45;
+                let coinY;
+                if (isArc) {
+                    // Arc pattern peaking mid-cluster, rewards jumping
+                    const t = clusterSize > 1 ? i / (clusterSize - 1) : 0.5;
+                    coinY = this.groundLevel - 110 - Math.sin(t * Math.PI) * 90;
+                } else {
+                    coinY = this.groundLevel - 45;
+                }
+
+                const coin = this.coins.create(coinX, coinY, 'coin');
+                coin.setDisplaySize(22, 22);
+                coin.setDepth(7);
+                if (coin.body) {
+                    coin.body.setAllowGravity(false);
+                    coin.body.setSize(18, 18);
+                }
+
+                // Spinning shimmer effect
+                this.tweens.add({
+                    targets: coin,
+                    scaleX: coin.scaleX * 0.2,
+                    duration: 400 + Math.random() * 200,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+            }
+
+            x += 350 + Math.random() * 350;
+        }
+
+        console.log(`🪙 Coin trails created across level (${this.coins.children.size} coins)`);
+    }
+
+    collectCoin(player, coin) {
+        const value = GAME_CONFIG.COIN_VALUE;
+        this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, value), 0, GAME_CONFIG.SESSION_MONEY_CAP);
+        this.addCombo('coin', 10);
+
+        // Sparkle pickup effect
+        const sparkle = this.add.circle(coin.x, coin.y, 12, 0xFFD700, 0.8);
+        sparkle.setDepth(60);
+        this.tweens.add({
+            targets: sparkle,
+            scaleX: 2,
+            scaleY: 2,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => sparkle.destroy()
+        });
+
+        coin.destroy();
     }
     
     setupControls() {
@@ -440,9 +602,6 @@ export default class GameScene extends Phaser.Scene {
         // 🚀 NITRO BOOST CONTROLS 🚀
         this.nitroKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
         
-        // WASD alternative controls
-        this.wasd = this.input.keyboard.addKeys('W,S,A,D');
-        
         // Mobile touch controls
         this.setupMobileTouchControls();
     }
@@ -454,7 +613,8 @@ export default class GameScene extends Phaser.Scene {
             right: false,
             jump: false,
             attack: false,
-            weapon: false
+            weapon: false,
+            boost: false
         };
         
         // Create mobile control buttons
@@ -547,6 +707,28 @@ export default class GameScene extends Phaser.Scene {
             fill: '#FFFFFF'
         }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
         
+        // Nitro boost button
+        this.boostButton = this.add.circle(SCREEN_WIDTH - 230, SCREEN_HEIGHT - 130, 30, 0xAA3300, buttonStyle.fillAlpha)
+            .setScrollFactor(0)
+            .setDepth(1000)
+            .setInteractive();
+        this.add.text(SCREEN_WIDTH - 230, SCREEN_HEIGHT - 130, '🔥', {
+            fontSize: '20px'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+        this.boostButton.on('pointerdown', () => {
+            this.touchInputs.boost = true;
+            this.boostButton.setFillStyle(0xFF4500, 0.8);
+        });
+        this.boostButton.on('pointerup', () => {
+            this.touchInputs.boost = false;
+            this.boostButton.setFillStyle(0xAA3300, 0.5);
+        });
+        this.boostButton.on('pointerout', () => {
+            this.touchInputs.boost = false;
+            this.boostButton.setFillStyle(0xAA3300, 0.5);
+        });
+
         // Store button references for interaction
         this.mobileButtons = {
             left: this.leftButton,
@@ -554,6 +736,7 @@ export default class GameScene extends Phaser.Scene {
             jump: this.jumpButton,
             attack: this.attackButton,
             weapon: this.weaponButton,
+            boost: this.boostButton,
             pause: this.pauseButton
         };
 
@@ -789,10 +972,11 @@ export default class GameScene extends Phaser.Scene {
         
         const instructions = [
             '🎮 CONTROLS:',
-            '← → Arrow Keys: Move',
-            'SPACE: Jump',
-            'A: Attack Enemies',
-            'W: Use Weapon',
+            '← → Brake / Throttle',
+            'SPACE: Jump (x2 mid-air)',
+            'A: Attack | W: Weapon',
+            'SHIFT: Nitro Boost',
+            '←/→ in air: FLIP for points!',
             'P: Pause Game'
         ];
         
@@ -1129,7 +1313,10 @@ export default class GameScene extends Phaser.Scene {
         
         // Player vs powerups
         this.physics.add.overlap(this.player, this.powerups, this.collectPowerup, null, this);
-        
+
+        // Player vs coins
+        this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this);
+
         // Projectiles vs enemies
         this.physics.add.overlap(this.projectiles, this.enemies, this.projectileHitEnemy, null, this);
 
@@ -1141,6 +1328,9 @@ export default class GameScene extends Phaser.Scene {
         
         // Enemies vs obstacles (including ramps for physics interactions)
         this.physics.add.collider(this.enemies, this.obstacles, this.enemyHitObstacle, null, this);
+
+        // Enemies vs jump obstacles (logs, barriers, ramps live in this group)
+        this.physics.add.collider(this.enemies, this.jumpObstacles, this.enemyHitObstacle, null, this);
         
         // Obstacles vs ground (for physics objects)
         this.physics.add.collider(this.obstacles, this.groundBody);
@@ -1162,40 +1352,62 @@ export default class GameScene extends Phaser.Scene {
             fontStyle: 'bold'
         });
         
-        // Speed boost effect indicator
-        this.speedBoostIndicator = this.add.text(10, 100, '', {
+        // ❤️ HEALTH BAR (camera-fixed)
+        this.healthBarBg = this.add.rectangle(20, 135, 204, 18, 0x222222)
+            .setOrigin(0, 0.5).setScrollFactor(0).setDepth(900)
+            .setStrokeStyle(2, 0x000000);
+        this.healthBar = this.add.rectangle(22, 135, 200, 14, 0x00DD00)
+            .setOrigin(0, 0.5).setScrollFactor(0).setDepth(901);
+        this.healthText = this.add.text(232, 135, `HP ${this.playerHealth}/${this.maxHealth}`, {
+            fontSize: '14px',
+            fill: '#FFFFFF',
+            fontFamily: 'Arial',
+            fontWeight: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(901);
+
+        // Speed boost effect indicator (camera-fixed)
+        this.speedBoostIndicator = this.add.text(20, 240, '', {
             fontSize: '16px',
             fill: '#00FF00',
-            fontFamily: 'Arial'
-        });
+            fontFamily: 'Arial',
+            fontWeight: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setScrollFactor(0).setDepth(900);
 
-        // 🔥 COMBO SYSTEM UI 🔥
-        this.comboIndicator = this.add.text(10, 120, '', {
+        // 🔥 COMBO SYSTEM UI 🔥 (camera-fixed)
+        this.comboIndicator = this.add.text(20, 155, '', {
             fontSize: '18px',
             fill: '#FF4500',
             fontFamily: 'Arial',
-            fontWeight: 'bold'
-        });
+            fontWeight: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setScrollFactor(0).setDepth(900);
 
-        // 🚀 NITRO BOOST UI 🚀
-        this.nitroBarBg = this.add.rectangle(10, 150, 200, 20, 0x333333);
-        this.nitroBarBg.setOrigin(0, 0.5);
-
-        this.nitroBar = this.add.rectangle(10, 150, 200, 20, 0xFF4500);
-        this.nitroBar.setOrigin(0, 0.5);
-
-        this.nitroText = this.add.text(10, 170, 'NITRO: 0%', {
+        // 🚀 NITRO BOOST UI 🚀 (camera-fixed)
+        this.nitroBarBg = this.add.rectangle(20, 190, 200, 16, 0x333333)
+            .setOrigin(0, 0.5).setScrollFactor(0).setDepth(900);
+        this.nitroBar = this.add.rectangle(20, 190, 200, 16, 0xFF4500)
+            .setOrigin(0, 0.5).setScrollFactor(0).setDepth(901);
+        this.nitroText = this.add.text(228, 190, 'NITRO 0%', {
             fontSize: '14px',
             fill: '#FFFFFF',
-            fontFamily: 'Arial'
-        });
+            fontFamily: 'Arial',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(901);
 
-        // 🌦️ WEATHER INDICATOR 🌦️
-        this.weatherText = this.add.text(10, 190, '🌤️ Clear', {
+        // 🌦️ WEATHER INDICATOR 🌦️ (camera-fixed)
+        this.weatherText = this.add.text(20, 215, '🌤️ Clear', {
             fontSize: '14px',
             fill: '#FFFFFF',
-            fontFamily: 'Arial'
-        });
+            fontFamily: 'Arial',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setScrollFactor(0).setDepth(900);
         
         // Controls help removed for clean gameplay interface
         
@@ -1225,8 +1437,8 @@ export default class GameScene extends Phaser.Scene {
         this.progressText.setOrigin(0.5, 0);
         this.progressText.setScrollFactor(0);
         
-        // Racing position display
-        this.positionText = this.add.text(20, 70, '', {
+        // Racing position display (below the DOM score/money overlay)
+        this.positionText = this.add.text(20, 105, '', {
             fontSize: '20px',
             fill: '#FFD700',
             fontFamily: 'Arial',
@@ -1235,17 +1447,7 @@ export default class GameScene extends Phaser.Scene {
             strokeThickness: 2
         });
         this.positionText.setScrollFactor(0);
-        
-        // Money display during gameplay
-        this.moneyText = this.add.text(20, 100, '', {
-            fontSize: '16px',
-            fill: '#FFD700',
-            fontFamily: 'Arial',
-            fontWeight: 'bold',
-            stroke: '#000000',
-            strokeThickness: 2
-        });
-        this.moneyText.setScrollFactor(0);
+        this.positionText.setDepth(900);
     }
     
     update(time, delta) {
@@ -1287,27 +1489,40 @@ export default class GameScene extends Phaser.Scene {
     
     updatePlayer(delta) {
         const deltaSeconds = delta / 1000;
-        
+
+        // Hold position until the countdown finishes
+        if (!this.raceStarted) {
+            this.player.body.setVelocityX(0);
+            return;
+        }
+
         // Check if player is on ground
         const wasOnGround = this.player.isOnGround;
         this.player.isOnGround = this.player.body.touching.down;
-        
+
         // Track air time for tricks
         if (!this.player.isOnGround) {
             this.player.airTime += deltaSeconds;
         } else if (!wasOnGround) {
-            // Just landed - calculate trick bonus
+            // Just landed - score flips first, then air-time bonus
+            this.handleFlipLanding();
             this.calculateTrickBonus();
             this.player.airTime = 0;
             this.player.lastGroundTime = Date.now();
         }
-        
+
         // Automatic forward movement with left/right control
-        const leftPressed = this.cursors.left.isDown || this.wasd.A.isDown || (this.touchInputs && this.touchInputs.left);
-        const rightPressed = this.cursors.right.isDown || this.wasd.D.isDown || (this.touchInputs && this.touchInputs.right);
-        
-        // Base forward speed (automatic movement)
-        let baseForwardSpeed = this.currentLevelConfig.worldSpeedMultiplier * 120; // Automatic forward movement
+        // (A/D removed from steering: A is the attack key, W fires the weapon)
+        const leftPressed = this.cursors.left.isDown || (this.touchInputs && this.touchInputs.left);
+        const rightPressed = this.cursors.right.isDown || (this.touchInputs && this.touchInputs.right);
+
+        // Base forward speed scales with the equipped bike's top speed
+        let baseForwardSpeed = this.currentLevelConfig.worldSpeedMultiplier * (60 + this.player.maxSpeed * 0.35);
+
+        // ⚡ SPEED BOOST powerup now actually speeds up the player
+        if (this.speedBoostActive) {
+            baseForwardSpeed *= POWERUPS.SPEED_BOOST.effect;
+        }
 
         // 🚀 NITRO BOOST INTEGRATION 🚀
         const nitroMultiplier = this.getNitroSpeedMultiplier();
@@ -1318,25 +1533,33 @@ export default class GameScene extends Phaser.Scene {
             this.createNitroEffect();
         }
 
-        if (leftPressed) {
-            // Slow down or move backwards
-            this.player.body.setVelocityX(Math.max(0, baseForwardSpeed - 100));
-        } else if (rightPressed) {
-            // Speed up beyond base speed
-            this.player.body.setVelocityX(baseForwardSpeed + 100);
+        // Better acceleration stat = bigger throttle response
+        const throttleBoost = 60 + this.player.acceleration * 0.4;
+
+        if (this.player.isOnGround) {
+            if (leftPressed) {
+                // Brake / slow down
+                this.player.body.setVelocityX(Math.max(0, baseForwardSpeed - 120));
+            } else if (rightPressed) {
+                // Throttle up beyond base speed
+                this.player.body.setVelocityX(baseForwardSpeed + throttleBoost);
+            } else {
+                // Maintain automatic forward speed
+                this.player.body.setVelocityX(baseForwardSpeed);
+            }
         } else {
-            // Maintain automatic forward speed
+            // 🤸 AIR FLIPS - lean back/forward in the air for trick points
+            const rotSpeed = 4.5 * this.player.handling;
+            if (leftPressed) {
+                this.player.flipRotation -= rotSpeed * deltaSeconds;
+            } else if (rightPressed) {
+                this.player.flipRotation += rotSpeed * deltaSeconds;
+            }
+            this.player.setRotation(this.player.flipRotation);
+            // Keep momentum while airborne
             this.player.body.setVelocityX(baseForwardSpeed);
         }
-        
-        // Engine sound management removed - was causing clicking sound bug
-        // Game now plays without engine/movement audio
-        
-        // Log movement occasionally (every 60 frames = 1 second)
-        if (this.time.now % 1000 < 16) {
-            console.log(`🏍️ Player moving at speed: ${Math.round(this.player.body.velocity.x)}, Base speed: ${Math.round(baseForwardSpeed)}`);
-        }
-        
+
         // Jumping with double jump ability (W key removed to prevent conflict with weapon firing)
         const jumpPressed = Phaser.Input.Keyboard.JustDown(this.spaceKey) || 
                            Phaser.Input.Keyboard.JustDown(this.cursors.up);
@@ -1426,12 +1649,19 @@ export default class GameScene extends Phaser.Scene {
         this.gameState.currentSpeed = Math.abs(this.player.body.velocity.x);
         
         // Enemy AI - now works with world coordinates and camera following
-        this.enemies.children.entries.forEach(enemy => {
-            if (enemy.body) {
-                // ⚔️ ENHANCED ENEMY AI WITH ATTACK PATTERNS ⚔️
-                this.updateEnemyAttackBehavior(enemy, delta);
-            }
-        });
+        if (this.raceStarted) {
+            this.enemies.children.entries.forEach(enemy => {
+                if (enemy.body) {
+                    // ⚔️ ENHANCED ENEMY AI WITH ATTACK PATTERNS ⚔️
+                    this.updateEnemyAttackBehavior(enemy, delta);
+
+                    // Keep rival flags floating above their riders
+                    if (enemy.racerFlag && enemy.racerFlag.active) {
+                        enemy.racerFlag.setPosition(enemy.x, enemy.y - 50);
+                    }
+                }
+            });
+        }
         
         // Remove off-screen objects (based on camera bounds)
         this.removeOffScreenObjects();
@@ -1447,14 +1677,18 @@ export default class GameScene extends Phaser.Scene {
         const lookAheadDistance = Math.max(80, targetVelocityX * 0.5);
         const checkX = enemy.x + lookAheadDistance;
         
-        // Check for obstacles in front of enemy
-        const nearbyObstacles = this.obstacles.children.entries.filter(obstacle => {
+        // Check for obstacles in front of enemy (must-jump obstacles live in jumpObstacles)
+        const candidates = [
+            ...this.obstacles.children.entries,
+            ...this.jumpObstacles.children.entries
+        ];
+        const nearbyObstacles = candidates.filter(obstacle => {
             if (!obstacle.body) return false;
-            
+
             const obstacleX = obstacle.x;
             const isInPath = obstacleX > enemy.x && obstacleX < checkX;
             const isAtSimilarHeight = Math.abs(obstacle.y - enemy.y) < 100;
-            
+
             return isInPath && isAtSimilarHeight;
         });
         
@@ -1729,27 +1963,28 @@ export default class GameScene extends Phaser.Scene {
     }
 
     updateSpawning(time, delta) {
+        if (!this.raceStarted) return;
+
         this.spawnTimer += delta;
-        
+
         // Calculate spawn position ahead of player in world coordinates
         const spawnDistance = 800; // Distance ahead of player to spawn objects
         const playerSpawnX = this.player.x + spawnDistance;
-        
+
         // Spawn obstacles
         if (this.spawnTimer > 2000 && this.lastObstacleX < this.player.x + spawnDistance - 200) {
             this.spawnRandomObstacle(playerSpawnX);
             this.spawnTimer = 0;
         }
-        
+
         // Spawn enemies - limited by level configuration
         const maxEnemies = this.currentLevelConfig.maxEnemies || 10;
         const currentEnemyCount = this.enemies.children.size;
-        
+
         if (currentEnemyCount < maxEnemies && Math.random() < 0.0015 * delta) {
             this.spawnEnemy(playerSpawnX);
-            console.log(`🏍️ Enemy spawned: ${currentEnemyCount + 1}/${maxEnemies}`);
         }
-        
+
         // Spawn powerups
         if (Math.random() < 0.001 * delta) {
             this.spawnPowerup(playerSpawnX);
@@ -1762,9 +1997,6 @@ export default class GameScene extends Phaser.Scene {
             console.error(`❌ Invalid spawnX: ${spawnX}. Must be a valid world coordinate.`);
             return;
         }
-        
-        // DIAGNOSTIC: Log spawn coordinates for debugging positioning
-        console.log(`🎯 OBSTACLE SPAWN: spawnX=${spawnX}, playerX=${this.player.x}, relative=${spawnX - this.player.x}`);
         
         const obstacleTypes = Object.keys(OBSTACLES);
         const randomType = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
@@ -1780,24 +2012,15 @@ export default class GameScene extends Phaser.Scene {
         
         let spriteName = spriteMap[randomType] || randomType.toLowerCase();
         
-        // List all available textures for debugging (only once)
-        if (!this.texturesListed) {
-            console.log('Available textures:', Object.keys(this.textures.list));
-            this.texturesListed = true;
-        }
-        
         // Check if real texture exists, otherwise use fallback
         if (!this.textures.exists(spriteName)) {
             const fallbackName = spriteName + '_fallback';
             if (this.textures.exists(fallbackName)) {
                 spriteName = fallbackName;
-                console.log(`Using fallback texture: ${fallbackName}`);
             } else {
                 console.warn(`No texture found for obstacle: ${spriteName}, using 'bike' as emergency fallback`);
                 spriteName = 'bike'; // Emergency fallback
             }
-        } else {
-            console.log(`Using real texture: ${spriteName}`);
         }
         
         // Position obstacle so bottom edge aligns EXACTLY with player and enemy bottom edges
@@ -1809,17 +2032,14 @@ export default class GameScene extends Phaser.Scene {
         const obstacle = (obstacleData.mustJump || obstacleData.isRamp) ?
             this.jumpObstacles.create(spawnX, 0, spriteName) : // Temporary Y position
             this.obstacles.create(spawnX, 0, spriteName); // Temporary Y position
-        
-        console.log(`🏗️ OBSTACLE SPAWNED: ${randomType} → ${(obstacleData.mustJump || obstacleData.isRamp) ? 'jumpObstacles' : 'obstacles'} group`);
-        
+
         // Configure obstacle physics and appearance
         obstacle.setDisplaySize(obstacleData.width, obstacleData.height); // Set size FIRST
-        
+
         // Now position based on actual display height
         const obstacleY = sharedBottomLevel - (obstacle.displayHeight / 2);
         obstacle.setY(obstacleY);
-        
-        console.log(`🏁 Spawning ${randomType} at WORLD coordinates (${spawnX}, ${obstacleY}), obstacle display height=${obstacle.displayHeight}, bottom edge at Y=${sharedBottomLevel}`);
+
         obstacle.setDepth(8); // Behind enemies and player
         
         // Debug outlines removed for cleaner gameplay
@@ -1839,11 +2059,7 @@ export default class GameScene extends Phaser.Scene {
             // Jump obstacles and RAMPS are completely solid - no overlap allowed
             if (obstacleData.mustJump || obstacleData.isRamp) {
                 obstacle.body.setSize(obstacleData.width, obstacleData.height); // Full size collision
-                console.log(`Created SOLID ${obstacleData.isRamp ? 'RAMP' : 'jump obstacle'}: ${randomType} at (${spawnX}, ${obstacle.y})`);
             }
-            
-            // DIAGNOSTIC: Log physics state to verify static behavior
-            console.log(`🔧 PHYSICS CHECK: ${randomType} gravity=(${obstacle.body.gravity.x}, ${obstacle.body.gravity.y}), velocity=(${obstacle.body.velocity.x}, ${obstacle.body.velocity.y}), immovable=${obstacle.body.immovable}`);
         }
         obstacle.obstacleType = randomType;
         obstacle.points = obstacleData.points;
@@ -1856,24 +2072,18 @@ export default class GameScene extends Phaser.Scene {
             obstacle.body.checkCollision.down = true;
             obstacle.body.checkCollision.left = true;
             obstacle.body.checkCollision.right = true;
-            console.log(`🚀 RAMP SETUP: ${randomType} configured for collision on all sides`);
         }
-        
-        // DIAGNOSTIC: Add final positioning confirmation
-        console.log(`✅ OBSTACLE CREATED: ${randomType} at final world position (${obstacle.x}, ${obstacle.y}), relative to player: ${obstacle.x - this.player.x}`);
-        
+
         this.lastObstacleX = spawnX;
     }
     
     spawnEnemy(spawnX) {
         // Validate that spawnX is provided and is a world coordinate
-        if (typeof spawnX !== 'number' || spawnX < 100) {
+        // (starting-grid rivals can spawn near x=0, behind the player)
+        if (typeof spawnX !== 'number' || isNaN(spawnX) || spawnX < 0) {
             console.error(`❌ Invalid enemy spawnX: ${spawnX}. Must be a valid world coordinate.`);
             return;
         }
-        
-        // DIAGNOSTIC: Log enemy spawn coordinates for debugging positioning
-        console.log(`🎯 ENEMY SPAWN: spawnX=${spawnX}, playerX=${this.player.x}, relative=${spawnX - this.player.x}`);
         
         // Position enemy so bottom edge aligns exactly with player and obstacles
         const sharedBottomLevel = this.groundLevel; // Same bottom level as player and obstacles
@@ -1889,14 +2099,14 @@ export default class GameScene extends Phaser.Scene {
         const enemyY = sharedBottomLevel - (enemy.displayHeight / 2);
         enemy.setY(enemyY);
         
-        console.log(`🏁 Spawning enemy with bottom-center origin: position (${spawnX}, ${sharedBottomLevel}), bottom edge at Y=${sharedBottomLevel}`);
         enemy.setDepth(9); // Just below player
         enemy.body.setSize(65, 40); // Increased hitbox accordingly
         enemy.body.setBounce(0.1, 0);
         enemy.body.setDragX(30);
         
-        // Enemy properties
-        enemy.baseSpeed = ENEMY_TYPES.RIDER.speed + Math.random() * 50;
+        // Enemy properties - speed scales with level difficulty so races stay competitive
+        enemy.baseSpeed = (ENEMY_TYPES.RIDER.speed + Math.random() * 50) *
+            (this.currentLevelConfig.worldSpeedMultiplier || 1) * 0.85;
         enemy.health = ENEMY_TYPES.RIDER.health;
         enemy.points = ENEMY_TYPES.RIDER.points;
         enemy.money = ENEMY_TYPES.RIDER.money || 0;
@@ -1913,6 +2123,8 @@ export default class GameScene extends Phaser.Scene {
         
         // Set initial velocity towards player (since enemies are spawned ahead)
         enemy.body.setVelocityX(-enemy.baseSpeed);
+
+        return enemy;
     }
     
     spawnPowerup(spawnX) {
@@ -1954,9 +2166,10 @@ export default class GameScene extends Phaser.Scene {
     }
     
     fireWeapon() {
+        if (!this.raceStarted) return;
         if (this.weaponCooldown <= 0) {
             const weapon = this.weaponStats;
-            
+
             // Play attack sound
             if (this.attackSound) {
                 try {
@@ -1965,11 +2178,11 @@ export default class GameScene extends Phaser.Scene {
                     console.warn('Could not play attack sound:', error);
                 }
             }
-            
+
             const projectile = this.projectiles.create(
                 this.player.x + 30,
                 this.player.y,
-                null
+                'projectile'
             );
             
             // Configure projectile based on weapon type
@@ -2049,7 +2262,7 @@ export default class GameScene extends Phaser.Scene {
             const previousScore = this.gameState.score;
             
             // 🔥 COMBO SYSTEM INTEGRATION 🔥 - Remove the manual score addition since addCombo will handle it
-            this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, enemy.money), 0, 500);
+            this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, enemy.money), 0, GAME_CONFIG.SESSION_MONEY_CAP);
             const comboBonus = this.addCombo('enemy', enemy.points);
             console.log(`🎯 Enemy defeated with combo bonus: ${comboBonus}`);
             
@@ -2076,6 +2289,9 @@ export default class GameScene extends Phaser.Scene {
     }
     
     projectileHitEnemy(projectile, enemy) {
+        // Enemy projectiles must not damage other enemies
+        if (projectile.isEnemyProjectile) return;
+
         // Apply damage based on weapon
         enemy.health -= projectile.damage;
         
@@ -2109,7 +2325,7 @@ export default class GameScene extends Phaser.Scene {
             const previousScore = this.gameState.score;
             
             // 🔥 COMBO SYSTEM INTEGRATION 🔥 - Remove the manual score addition since addCombo will handle it
-            this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, enemy.money), 0, 500);
+            this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, enemy.money), 0, GAME_CONFIG.SESSION_MONEY_CAP);
             const comboBonus = this.addCombo('enemy', enemy.points);
             console.log(`🎯 Enemy defeated with combo bonus: ${comboBonus}`);
             
@@ -2129,7 +2345,7 @@ export default class GameScene extends Phaser.Scene {
         
         const hitPoints = this.safeMultiply(25, projectile.damage);
         const previousScore = this.gameState.score;
-        this.gameState.score = this.clampValue(this.safeAdd(this.gameState.score, hitPoints), 0, 5000);
+        this.gameState.score = this.clampValue(this.safeAdd(this.gameState.score, hitPoints), 0, GAME_CONFIG.MAX_SCORE);
         console.log(`🎯 SCORE! Projectile hit: +${hitPoints} points (${previousScore} → ${this.gameState.score})`);
         
         // Chain shots can penetrate
@@ -2168,16 +2384,8 @@ export default class GameScene extends Phaser.Scene {
         // Only handle enemy projectiles
         if (!projectile.isEnemyProjectile) return;
 
-        console.log('💥 Player hit by enemy projectile!');
-
-        // Apply damage to player (if health system exists)
-        if (this.gameState.health !== undefined) {
-            this.gameState.health = Math.max(0, this.gameState.health - projectile.damage);
-        }
-
-        // Visual feedback
-        player.setTint(0xFF0000);
-        this.time.delayedCall(200, () => player.clearTint());
+        // Apply damage to the player's health
+        this.damagePlayer(15);
 
         // Screen shake for impact
         this.cameras.main.shake(200, 0.02);
@@ -2208,15 +2416,9 @@ export default class GameScene extends Phaser.Scene {
     }
 
     hitJumpObstacle(player, obstacle) {
-        console.log(`🎯 DEBUG: hitJumpObstacle called - JUMP OBSTACLE hit! Type: ${obstacle.obstacleType}`);
-        console.log(`🔥 COLLISION DETECTED! Player hit obstacle in jumpObstacles group!`);
-
         // Check if this is a RAMP first!
         if (obstacle.isRamp) {
-            // RAMPS: Provide EPIC jump boost when touched - ENHANCED!
-            console.log('🚀🚀🚀 EPIC RAMP HIT! LAUNCHING INTO THE SKY! 🚀🚀🚀');
-            console.log(`🎯 Ramp type: ${obstacle.obstacleType}, isRamp: ${obstacle.isRamp}`);
-
+            // RAMPS: Provide EPIC jump boost when touched
             const approachSpeed = Math.abs(player.body.velocity.x);
             // ENHANCED: Much bigger jump boost that scales with speed
             const baseJumpBoost = 800; // Increased from 600
@@ -2268,14 +2470,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     hitObstacle(player, obstacle) {
-        console.log(`🎯 DEBUG: hitObstacle called - Obstacle type: ${obstacle.obstacleType}, mustJump: ${obstacle.mustJump}, isRamp: ${obstacle.isRamp}`);
-        console.log(`🔥 COLLISION DETECTED! Player hit obstacle in obstacles group!`);
-        
         if (obstacle.isRamp) {
-            // RAMPS: Provide EPIC jump boost when touched - ENHANCED!
-            console.log('🚀🚀🚀 EPIC RAMP HIT! LAUNCHING INTO THE SKY! 🚀🚀🚀');
-            console.log(`🎯 Ramp type: ${obstacle.obstacleType}, isRamp: ${obstacle.isRamp}`);
-
+            // RAMPS: Provide EPIC jump boost when touched
             const approachSpeed = Math.abs(player.body.velocity.x);
             // ENHANCED: Much bigger jump boost that scales with speed
             const baseJumpBoost = 800; // Increased from 600
@@ -2333,7 +2529,8 @@ export default class GameScene extends Phaser.Scene {
             
             // Regular obstacles cause damage and knockback
             this.gameState.score = Math.max(0, this.gameState.score - 50);
-            
+            this.damagePlayer(15);
+
             // More realistic collision physics
             const collisionForce = Math.abs(player.body.velocity.x) * 0.01;
             player.body.setVelocityX(player.body.velocity.x * (0.3 + collisionForce));
@@ -2352,6 +2549,9 @@ export default class GameScene extends Phaser.Scene {
         const slowdownFactor = 0.3;
         const slowdownDuration = 2000; // 2 seconds
         
+        // Crashing into an obstacle hurts
+        this.damagePlayer(10);
+
         // Apply immediate velocity reduction
         player.body.setVelocityX(player.body.velocity.x * slowdownFactor);
         player.body.setVelocityY(-100); // Small bounce
@@ -2480,13 +2680,14 @@ export default class GameScene extends Phaser.Scene {
         const now = Date.now();
         if (!enemy.lastHitTime || now - enemy.lastHitTime > 1000) { // 1 second cooldown
             enemy.lastHitTime = now;
-            
+
             this.gameState.score = Math.max(0, this.gameState.score - 50); // Less penalty
-            
+            this.damagePlayer(12);
+
             // Minor speed adjustment instead of major knockback
             player.body.setVelocityX(player.body.velocity.x * 0.8); // 20% reduction instead of 70%
             enemy.body.setVelocityX(enemy.body.velocity.x * 0.8);
-            
+
             this.flashScreen(0xff0000);
             this.playCrashSound();
         }
@@ -2558,6 +2759,25 @@ export default class GameScene extends Phaser.Scene {
             case 'INVINCIBILITY':
                 this.activateInvincibility(powerupData.duration);
                 break;
+            case 'HEALTH_PACK': {
+                this.healPlayer(powerupData.value);
+                const healText = this.add.text(powerup.x, powerup.y - 30, `+${powerupData.value} HP`, {
+                    fontSize: '20px',
+                    fill: '#FF5555',
+                    fontFamily: 'Arial',
+                    fontWeight: 'bold',
+                    stroke: '#000000',
+                    strokeThickness: 2
+                }).setOrigin(0.5).setDepth(1000);
+                this.tweens.add({
+                    targets: healText,
+                    y: healText.y - 50,
+                    alpha: 0,
+                    duration: 1200,
+                    onComplete: () => healText.destroy()
+                });
+                break;
+            }
         }
         
         this.gameState.score += powerupData.points;
@@ -2618,7 +2838,9 @@ export default class GameScene extends Phaser.Scene {
     }
     
     createCollectionEffect(x, y, color) {
-        const effect = this.add.circle(x, y, 15, color);
+        // POWERUPS colors are CSS strings like '#00FF00'; Phaser fills need numbers
+        const fillColor = typeof color === 'string' ? parseInt(color.replace('#', ''), 16) : color;
+        const effect = this.add.circle(x, y, 15, fillColor);
         this.tweens.add({
             targets: effect,
             scaleX: 3,
@@ -2819,6 +3041,81 @@ export default class GameScene extends Phaser.Scene {
             // Reset trick multiplier
             this.player.trickMultiplier = 1;
         }
+    }
+
+    // 🤸 FLIP TRICK SYSTEM 🤸
+    handleFlipLanding() {
+        const fullFlips = Math.floor(Math.abs(this.player.flipRotation) / (Math.PI * 2 * 0.85));
+
+        if (fullFlips >= 1) {
+            const flipName = this.player.flipRotation < 0 ? 'BACKFLIP' : 'FRONTFLIP';
+            const bonus = this.addCombo('flip', 150 * fullFlips);
+
+            const flipText = this.add.text(this.player.x, this.player.y - 70,
+                `${fullFlips > 1 ? `${fullFlips}x ` : ''}${flipName}! +${bonus}`, {
+                fontSize: '22px',
+                fill: '#00FFFF',
+                fontFamily: 'Arial',
+                fontWeight: 'bold',
+                stroke: '#000000',
+                strokeThickness: 3
+            }).setOrigin(0.5).setDepth(100);
+
+            this.tweens.add({
+                targets: flipText,
+                y: flipText.y - 60,
+                alpha: 0,
+                duration: 1200,
+                onComplete: () => flipText.destroy()
+            });
+        }
+
+        // Snap upright on landing
+        this.player.flipRotation = 0;
+        this.player.setRotation(0);
+    }
+
+    // ❤️ HEALTH SYSTEM 🖤
+    damagePlayer(amount) {
+        if (!this.raceStarted) return;
+        if (this.invincibilityActive || this.levelCompleted || this.gameOverTriggered) return;
+        if (this.time.now < this.damageInvulnUntil) return;
+        this.damageInvulnUntil = this.time.now + 800; // Grace period between hits
+
+        this.playerHealth = Math.max(0, this.playerHealth - amount);
+        this.updateHealthBar();
+
+        // Damage feedback
+        this.player.setTint(0xff6666);
+        this.time.delayedCall(250, () => {
+            if (!this.nitroActive && !this.invincibilityActive) this.player.clearTint();
+        });
+
+        if (this.playerHealth <= 0) {
+            this.createExplosionEffect(this.player.x, this.player.y);
+            this.cameras.main.shake(400, 0.02);
+            this.playCrashSound();
+            this.gameOver();
+        }
+    }
+
+    healPlayer(amount) {
+        this.playerHealth = Math.min(this.maxHealth, this.playerHealth + amount);
+        this.updateHealthBar();
+    }
+
+    updateHealthBar() {
+        if (!this.healthBar) return;
+        const pct = this.playerHealth / this.maxHealth;
+        this.healthBar.setSize(200 * pct, 14);
+        if (pct > 0.5) {
+            this.healthBar.setFillStyle(0x00DD00);
+        } else if (pct > 0.25) {
+            this.healthBar.setFillStyle(0xFFA500);
+        } else {
+            this.healthBar.setFillStyle(0xFF2222);
+        }
+        this.healthText.setText(`HP ${Math.ceil(this.playerHealth)}/${this.maxHealth}`);
     }
 
     // 🔥 COMBO SYSTEM FUNCTIONS 🔥
@@ -3208,8 +3505,8 @@ export default class GameScene extends Phaser.Scene {
             return true;
         });
 
-        // Apply wind effects to player
-        if (this.weatherType === 'wind' && this.windStrength > 0) {
+        // Apply wind effects to player (only once the race is underway)
+        if (this.raceStarted && this.weatherType === 'wind' && this.windStrength > 0) {
             const windForce = this.windDirection * this.windStrength * 10;
             this.player.x += windForce * (delta / 1000);
         }
@@ -3227,6 +3524,8 @@ export default class GameScene extends Phaser.Scene {
     flashScreen(color) {
         const flash = this.add.rectangle(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, SCREEN_WIDTH, SCREEN_HEIGHT, color);
         flash.setAlpha(0.3);
+        flash.setScrollFactor(0);
+        flash.setDepth(1500);
         this.tweens.add({
             targets: flash,
             alpha: 0,
@@ -3240,10 +3539,10 @@ export default class GameScene extends Phaser.Scene {
         const removalDistance = 1000; // Distance behind player before removing objects
         const removalThreshold = this.player.x - removalDistance;
         
-        [this.obstacles, this.enemies, this.powerups, this.projectiles].forEach(group => {
+        [this.obstacles, this.jumpObstacles, this.enemies, this.powerups, this.projectiles, this.coins].forEach(group => {
             group.children.entries.forEach(obj => {
-                if (obj.x < removalThreshold) {
-                    // Debug outlines removed - no cleanup needed
+                // Rivals stay in the race even when dropped far behind
+                if (obj.x < removalThreshold && !obj.isRacer) {
                     obj.destroy();
                 }
             });
@@ -3378,14 +3677,14 @@ export default class GameScene extends Phaser.Scene {
     }
     
     updateRacingPosition() {
-        // Get all racers (player + enemies) and sort by X position
+        // Get all racers (player + grid rivals) and sort by X position.
+        // Traffic riders spawned mid-race don't count toward the standings.
         const allRacers = [
             { x: this.player.x, isPlayer: true }
         ];
-        
-        // Add all enemies to racer list
+
         this.enemies.children.entries.forEach(enemy => {
-            if (enemy.body) {
+            if (enemy.body && enemy.isRacer) {
                 allRacers.push({ x: enemy.x, isPlayer: false });
             }
         });
@@ -3411,48 +3710,32 @@ export default class GameScene extends Phaser.Scene {
             this.positionText.setText(`Position: ${playerPosition}/${totalRacers}`);
             this.positionText.setFill(positionColor);
         }
-        
-        // Update money display
-        this.moneyText.setText(`Money: $${this.gameState.money}`);
     }
     
     updateGameState() {
         // Check for win condition - player reached finish line
-        // Log progress occasionally (every 2 seconds)
-        if (this.time.now % 2000 < 32) {
-            const progress = Math.round((this.player.x/this.currentLevelConfig.length)*100);
-            console.log(`🏁 Progress: ${Math.round(this.player.x)}m / ${this.currentLevelConfig.length}m (${progress}%)`);
-            
-            // Extra logging when near the end
-            if (progress > 90) {
-                console.log(`🏁 NEAR FINISH: Player Y: ${Math.round(this.player.y)}, Ground level: ${this.groundLevel}, Distance to finish: ${Math.round(this.currentLevelConfig.length - this.player.x)}m`);
-            }
-        }
-        
-        if (this.player.x >= this.currentLevelConfig.length) {
-            console.log(`🏁 DEBUG: LEVEL COMPLETION TRIGGERED!`);
-            console.log(`🏁 DEBUG: Player final position: ${Math.round(this.player.x)}m`);
-            console.log(`🏁 DEBUG: Required distance: ${this.currentLevelConfig.length}m`);
-            console.log(`🏁 DEBUG: Current session money before completion: $${this.gameState.money}`);
-            console.log(`🏁 DEBUG: Current total money before completion: $${this.gameState.totalMoney}`);
+        if (this.player.x >= this.currentLevelConfig.length && !this.levelCompleted) {
             this.levelComplete();
-            return; // Don't check for game over if level is complete
+            return;
         }
-        
-        // Check for game over conditions
-        if (this.gameState.score < -1000 || this.player.y > SCREEN_HEIGHT) {
+
+        // Safety net: falling out of the world ends the race
+        if (this.player.y > SCREEN_HEIGHT + 100) {
             this.gameOver();
         }
-        
+
         // Emit event for UI updates
         this.game.events.emit('gameStateUpdate');
     }
     
     levelComplete() {
+        // Guard: update() keeps running after the finish line, only complete once
+        if (this.levelCompleted) return;
+        this.levelCompleted = true;
+        this.gameState.lastRaceWon = true;
+
         console.log('🏁 LEVEL COMPLETE! Player reached finish line!');
-        console.log('🏁 DEBUG: Player X position:', this.player.x);
-        console.log('🏁 DEBUG: Level length required:', this.currentLevelConfig.length);
-        
+
         // Lock the current position - no more updates after player finishes
         if (!this.positionLocked) {
             this.finalPosition = this.currentPosition;
@@ -3472,8 +3755,8 @@ export default class GameScene extends Phaser.Scene {
         console.log(`💰 DEBUG: Level money bonus: ${levelMoneyBonus}`);
         
         const previousScore = this.gameState.score;
-        this.gameState.score = this.clampValue(this.safeAdd(this.gameState.score, victoryBonus), 0, 5000);
-        this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, levelMoneyBonus), 0, 500);
+        this.gameState.score = this.clampValue(this.safeAdd(this.gameState.score, victoryBonus), 0, GAME_CONFIG.MAX_SCORE);
+        this.gameState.money = this.clampValue(this.safeAdd(this.gameState.money, levelMoneyBonus), 0, GAME_CONFIG.SESSION_MONEY_CAP);
         
         console.log(`🎯 FINAL SCORE! Level completion: +${victoryBonus} victory bonus (${previousScore} → ${this.gameState.score})`);
         console.log(`💰 DEBUG: AFTER BONUS - Session money: ${this.gameState.money}, Total money: ${this.gameState.totalMoney}`);
@@ -3498,19 +3781,16 @@ export default class GameScene extends Phaser.Scene {
         if (!this.moneyTransferred) {
             const currentMoney = this.gameState.money || 0;
             const previousTotal = this.gameState.totalMoney || 0;
-            console.log(`💰 DEBUG: Transferring session money ${currentMoney} to previous total ${previousTotal}`);
-            
+
+            this.gameState.sessionMoneyEarned = currentMoney; // Remember for results screen
             this.gameState.totalMoney = Math.min(previousTotal + currentMoney, GAME_CONFIG.MAX_MONEY);
             this.gameState.money = 0; // Reset session money to prevent duplication
             this.moneyTransferred = true; // Flag to prevent multiple transfers
-            
-            console.log(`💰 DEBUG: NEW TOTAL MONEY: ${this.gameState.totalMoney}, Session reset to: ${this.gameState.money}`);
-            
+
+            console.log(`💰 Money transferred: +$${currentMoney}, new total: $${this.gameState.totalMoney}`);
+
             // Update registry immediately
             this.registry.set('gameState', this.gameState);
-            console.log(`💰 DEBUG: Updated game state in registry`);
-        } else {
-            console.log(`💰 DEBUG: Money already transferred, skipping to prevent duplication`);
         }
         
         // Show victory message
@@ -3704,10 +3984,13 @@ export default class GameScene extends Phaser.Scene {
     }
     
     gameOver() {
+        // Guard against double triggers (e.g. damage during scene transition)
+        if (this.gameOverTriggered || this.levelCompleted) return;
+        this.gameOverTriggered = true;
+        this.gameState.lastRaceWon = false;
+
         console.log('💀 GAME OVER!');
-        console.log(`Current session money: ${this.gameState.money}`);
-        console.log(`Total money before: ${this.gameState.totalMoney}`);
-        
+
         // Store final race position for game over screen
         this.gameState.finalRacePosition = this.finalPosition || this.currentPosition;
         console.log(`💀 Final race position for game over: ${this.gameState.finalRacePosition}`);
@@ -3721,6 +4004,7 @@ export default class GameScene extends Phaser.Scene {
         if (!this.moneyTransferred) {
             const currentMoney = this.gameState.money || 0;
             const previousTotal = this.gameState.totalMoney || 0;
+            this.gameState.sessionMoneyEarned = currentMoney; // Remember for results screen
             this.gameState.totalMoney = Math.min(previousTotal + currentMoney, GAME_CONFIG.MAX_MONEY);
             this.gameState.money = 0; // Reset session money
             this.moneyTransferred = true;

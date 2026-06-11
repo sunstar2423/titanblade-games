@@ -38,7 +38,10 @@ export const GAME_CONFIG = {
     CAMERA_WORLD_WIDTH: 8200, // Camera bounds width (slightly beyond finish line)
     VICTORY_SCORE_BONUS: 250, // Bonus points for completing level (balanced)
     DISTANCE_MARKERS: [2000, 4000, 6000, 8000], // Progress markers every 2000m
-    MAX_MONEY: 6000 // Maximum money cap to prevent unrealistic amounts
+    MAX_MONEY: 25000, // Maximum money cap (high enough to buy every bike and weapon)
+    MAX_SCORE: 999999, // Score ceiling
+    SESSION_MONEY_CAP: 2000, // Max money earnable in a single race
+    COIN_VALUE: 5 // Money per collected coin
 };
 
 // Background music configuration
@@ -265,6 +268,11 @@ export const POWERUPS = {
         duration: 2000,
         color: '#FF00FF',
         points: 100
+    },
+    HEALTH_PACK: {
+        value: 35,
+        color: '#FF5555',
+        points: 25
     }
 };
 

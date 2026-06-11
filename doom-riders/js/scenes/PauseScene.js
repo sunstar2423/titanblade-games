@@ -23,14 +23,20 @@ export default class PauseScene extends Phaser.Scene {
             this.scene.resume(SCENES.GAME);
         });
         
-        this.createButton(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 80, 'MAIN MENU', () => {
+        this.createButton(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 80, 'RESTART RACE', () => {
+            this.scene.stop();
+            const gameScene = this.scene.get(SCENES.GAME);
+            gameScene.scene.restart();
+        });
+
+        this.createButton(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 160, 'MAIN MENU', () => {
             this.scene.stop();
             this.scene.stop(SCENES.GAME);
             this.scene.start(SCENES.MAIN_MENU);
         });
-        
+
         // Controls reminder
-        this.add.text(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 180, 'Press P to resume', {
+        this.add.text(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 230, 'Press P to resume', {
             fontSize: '16px',
             fill: '#CCCCCC',
             fontFamily: 'Arial'
@@ -44,7 +50,8 @@ export default class PauseScene extends Phaser.Scene {
     }
     
     update() {
-        if (this.pauseKey.isDown) {
+        // JustDown so the P press that opened the pause menu doesn't instantly resume
+        if (Phaser.Input.Keyboard.JustDown(this.pauseKey)) {
             this.scene.stop();
             this.scene.resume(SCENES.GAME);
         }

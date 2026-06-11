@@ -7,28 +7,31 @@ export default class GameOverScene extends Phaser.Scene {
 
     create() {
         const gameState = this.registry.get('gameState');
-        
+        const won = !!gameState.lastRaceWon;
+
         // Background
         this.add.rectangle(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, SCREEN_WIDTH, SCREEN_HEIGHT, 0x000000, 0.8);
-        
-        // Game Over title
-        this.add.text(SCREEN_WIDTH/2, 150, 'GAME OVER', {
+
+        // Title reflects the actual race result
+        this.add.text(SCREEN_WIDTH/2, 150, won ? '🏁 RACE COMPLETE! 🏁' : 'GAME OVER', {
             fontSize: '56px',
-            fill: '#FF4500',
+            fill: won ? '#FFD700' : '#FF4500',
             fontFamily: 'Arial',
             fontWeight: 'bold',
             stroke: '#000000',
             strokeThickness: 4
         }).setOrigin(0.5);
-        
+
         // Score display
         this.add.text(SCREEN_WIDTH/2, 250, `Final Score: ${gameState.score}`, {
             fontSize: '32px',
             fill: '#FFFFFF',
             fontFamily: 'Arial'
         }).setOrigin(0.5);
-        
-        this.add.text(SCREEN_WIDTH/2, 290, `Money Earned: $${gameState.money}`, {
+
+        // Session money was already banked into totalMoney; show the recorded amount
+        const earned = gameState.sessionMoneyEarned || 0;
+        this.add.text(SCREEN_WIDTH/2, 290, `Money Earned: $${earned}`, {
             fontSize: '24px',
             fill: '#00FF00',
             fontFamily: 'Arial'
@@ -118,23 +121,23 @@ export default class GameOverScene extends Phaser.Scene {
             color = '#FF6666';
         }
         
-        this.add.text(SCREEN_WIDTH/2, 370, message, {
+        this.add.text(SCREEN_WIDTH/2, 410, message, {
             fontSize: '24px',
             fill: color,
             fontFamily: 'Arial',
             fontWeight: 'bold'
         }).setOrigin(0.5);
-        
+
         // Suggestion for improvement
         if (score < 500) {
-            this.add.text(SCREEN_WIDTH/2, 410, 'Tip: Use ramps for bonus points and avoid obstacles!', {
+            this.add.text(SCREEN_WIDTH/2, 445, 'Tip: Use ramps for bonus points and do flips in the air!', {
                 fontSize: '16px',
                 fill: '#CCCCCC',
                 fontFamily: 'Arial',
                 fontStyle: 'italic'
             }).setOrigin(0.5);
         } else if (score < 1000) {
-            this.add.text(SCREEN_WIDTH/2, 410, 'Tip: Attack enemies for extra points and money!', {
+            this.add.text(SCREEN_WIDTH/2, 445, 'Tip: Attack enemies for extra points and money!', {
                 fontSize: '16px',
                 fill: '#CCCCCC',
                 fontFamily: 'Arial',

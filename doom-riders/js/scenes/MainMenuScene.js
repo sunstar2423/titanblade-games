@@ -126,9 +126,9 @@ export default class MainMenuScene extends Phaser.Scene {
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                          (window.innerWidth < 768);
         
-        const controlsText = isMobile ? 
-            'Mobile Controls: Touch buttons to move, jump, and attack' :
-            'Controls: Arrow Keys = Move | Space = Jump | A = Attack | W = Weapon';
+        const controlsText = isMobile ?
+            'Mobile Controls: Touch buttons to move, jump, attack and boost' :
+            'Controls: ←/→ Move | SPACE Jump | A Attack | W Weapon | SHIFT Nitro | Flip in mid-air with ←/→';
             
         this.add.text(SCREEN_WIDTH/2, 730, controlsText, {
             fontSize: '16px',
