@@ -86,6 +86,9 @@ class Game {
         
         // Make saveProgress function globally accessible
         window.doomRidersSaveProgress = this.saveProgress.bind(this);
+
+        // Expose game instance for debugging
+        window.doomRidersGame = this.game;
         
         console.log('Initializing game state...');
         // Initialize game state with proper money handling

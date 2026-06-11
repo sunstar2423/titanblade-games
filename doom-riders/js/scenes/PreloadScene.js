@@ -294,6 +294,32 @@ export default class PreloadScene extends Phaser.Scene {
             graphics.destroy();
             console.log(`Created powerup texture: ${powerup.key}`);
         });
+
+        // Health pack - red circle with white cross
+        const healthGfx = this.add.graphics();
+        healthGfx.fillStyle(0xFF4444);
+        healthGfx.fillCircle(10, 10, 10);
+        healthGfx.fillStyle(0xFFFFFF);
+        healthGfx.fillRect(8, 4, 4, 12);
+        healthGfx.fillRect(4, 8, 12, 4);
+        healthGfx.generateTexture('healthpack', 20, 20);
+        healthGfx.destroy();
+
+        // Coin - gold circle with darker inner ring
+        const coinGfx = this.add.graphics();
+        coinGfx.fillStyle(0xFFD700);
+        coinGfx.fillCircle(10, 10, 10);
+        coinGfx.lineStyle(2, 0xB8860B);
+        coinGfx.strokeCircle(10, 10, 7);
+        coinGfx.generateTexture('coin', 20, 20);
+        coinGfx.destroy();
+
+        // Projectile - bright bullet shape
+        const projGfx = this.add.graphics();
+        projGfx.fillStyle(0xFFFFFF);
+        projGfx.fillRoundedRect(0, 0, 12, 6, 3);
+        projGfx.generateTexture('projectile', 12, 6);
+        projGfx.destroy();
     }
 
     create() {
