@@ -5961,15 +5961,14 @@ function loop(ts) {
     updateHUD();
   }
 
-  // Barn lantern flicker
-  if (window._barnLantern) window._barnLantern.intensity = 2.2 + Math.sin(t * 9.3) * 0.5 + Math.sin(t * 17.7) * 0.2;
-
   // Drift clouds slowly
   scene.children.forEach(c => { if (c._isCloud) { c.position.x += 0.4 * dt; if (c.position.x > 50) c.position.x = -50; } });
   // Spin windmill blades
   if (windmillBlades) windmillBlades.rotation.z += dt * 0.7;
   // Sway plants gently in the wind
   const t = Date.now() * 0.001;
+  // Barn lantern flicker
+  if (window._barnLantern) window._barnLantern.intensity = 2.2 + Math.sin(t * 9.3) * 0.5 + Math.sin(t * 17.7) * 0.2;
   gs.placedPlants.forEach((p, i) => {
     if (!p.mesh || p.data.kind === 'animal') return; // animals move themselves
     if (!p._swayPh)  p._swayPh  = i * 2.4 + Math.random() * 1.8;
