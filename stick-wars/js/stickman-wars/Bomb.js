@@ -53,9 +53,8 @@ class Bomb {
         this.group.position.copy(startPos);
         this.group.position.y += 1.5; // Throw from chest height
 
-        // Set direction (bombs arc through the air)
+        // Set direction (the thrower already added the upward arc)
         this.direction = direction.normalize();
-        this.direction.y += 0.3; // Initial upward arc
 
         this.scene.add(this.group);
 
@@ -102,7 +101,7 @@ class Bomb {
         this.hasExploded = true;
         this.alive = false;
 
-        console.log('💣 BOMB EXPLODING at position:', this.group.position);
+        if (window.Sound) window.Sound.explosion();
 
         // Create explosion effect
         this.createExplosion();
@@ -252,7 +251,6 @@ class Bomb {
 
             // If bomb hits target directly, explode
             if (horizontalDist < 1.0 && validHeight) {
-                console.log('💥 Bomb hit target directly! Exploding...');
                 this.explode();
                 return { target, damage: this.damage, isExplosion: true };
             }
@@ -275,13 +273,10 @@ class Bomb {
             const dz = this.group.position.z - target.group.position.z;
             const distance = Math.sqrt(dx * dx + dz * dz);
 
-            // If within explosion radius, apply damage
+            // If within explosion radius, apply damage with distance falloff
             if (distance < this.explosionRadius) {
-                // Damage falls off with distance
                 const damageMultiplier = 1 - (distance / this.explosionRadius);
-                const explosionDamage = Math.floor(this.damage * damageMultiplier);
-
-                console.log(`💥 Explosion hit ${target.characterType} at distance ${distance.toFixed(2)}, damage: ${explosionDamage}`);
+                const explosionDamage = Math.max(1, Math.floor(this.damage * damageMultiplier));
 
                 hitTargets.push({ target, damage: explosionDamage });
             }

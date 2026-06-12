@@ -36,6 +36,50 @@
             padding: 10px;
             border-radius: 5px;
             margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        #healthBarOuter {
+            display: inline-block;
+            width: 150px;
+            height: 14px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 7px;
+            overflow: hidden;
+            vertical-align: middle;
+            margin: 0 6px;
+        }
+
+        #healthBarInner {
+            width: 100%;
+            height: 100%;
+            background: #4CAF50;
+            transition: width 0.2s, background 0.2s;
+        }
+
+        #damageOverlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 55%, rgba(255,0,0,0.6) 100%);
+            opacity: 0;
+            transition: opacity 0.35s;
+            z-index: 90;
+        }
+
+        #pauseOverlay {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            font-size: 42px;
+            font-weight: bold;
+            z-index: 800;
+            text-align: center;
         }
 
         #multiplayerMenu {
@@ -97,6 +141,7 @@
             width: 150px;
             height: 150px;
             pointer-events: auto;
+            z-index: 20;
         }
 
         #joystick-base {
@@ -121,7 +166,7 @@
             transition: all 0.1s;
         }
 
-        /* Attack Button */
+        /* Attack Button (z-index keeps it above the look area) */
         #attack-button {
             position: absolute;
             bottom: 20px;
@@ -138,6 +183,7 @@
             pointer-events: auto;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
+            z-index: 20;
         }
 
         #attack-button:active {
@@ -154,6 +200,7 @@
             height: 100%;
             pointer-events: auto;
             touch-action: none;
+            z-index: 10;
         }
 
         /* Mobile UI adjustments */
@@ -165,14 +212,18 @@
             }
 
             .weapon-slot {
-                width: 40px;
-                height: 40px;
-                font-size: 14px;
+                width: 44px;
+                height: 44px;
+                font-size: 13px;
             }
 
             #gameInfo {
                 font-size: 12px;
                 padding: 8px;
+            }
+
+            #healthBarOuter {
+                width: 90px;
             }
 
             #multiplayerMenu {
@@ -186,20 +237,29 @@
             right: 10px;
             display: flex;
             gap: 10px;
+            z-index: 30;
         }
 
         .weapon-slot {
-            width: 50px;
-            height: 50px;
+            width: 54px;
+            height: 54px;
             background: rgba(0,0,0,0.7);
             border: 2px solid #666;
             border-radius: 5px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: bold;
             cursor: pointer;
+        }
+
+        .weapon-slot small {
+            font-size: 9px;
+            font-weight: normal;
+            color: #ccc;
+            margin-top: 2px;
         }
 
         .weapon-slot.active {
@@ -243,55 +303,59 @@
             <div class="crosshair-line crosshair-v"></div>
         </div>
 
+        <div id="damageOverlay"></div>
+        <div id="pauseOverlay">PAUSED<br><span style="font-size: 20px; font-weight: normal;">Press P to resume</span></div>
+
         <div id="ui">
             <div id="gameInfo">
-                <div>Health: <span id="healthValue">3000</span>/3000</div>
+                <div>❤️<span id="healthBarOuter"><span id="healthBarInner"></span></span><span id="healthValue">200/200</span></div>
                 <div>Weapon: <span id="currentWeapon">Sword</span></div>
                 <div>Wave: <span id="waveNumber">1/5</span></div>
                 <div>Enemies: <span id="enemyCount">5</span></div>
-                <div>Coins: <span id="coinCount">0</span></div>
+                <div>🪙 <span id="coinCount">0</span><span id="coinGoal" style="color:#aaa;"></span></div>
             </div>
         </div>
 
         <div id="multiplayerMenu">
             <h4>Multiplayer</h4>
             <button onclick="startLocalMultiplayer()">Local 2P</button>
-            <button onclick="createOnlineGame()">Create Online</button>
-            <button onclick="joinOnlineGame()">Join Online</button>
         </div>
 
         <div id="weaponBar">
             <div class="weapon-slot active" data-weapon="0" onclick="switchWeapon(0)">
-                <span>1</span>
+                <span>1</span><small>Sword</small>
             </div>
             <div class="weapon-slot" data-weapon="1" onclick="switchWeapon(1)">
-                <span>2</span>
+                <span>2</span><small>Axe</small>
             </div>
             <div class="weapon-slot" data-weapon="2" onclick="switchWeapon(2)">
-                <span>3</span>
+                <span>3</span><small>Spear</small>
             </div>
             <div class="weapon-slot" data-weapon="3" onclick="switchWeapon(3)">
-                <span>4</span>
+                <span>4</span><small>Hammer</small>
             </div>
             <div class="weapon-slot" data-weapon="4" onclick="switchWeapon(4)">
-                <span>5</span>
+                <span>5</span><small>Crossbow</small>
             </div>
-            <div class="weapon-slot" data-weapon="5" onclick="switchWeapon(5)" style="opacity: 0.3;">
-                <span>6</span>
+            <div class="weapon-slot" data-weapon="5" onclick="switchWeapon(5)" style="opacity: 0.4;">
+                <span>6</span><small>Rifle 🔒</small>
             </div>
-            <div class="weapon-slot" data-weapon="6" onclick="switchWeapon(6)" style="opacity: 0.3;">
-                <span>7</span>
+            <div class="weapon-slot" data-weapon="6" onclick="switchWeapon(6)" style="opacity: 0.4;">
+                <span>7</span><small>Bomb 🔒</small>
             </div>
         </div>
 
         <div id="controls">
             <strong>Controls:</strong><br>
-            WASD: Move | Mouse: Look Around | Click: Attack<br>
-            1-7: Switch Weapons | R: Reload | C: Toggle Camera | ESC: Release mouse
+            WASD: Move | Mouse: Look | Hold Click: Attack<br>
+            1-7: Weapons | R: Reload | C: Camera | P: Pause | ESC: Release mouse
         </div>
 
         <!-- Mobile Touch Controls -->
         <div class="mobile-controls">
+            <!-- Look/Aim Touch Area (below the buttons) -->
+            <div id="look-area"></div>
+
             <!-- Virtual Joystick -->
             <div id="joystick-container">
                 <div id="joystick-base"></div>
@@ -300,13 +364,11 @@
 
             <!-- Attack Button -->
             <div id="attack-button">⚔️</div>
-
-            <!-- Look/Aim Touch Area -->
-            <div id="look-area"></div>
         </div>
     </div>
 
     <script src="js/libs/three.min.js"></script>
+    <script src="js/stickman-wars/Sound.js"></script>
     <script src="js/stickman-wars/Environment.js"></script>
     <script src="js/stickman-wars/Arrow.js"></script>
     <script src="js/stickman-wars/Bomb.js"></script>
@@ -340,7 +402,8 @@
                 lastY: 0
             },
             attack: {
-                active: false
+                active: false,
+                interval: null
             }
         };
 
@@ -352,7 +415,6 @@
             const lookArea = document.getElementById('look-area');
 
             if (!joystickContainer || !attackButton || !lookArea) {
-                console.log('Touch controls not found (probably desktop)');
                 return;
             }
 
@@ -461,7 +523,7 @@
                 touchControls.look.lastY = touch.clientY;
 
                 // Apply camera rotation (similar to mouse move)
-                if (game && game.currentPlayer) {
+                if (game && game.currentPlayer && !game.paused) {
                     const sensitivity = 0.003;
 
                     if (game.cameraMode === 'third') {
@@ -486,34 +548,37 @@
                 touchControls.look.active = false;
             });
 
-            // Attack Button
+            // Attack Button - hold to keep attacking (weapon cooldowns limit the rate)
+            const tryAttack = () => {
+                if (game && game.currentPlayer && !game.paused && !game.gameOver && !game.gameWon) {
+                    game.currentPlayer.attack(game);
+                }
+            };
+
             attackButton.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 touchControls.attack.active = true;
+                tryAttack();
 
-                if (game && game.currentPlayer) {
-                    game.currentPlayer.attack(game);
-                }
+                clearInterval(touchControls.attack.interval);
+                touchControls.attack.interval = setInterval(tryAttack, 150);
             });
 
             attackButton.addEventListener('touchend', (e) => {
                 e.preventDefault();
                 touchControls.attack.active = false;
+                clearInterval(touchControls.attack.interval);
+                touchControls.attack.interval = null;
             });
-
-            console.log('Touch controls initialized');
         }
 
         // Initialize the game
         function initGame() {
             try {
-                console.log('Initializing game...');
                 game = new Game3D();
                 game.init();
-                console.log('Game initialized successfully');
 
                 multiplayerManager = new MultiplayerManager(game);
-                console.log('Multiplayer manager initialized');
 
                 // Initialize touch controls for mobile devices
                 initTouchControls();
@@ -536,12 +601,6 @@
         function switchWeapon(index) {
             if (game && game.currentPlayer) {
                 game.currentPlayer.switchWeapon(index);
-
-                // Update UI
-                document.querySelectorAll('.weapon-slot').forEach(slot => {
-                    slot.classList.remove('active');
-                });
-                document.querySelector(`[data-weapon="${index}"]`).classList.add('active');
             }
         }
 
@@ -553,31 +612,20 @@
 
         // Multiplayer Functions
         function startLocalMultiplayer() {
+            if (!multiplayerManager || multiplayerManager.localMultiplayerEnabled) return;
             multiplayerManager.enableLocalMultiplayer();
 
             // Update UI to show both players
             const gameInfo = document.getElementById('gameInfo');
-            gameInfo.innerHTML += '<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #666;">Player 2 Controls: Arrow Keys + NumPad</div>';
+            gameInfo.innerHTML += '<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #666;">Player 2: Arrow Keys move, NumPad 0 attack, NumPad 1-4 weapons</div>';
         }
 
-        function createOnlineGame() {
-            multiplayerManager.createOnlineGame();
-        }
-
-        function joinOnlineGame() {
-            const offerString = prompt('Paste the connection string from the host:');
-            if (offerString) {
-                multiplayerManager.joinOnlineGame(offerString);
-            }
-        }
-
-        // Game loop additions
+        // Game loop additions (UI only - game logic lives in Game3D.animate)
         function gameUpdate() {
             if (game) {
                 updateEnemyCount();
 
-                // Check lose condition only (victory is handled by wave system in Game3D.js)
-                if (game.currentPlayer && game.currentPlayer.health <= 0) {
+                if (game.gameOver) {
                     showDefeatMessage();
                 }
             }
@@ -590,6 +638,10 @@
         function showDefeatMessage() {
             if (gameOverShown) return;
             gameOverShown = true;
+
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
 
             const message = document.createElement('div');
             message.style.position = 'absolute';
@@ -610,7 +662,7 @@
             message.appendChild(title);
 
             const text = document.createElement('p');
-            text.textContent = 'Better luck next time!';
+            text.textContent = `You made it to wave ${game ? game.currentWave : '?'} of ${game ? game.maxWaves : '?'}. Better luck next time!`;
             text.style.margin = '0 0 20px 0';
             message.appendChild(text);
 

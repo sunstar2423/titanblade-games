@@ -2,12 +2,14 @@ class Arrow {
     constructor(scene, startPos, direction, owner) {
         this.scene = scene;
         this.owner = owner;
-        this.speed = 20;
-        // Use the owner's current weapon damage
+        // Use the owner's current weapon damage; rifles fire faster, flatter shots
+        const weaponName = owner.currentWeapon ? owner.currentWeapon.name : '';
+        this.speed = weaponName === 'Rifle' ? 45 : 22;
+        this.gravity = weaponName === 'Rifle' ? 0.05 : 0.3;
         this.damage = owner.currentWeapon ? owner.currentWeapon.damage : 10;
         this.alive = true;
         this.distanceTraveled = 0;
-        this.maxDistance = 50;
+        this.maxDistance = weaponName === 'Rifle' ? 80 : 50;
 
         // Create arrow mesh
         this.group = new THREE.Group();
@@ -65,7 +67,7 @@ class Arrow {
         this.distanceTraveled += movement.length();
 
         // Add gravity effect (slower for more accurate shots)
-        this.direction.y -= 0.3 * deltaTime;
+        this.direction.y -= this.gravity * deltaTime;
 
         // Update arrow rotation to match trajectory
         const horizontalDistance = Math.sqrt(this.direction.x * this.direction.x + this.direction.z * this.direction.z);
@@ -95,8 +97,6 @@ class Arrow {
 
             // More forgiving hitbox - 1.2 unit horizontal radius
             if (horizontalDist < 1.2 && validHeight) {
-                // Hit!
-                console.log('Arrow hit target!', 'Distance:', horizontalDist, 'Height:', arrowHeight, 'Damage:', this.damage);
                 this.alive = false;
                 this.remove();
                 return { target, damage: this.damage };
