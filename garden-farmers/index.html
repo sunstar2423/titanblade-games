@@ -185,7 +185,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.55;
+renderer.toneMappingExposure = 0.70;
 renderer.outputEncoding = THREE.sRGBEncoding;
 
 const scene = new THREE.Scene();
@@ -196,19 +196,39 @@ scene.fog = new THREE.FogExp2(0x0d1220, 0.009);
   const c = document.createElement('canvas'); c.width = 2; c.height = 256;
   const ctx = c.getContext('2d');
   const g = ctx.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0,    '#050a10');
-  g.addColorStop(0.35, '#0a1525');
-  g.addColorStop(0.65, '#122035');
-  g.addColorStop(0.85, '#1e2e44');
-  g.addColorStop(1,    '#22364e');
+  g.addColorStop(0,    '#040c1e');
+  g.addColorStop(0.30, '#071830');
+  g.addColorStop(0.60, '#0e2848');
+  g.addColorStop(0.82, '#1a3a5c');
+  g.addColorStop(1,    '#264a6a');
   ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
   const tex = new THREE.CanvasTexture(c);
   const sky = new THREE.Mesh(
-    new THREE.SphereGeometry(90, 16, 8),
+    new THREE.SphereGeometry(90, 32, 16),
     new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide })
   );
   scene.add(sky);
   window._skyMesh = sky; window._skyCanvas = c; window._skyCtx = ctx;
+})();
+
+// Star field — 700 points on inner surface of sky dome
+(function() {
+  const count = 700;
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const cosTheta = 0.1 + Math.random() * 0.9;
+    const sinTheta = Math.sqrt(1 - cosTheta * cosTheta);
+    const phi = Math.random() * Math.PI * 2;
+    const r = 82 + Math.random() * 4;
+    pos[i*3]   = r * sinTheta * Math.cos(phi);
+    pos[i*3+1] = r * cosTheta;
+    pos[i*3+2] = r * sinTheta * Math.sin(phi);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.52, sizeAttenuation: true, transparent: true, opacity: 0.75 });
+  window._starField = new THREE.Points(geo, mat);
+  scene.add(window._starField);
 })();
 
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 200);
@@ -224,23 +244,23 @@ window.addEventListener('resize', () => {
 });
 
 // Lighting
-const hemiLight = new THREE.HemisphereLight(0x334455, 0x1a1a0e, 0.6);
+const hemiLight = new THREE.HemisphereLight(0x6688bb, 0x3a2808, 0.85);
 scene.add(hemiLight);
-const sun = new THREE.DirectionalLight(0xaaaadd, 0.65);
-sun.position.set(18, 22, 12);
+const sun = new THREE.DirectionalLight(0xfff0cc, 1.0);
+sun.position.set(18, 28, 12);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
 sun.shadow.camera.top = 75;  sun.shadow.camera.bottom = -75;
-sun.shadow.bias = -0.001;
+sun.shadow.bias = -0.0008;
 scene.add(sun);
-const fill = new THREE.DirectionalLight(0x223355, 0.3);
+const fill = new THREE.DirectionalLight(0x4466aa, 0.42);
 fill.position.set(-12, 8, -12);
 scene.add(fill);
-const rimLight = new THREE.DirectionalLight(0x334466, 0.3);
+const rimLight = new THREE.DirectionalLight(0x88aacc, 0.48);
 rimLight.position.set(-8, 5, 20);
 scene.add(rimLight);
-const topLight = new THREE.DirectionalLight(0x223355, 0.1);
+const topLight = new THREE.DirectionalLight(0x445577, 0.18);
 topLight.position.set(0, 30, 0);
 scene.add(topLight);
 
@@ -255,28 +275,39 @@ const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
 // Outer ground — canvas grass texture
 (function() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+  const c = document.createElement('canvas'); c.width = 512; c.height = 512;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#3e8a25'; ctx.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 1200; i++) {
-    const x = Math.random()*256, y = Math.random()*256;
-    const c = Math.random();
-    ctx.fillStyle = c < 0.25 ? '#2d6e18' : c < 0.55 ? '#4da030' : c < 0.8 ? '#5ebb38' : '#6acc44';
-    ctx.fillRect(x, y, Math.random()*4+1, Math.random()*4+1);
+  ctx.fillStyle = '#3e8a25'; ctx.fillRect(0, 0, 512, 512);
+  // Color variation patches
+  for (let i = 0; i < 80; i++) {
+    const px = Math.random()*512, py = Math.random()*512, pr = 18+Math.random()*32;
+    const v = Math.random();
+    ctx.fillStyle = v < 0.3 ? '#2d6e18' : v < 0.6 ? '#52b030' : '#4a9e28';
+    ctx.globalAlpha = 0.25;
+    ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI*2); ctx.fill();
   }
-  // Subtle grass blade marks
-  for (let i = 0; i < 300; i++) {
-    ctx.strokeStyle = Math.random() > 0.5 ? '#2a6015' : '#70cc48';
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.35;
+  ctx.globalAlpha = 1;
+  // Fine color dots
+  for (let i = 0; i < 3000; i++) {
+    const x = Math.random()*512, y = Math.random()*512;
+    const v = Math.random();
+    ctx.fillStyle = v < 0.2 ? '#24580e' : v < 0.5 ? '#48a028' : v < 0.78 ? '#5cbb38' : '#72d048';
+    ctx.fillRect(x, y, Math.random()*3+1, Math.random()*3+1);
+  }
+  // Grass blade strokes
+  for (let i = 0; i < 700; i++) {
+    const bx = Math.random()*512, by = Math.random()*512;
+    ctx.strokeStyle = Math.random() > 0.45 ? '#1e5010' : '#78d850';
+    ctx.lineWidth = Math.random() > 0.6 ? 2 : 1;
+    ctx.globalAlpha = 0.28 + Math.random() * 0.22;
     ctx.beginPath();
-    const bx = Math.random()*256, by = Math.random()*256;
-    ctx.moveTo(bx, by); ctx.lineTo(bx + (Math.random()-0.5)*6, by - Math.random()*8);
+    ctx.moveTo(bx, by);
+    ctx.lineTo(bx + (Math.random()-0.5)*7, by - Math.random()*11);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
-  const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(8, 8);
-  const gnd = new THREE.Mesh(new THREE.PlaneGeometry(180, 180), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0 }));
+  const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(10, 10);
+  const gnd = new THREE.Mesh(new THREE.PlaneGeometry(180, 180), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92, metalness: 0 }));
   gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true; scene.add(gnd);
 })();
 
@@ -285,16 +316,25 @@ const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
   const c = document.createElement('canvas'); c.width = 512; c.height = 512;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#6b4a0e'; ctx.fillRect(0, 0, 512, 512);
-  for (let i = 0; i < 3000; i++) {
-    const c = Math.random();
-    ctx.fillStyle = c < 0.3 ? '#4e3208' : c < 0.6 ? '#7a5812' : c < 0.85 ? '#8e6b1a' : '#9e7a22';
+  // Base color noise
+  for (let i = 0; i < 4000; i++) {
+    const v = Math.random();
+    ctx.fillStyle = v < 0.25 ? '#3e2506' : v < 0.55 ? '#7a5810' : v < 0.82 ? '#8c6a18' : '#a07c24';
     ctx.fillRect(Math.random()*512, Math.random()*512, Math.random()*5+1, Math.random()*4+1);
   }
-  // Ploughed furrow rows
-  for (let y = 0; y < 512; y += 20) {
-    ctx.fillStyle = '#3c2204'; ctx.fillRect(0, y, 512, 5);
-    ctx.fillStyle = '#9e7a22'; ctx.fillRect(0, y + 5, 512, 4);
-    ctx.fillStyle = '#7a5810'; ctx.fillRect(0, y + 9, 512, 3);
+  // Ploughed furrow rows with better shading
+  for (let y = 0; y < 512; y += 22) {
+    ctx.fillStyle = '#2e1a02'; ctx.globalAlpha = 0.9; ctx.fillRect(0, y, 512, 4);
+    ctx.fillStyle = '#a07c22'; ctx.globalAlpha = 0.7; ctx.fillRect(0, y + 4, 512, 5);
+    ctx.fillStyle = '#7a5810'; ctx.globalAlpha = 0.85; ctx.fillRect(0, y + 9, 512, 4);
+    ctx.fillStyle = '#8c6a1a'; ctx.globalAlpha = 0.6; ctx.fillRect(0, y + 13, 512, 3);
+  }
+  ctx.globalAlpha = 1;
+  // Small stones
+  for (let i = 0; i < 60; i++) {
+    const sx = Math.random()*512, sy = Math.random()*512, sr = 1.5+Math.random()*3;
+    ctx.fillStyle = Math.random() > 0.5 ? '#554433' : '#887766';
+    ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI*2); ctx.fill();
   }
   const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(6, 6);
   _farmDirtMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.97, metalness: 0 });
@@ -357,6 +397,11 @@ arch.rotation.z = Math.PI/2; arch.position.set(0, 3.2, 3.08); barnGrp.add(arch);
   chim.position.set(x, 8.2, 0); barnGrp.add(chim);
 });
 scene.add(barnGrp);
+// Warm flickering lantern at barn entrance
+const barnLantern = new THREE.PointLight(0xffaa44, 2.2, 16, 1.5);
+barnLantern.position.set(0, 3.8, 3.2);
+scene.add(barnLantern);
+window._barnLantern = barnLantern;
 const _barnCannonPositions = [
   [0, 3.5, 3.8, 0],
   [-4.0, 3.2, 0, -Math.PI/2],
@@ -4921,64 +4966,64 @@ function selectBiome(biome) {
 }
 
 function applyBiomeTheme(biome) {
+  const stars = window._starField;
   if (biome === 'jungle') {
-    scene.fog.color.setHex(0x1a5520);
-    hemiLight.color.setHex(0x44aa22);
-    hemiLight.groundColor.setHex(0x2d5e00);
-    sun.color.setHex(0xffee88);
+    scene.fog.color.setHex(0x1e6626); scene.fog.density = 0.013;
+    hemiLight.color.setHex(0x55cc33); hemiLight.groundColor.setHex(0x2d5e00); hemiLight.intensity = 1.0;
+    sun.color.setHex(0xffee88); sun.intensity = 1.1;
+    if (stars) { stars.material.color.setHex(0x335522); stars.material.opacity = 0.18; }
     if (window._skyCtx) {
       const ctx = window._skyCtx, c = window._skyCanvas;
       const g = ctx.createLinearGradient(0, 0, 0, 256);
-      g.addColorStop(0,    '#020e04');
-      g.addColorStop(0.45, '#0a2d10');
-      g.addColorStop(0.75, '#154020');
-      g.addColorStop(1,    '#225530');
+      g.addColorStop(0,    '#010a02');
+      g.addColorStop(0.38, '#082010');
+      g.addColorStop(0.68, '#10381a');
+      g.addColorStop(1,    '#1a4e28');
       ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
       window._skyMesh.material.map.needsUpdate = true;
     }
   } else if (biome === 'snow') {
-    scene.fog.color.setHex(0x99bbdd);
-    hemiLight.color.setHex(0xaaccee);
-    hemiLight.groundColor.setHex(0x8899aa);
-    sun.color.setHex(0xeeeeff);
+    scene.fog.color.setHex(0x88aedd); scene.fog.density = 0.0055;
+    hemiLight.color.setHex(0xaad0f0); hemiLight.groundColor.setHex(0x8899aa); hemiLight.intensity = 0.75;
+    sun.color.setHex(0xe8eeff); sun.intensity = 0.85;
+    if (stars) { stars.material.color.setHex(0xffffff); stars.material.opacity = 0.5; }
     if (window._skyCtx) {
       const ctx = window._skyCtx, c = window._skyCanvas;
       const g = ctx.createLinearGradient(0, 0, 0, 256);
-      g.addColorStop(0,    '#1a2a40');
-      g.addColorStop(0.45, '#3a5575');
-      g.addColorStop(0.75, '#6688aa');
-      g.addColorStop(1,    '#99bbcc');
+      g.addColorStop(0,    '#141e30');
+      g.addColorStop(0.38, '#2a4462');
+      g.addColorStop(0.68, '#4e7090');
+      g.addColorStop(1,    '#80aabb');
       ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
       window._skyMesh.material.map.needsUpdate = true;
     }
   } else if (biome === 'deepsea') {
-    scene.fog.color.setHex(0x002244);
-    scene.fog.near = 18; scene.fog.far = 55;
-    hemiLight.color.setHex(0x004466);
-    hemiLight.groundColor.setHex(0x001a33);
-    sun.color.setHex(0x2288bb);
+    scene.fog.color.setHex(0x001833); scene.fog.density = 0.028;
+    hemiLight.color.setHex(0x0066aa); hemiLight.groundColor.setHex(0x001a2e); hemiLight.intensity = 0.6;
+    sun.color.setHex(0x44aacc); sun.intensity = 0.45;
+    if (stars) { stars.material.opacity = 0; }
     if (window._skyCtx) {
       const ctx = window._skyCtx, c = window._skyCanvas;
       const g = ctx.createLinearGradient(0, 0, 0, 256);
-      g.addColorStop(0,    '#000408');
-      g.addColorStop(0.35, '#000d1a');
-      g.addColorStop(0.7,  '#001a33');
-      g.addColorStop(1,    '#002244');
+      g.addColorStop(0,    '#000306');
+      g.addColorStop(0.35, '#000a14');
+      g.addColorStop(0.7,  '#001428');
+      g.addColorStop(1,    '#001833');
       ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
       window._skyMesh.material.map.needsUpdate = true;
     }
   } else {
-    scene.fog.color.setHex(0x3a5a78);
-    hemiLight.color.setHex(0x6688bb);
-    hemiLight.groundColor.setHex(0x336611);
-    sun.color.setHex(0xfff0cc);
+    scene.fog.color.setHex(0x3a5a78); scene.fog.density = 0.009;
+    hemiLight.color.setHex(0x6688bb); hemiLight.groundColor.setHex(0x336611); hemiLight.intensity = 0.85;
+    sun.color.setHex(0xfff0cc); sun.intensity = 1.0;
+    if (stars) { stars.material.color.setHex(0xffffff); stars.material.opacity = 0.75; }
     if (window._skyCtx) {
       const ctx = window._skyCtx, c = window._skyCanvas;
       const g = ctx.createLinearGradient(0, 0, 0, 256);
-      g.addColorStop(0,    '#060e22');
-      g.addColorStop(0.45, '#0d2a55');
-      g.addColorStop(0.75, '#1a3d6e');
-      g.addColorStop(1,    '#2a5080');
+      g.addColorStop(0,    '#040c1e');
+      g.addColorStop(0.38, '#0d2a55');
+      g.addColorStop(0.68, '#1a3d6e');
+      g.addColorStop(1,    '#264a7a');
       ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
       window._skyMesh.material.map.needsUpdate = true;
     }
@@ -4990,6 +5035,7 @@ function startGame() {
   startBattleTheme();
   resetGame();
   applyBiomeTheme(gs.biome);
+  initBiomeParticles(gs.biome);
   document.getElementById('screen').classList.add('hidden');
   gameStarted = true;
   buildPlayerMesh(); buildHotbar(); updateHUD();
@@ -5002,6 +5048,7 @@ function loadAndPlay() {
   startBattleTheme();
   loadGame();
   applyBiomeTheme(gs.biome);
+  initBiomeParticles(gs.biome);
   document.getElementById('screen').classList.add('hidden');
   gameStarted = true;
   buildPlayerMesh(); buildHotbar(); updateHUD();
@@ -5011,6 +5058,8 @@ function loadAndPlay() {
 function endGame() {
   gameStarted = false;
   stopBattleTheme();
+  _biomeParticles.forEach(p => scene.remove(p.mesh));
+  _biomeParticles = [];
   showScreen('gameover');
 }
 
@@ -5509,7 +5558,12 @@ function stopBattleTheme() {
 function _scheduleBattleLoop(t0) {
   if (!_battleActive) return;
   const ctx = _getCtx();
-  const end = _playBattleTheme(t0);
+  const biome = (typeof gs !== 'undefined') ? gs.biome : 'garden';
+  let end;
+  if      (biome === 'jungle')  end = _playBattleTheme_jungle(t0);
+  else if (biome === 'snow')    end = _playBattleTheme_snow(t0);
+  else if (biome === 'deepsea') end = _playBattleTheme_deepsea(t0);
+  else                          end = _playBattleTheme(t0);
   const msLeft = (end - ctx.currentTime) * 1000 - 200;
   _battleLoopTimeout = setTimeout(() => _scheduleBattleLoop(end), Math.max(0, msLeft));
 }
@@ -5632,6 +5686,228 @@ function _playBattleTheme(t0) {
   return t0 + w * 8;
 }
 
+// ── Jungle battle theme — A minor pentatonic, 128 BPM, marimba + conga ──
+function _playBattleTheme_jungle(t0) {
+  const ctx = _getCtx();
+  const bg = _battleGain;
+  const BPM = 128, b = 60 / BPM;
+  const e8 = b / 2, q = b, h = b * 2, w = b * 4;
+  const N = {
+    A2:110.00, E3:164.81, G3:196.00, A3:220.00,
+    C4:261.63, D4:293.66, E4:329.63, G4:392.00, A4:440.00,
+    C5:523.25, D5:587.33, E5:659.25, G5:783.99, A5:880.00
+  };
+  function mar(freq, t, dur, vol=0.30) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = freq;
+    filt.type = 'lowpass'; filt.frequency.value = Math.min(freq * 4.5, 4000); filt.Q.value = 1.8;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(dur * 0.55, 0.30));
+    osc.connect(filt); filt.connect(g); g.connect(bg);
+    osc.start(t); osc.stop(t + Math.min(dur * 0.6, 0.32));
+  }
+  function bss(freq, t, dur) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = freq;
+    filt.type = 'lowpass'; filt.frequency.value = 520; filt.Q.value = 1.2;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.30, t + 0.022);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.72);
+    osc.connect(filt); filt.connect(g); g.connect(bg);
+    osc.start(t); osc.stop(t + dur * 0.76);
+  }
+  function conga(t, hi=false) {
+    if (!_battleActive) return;
+    const f = hi ? 320 : 215;
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f * 1.55, t); osc.frequency.exponentialRampToValueAtTime(f, t + 0.05);
+    g.gain.setValueAtTime(0.44, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    osc.connect(g); g.connect(bg); osc.start(t); osc.stop(t + 0.16);
+  }
+  function shaker(t) {
+    if (!_battleActive) return;
+    const sr = ctx.sampleRate, len = Math.ceil(sr * 0.025);
+    const buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter(); filt.type = 'highpass'; filt.frequency.value = 5500;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.07, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.022);
+    src.connect(filt); filt.connect(g); g.connect(bg); src.start(t); src.stop(t + 0.028);
+  }
+  // A minor pentatonic melody — 8 bars, 128 BPM
+  const melody = [
+    [N.A4,e8],[N.C5,e8],[N.D5,e8],[N.E5,e8],[N.D5,e8],[N.C5,e8],[N.A4,e8],[N.G4,e8],  // bar 1
+    [N.A4,q],[N.E5,q],[N.D5,q],[N.C5,q],                                                 // bar 2
+    [N.G4,e8],[N.A4,e8],[N.C5,e8],[N.D5,e8],[N.E5,e8],[N.G5,e8],[N.E5,q],               // bar 3
+    [N.D5,h],[N.C5,q],[N.A4,q],                                                          // bar 4
+    [N.E5,e8],[N.D5,e8],[N.C5,e8],[N.A4,e8],[N.G4,e8],[N.A4,e8],[N.C5,e8],[N.D5,e8],   // bar 5
+    [N.E5,q],[N.G5,e8],[N.E5,e8],[N.D5,q],[N.C5,q],                                     // bar 6
+    [N.A4,e8],[N.C5,e8],[N.D5,e8],[N.E5,e8],[N.D5,q],[N.C5,e8],[N.A4,e8],              // bar 7
+    [N.E4,q],[N.G4,q],[N.A4,h],                                                          // bar 8
+  ];
+  const bassLine = [
+    [N.A2,w],[N.A2,w],[N.E3,w],[N.A2,w],
+    [N.A2,w],[N.G3,w],[N.E3,w],[N.A2,w],
+  ];
+  let mt = t0; melody.forEach(([f,d]) => { mar(f, mt, d); mt += d; });
+  let bt = t0; bassLine.forEach(([f,d]) => { bss(f, bt, d); bt += d; });
+  for (let beat = 0; beat < 32; beat++) {
+    const bt2 = t0 + beat * q;
+    if (beat % 4 === 0)                            conga(bt2, false);
+    if (beat % 4 === 1) { conga(bt2, true);        conga(bt2 + e8, false); }
+    if (beat % 4 === 2)                            conga(bt2, false);
+    if (beat % 4 === 3) { conga(bt2, true);        conga(bt2 + e8 * 1.5, true); }
+    shaker(bt2); shaker(bt2 + e8);
+  }
+  return t0 + w * 8;
+}
+
+// ── Snow battle theme — E minor, 76 BPM, ice bells + soft pads ──
+function _playBattleTheme_snow(t0) {
+  const ctx = _getCtx();
+  const bg = _battleGain;
+  const BPM = 76, b = 60 / BPM;
+  const e8 = b / 2, q = b, h = b * 2, w = b * 4;
+  const N = {
+    E3:164.81, Fs3:185.00, G3:196.00, A3:220.00, B3:246.94,
+    C4:261.63, D4:293.66, E4:329.63, Fs4:369.99, G4:392.00,
+    A4:440.00, B4:493.88, C5:523.25, D5:587.33, E5:659.25,
+    Fs5:739.99, G5:783.99
+  };
+  function bell(freq, t, dur, vol=0.34) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(dur * 0.9, 1.3));
+    osc.connect(g); g.connect(bg); osc.start(t); osc.stop(t + Math.min(dur * 0.95, 1.38));
+    // bell shimmer overtone
+    const osc2 = ctx.createOscillator(), g2 = ctx.createGain();
+    osc2.type = 'sine'; osc2.frequency.value = freq * 2.756;
+    g2.gain.setValueAtTime(vol * 0.3, t);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(dur * 0.45, 0.5));
+    osc2.connect(g2); g2.connect(bg); osc2.start(t); osc2.stop(t + Math.min(dur * 0.5, 0.55));
+  }
+  function pad(freq, t, dur) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    filt.type = 'lowpass'; filt.frequency.value = 750; filt.Q.value = 0.8;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.12, t + 0.4);
+    g.gain.setValueAtTime(0.12, t + dur - 0.5);
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    osc.connect(filt); filt.connect(g); g.connect(bg);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+  function iceclick(t) {
+    if (!_battleActive) return;
+    const sr = ctx.sampleRate, len = Math.ceil(sr * 0.014);
+    const buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter(); filt.type = 'bandpass'; filt.frequency.value = 3800; filt.Q.value = 3;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.09, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.012);
+    src.connect(filt); filt.connect(g); g.connect(bg); src.start(t); src.stop(t + 0.018);
+  }
+  // E minor melody — sparse, ethereal, 8 bars at 76 BPM
+  const melody = [
+    [N.E5,h],[N.D5,q],[N.B4,q],          // bar 1
+    [N.C5,h],[N.B4,h],                   // bar 2
+    [N.A4,q],[N.B4,q],[N.C5,q],[N.B4,q], // bar 3
+    [N.E5,w],                            // bar 4
+    [N.G5,q],[N.Fs5,q],[N.E5,h],         // bar 5
+    [N.D5,q],[N.C5,q],[N.B4,q],[N.A4,q], // bar 6
+    [N.Fs4,q],[N.G4,q],[N.A4,q],[N.B4,q],// bar 7
+    [N.E4,w],                            // bar 8
+  ];
+  const pads = [
+    [N.E3,w],[N.A3,w],[N.G3,w],[N.B3,w],
+    [N.A3,w],[N.G3,w],[N.Fs3,w],[N.E3,w],
+  ];
+  let mt = t0; melody.forEach(([f,d]) => { bell(f, mt, d); mt += d; });
+  let pt = t0; pads.forEach(([f,d]) => { pad(f, pt, d); pt += d; });
+  for (let bar = 0; bar < 8; bar++) {
+    iceclick(t0 + bar * w);
+    iceclick(t0 + bar * w + h);
+    if (bar % 2 === 0) iceclick(t0 + bar * w + q);
+  }
+  return t0 + w * 8;
+}
+
+// ── Deep Sea battle theme — B minor pentatonic, 90 BPM, drones + bubbles ──
+function _playBattleTheme_deepsea(t0) {
+  const ctx = _getCtx();
+  const bg = _battleGain;
+  const BPM = 90, b = 60 / BPM;
+  const e8 = b / 2, q = b, h = b * 2, w = b * 4;
+  const N = {
+    Fs2:92.50, B2:123.47, D3:146.83, E3:164.81, Fs3:185.00,
+    A3:220.00, B3:246.94, D4:293.66, E4:329.63, Fs4:369.99,
+    A4:440.00, B4:493.88, D5:587.33, E5:659.25
+  };
+  function drone(freq, t, dur) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    filt.type = 'lowpass'; filt.frequency.value = 550; filt.Q.value = 2.5;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.34, t + 0.22);
+    g.gain.setValueAtTime(0.34, t + dur - 0.35);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(filt); filt.connect(g); g.connect(bg);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+  function eerie(freq, t, dur, vol=0.28) {
+    if (!_battleActive) return;
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq * 1.018, t);
+    osc.frequency.linearRampToValueAtTime(freq, t + 0.28);
+    filt.type = 'bandpass'; filt.frequency.value = freq * 2.1; filt.Q.value = 3.2;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.09);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(dur * 0.84, 0.95));
+    osc.connect(filt); filt.connect(g); g.connect(bg);
+    osc.start(t); osc.stop(t + Math.min(dur * 0.88, 1.0));
+  }
+  function bubble(t) {
+    if (!_battleActive) return;
+    const f0 = 380 + Math.random() * 340;
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f0, t); osc.frequency.exponentialRampToValueAtTime(f0 * 2.4, t + 0.065);
+    g.gain.setValueAtTime(0.055, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    osc.connect(g); g.connect(bg); osc.start(t); osc.stop(t + 0.08);
+  }
+  // B minor pentatonic melody — dark, slow, 8 bars at 90 BPM
+  const melody = [
+    [N.B4,h],[N.A4,q],[N.Fs4,q],           // bar 1
+    [N.E4,h],[N.D4,h],                      // bar 2
+    [N.Fs4,q],[N.E4,q],[N.D4,q],[N.B3,q],  // bar 3
+    [N.B3,w],                               // bar 4
+    [N.D5,q],[N.B4,q],[N.A4,h],             // bar 5
+    [N.E4,q],[N.Fs4,q],[N.A4,q],[N.B4,q],  // bar 6
+    [N.D5,e8],[N.E5,e8],[N.D5,q],[N.B4,q],[N.A4,q],  // bar 7
+    [N.B3,w],                               // bar 8
+  ];
+  const bassLine = [
+    [N.B2,w],[N.E3,w],[N.B2,w],[N.Fs2,w],
+    [N.A3,w],[N.D3,w],[N.B2,w],[N.B2,w],
+  ];
+  let mt = t0; melody.forEach(([f,d]) => { eerie(f, mt, d); mt += d; });
+  let bt = t0; bassLine.forEach(([f,d]) => { drone(f, bt, d); bt += d; });
+  for (let bar = 0; bar < 8; bar++) {
+    const bt2 = t0 + bar * w;
+    bubble(bt2 + q * (0.3 + Math.random() * 1.4));
+    if (Math.random() > 0.38) bubble(bt2 + h + q * (0.2 + Math.random() * 1.6));
+  }
+  return t0 + w * 8;
+}
+
 // ═══════════════════════════════════════
 //  GAME LOOP
 // ═══════════════════════════════════════
@@ -5681,12 +5957,16 @@ function loop(ts) {
       spawnWildBird();
     }
     updateArmy(dt);
+    updateBiomeParticles(dt);
 
     // Camera follows player
     camera.position.lerp(gs.playerPos.clone().add(CAM_OFF.clone().multiplyScalar(camZoom)), 0.06);
     camera.lookAt(gs.playerPos);
     updateHUD();
   }
+
+  // Barn lantern flicker
+  if (window._barnLantern) window._barnLantern.intensity = 2.2 + Math.sin(t * 9.3) * 0.5 + Math.sin(t * 17.7) * 0.2;
 
   // Drift clouds slowly
   scene.children.forEach(c => { if (c._isCloud) { c.position.x += 0.4 * dt; if (c.position.x > 50) c.position.x = -50; } });
@@ -5851,6 +6131,72 @@ function _playTheme(t0) {
     hihat(bt2); hihat(bt2 + e8);
   }
   return t0 + w * 8;
+}
+
+// ═══════════════════════════════════════
+//  BIOME AMBIENT PARTICLES
+// ═══════════════════════════════════════
+let _biomeParticles = [];
+function initBiomeParticles(biome) {
+  _biomeParticles.forEach(p => scene.remove(p.mesh));
+  _biomeParticles = [];
+  if (biome === 'snow') {
+    for (let i = 0; i < 55; i++) {
+      const m = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.07 + Math.random() * 0.04, 0),
+        new THREE.MeshBasicMaterial({ color: 0xddeeff, transparent: true, opacity: 0.80 })
+      );
+      m.position.set((Math.random()-0.5)*72, Math.random()*24, (Math.random()-0.5)*72);
+      scene.add(m);
+      _biomeParticles.push({ mesh:m, vy:-(0.7+Math.random()*1.1), vx:(Math.random()-0.5)*0.4, vz:(Math.random()-0.5)*0.4, wb:Math.random()*Math.PI*2 });
+    }
+  } else if (biome === 'jungle') {
+    const lc = [0x3a7d1a, 0x5aad2a, 0x228b22, 0x7dc52a, 0xa05800];
+    for (let i = 0; i < 22; i++) {
+      const m = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.18 + Math.random() * 0.14, 0),
+        new THREE.MeshBasicMaterial({ color: lc[i % lc.length], transparent: true, opacity: 0.82 })
+      );
+      m.position.set((Math.random()-0.5)*66, Math.random()*20, (Math.random()-0.5)*66);
+      m.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+      scene.add(m);
+      _biomeParticles.push({ mesh:m, vy:-(0.5+Math.random()*0.8), vx:(Math.random()-0.5)*0.3, vz:(Math.random()-0.5)*0.3, spin:(Math.random()-0.5)*2.5, wb:Math.random()*Math.PI*2 });
+    }
+  } else if (biome === 'deepsea') {
+    for (let i = 0; i < 38; i++) {
+      const r = 0.055 + Math.random() * 0.09;
+      const m = new THREE.Mesh(
+        new THREE.SphereGeometry(r, 5, 4),
+        new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.32 + Math.random()*0.28 })
+      );
+      m.position.set((Math.random()-0.5)*56, Math.random()*15, (Math.random()-0.5)*56);
+      scene.add(m);
+      _biomeParticles.push({ mesh:m, vy:0.55+Math.random()*0.9, vx:(Math.random()-0.5)*0.15, vz:(Math.random()-0.5)*0.15, wb:Math.random()*Math.PI*2 });
+    }
+  }
+}
+function updateBiomeParticles(dt) {
+  if (!_biomeParticles.length) return;
+  for (const p of _biomeParticles) {
+    p.wb += dt * 0.85;
+    if (gs.biome === 'snow') {
+      p.mesh.position.x += (p.vx + Math.sin(p.wb) * 0.18) * dt;
+      p.mesh.position.y += p.vy * dt;
+      p.mesh.position.z += p.vz * dt;
+      if (p.mesh.position.y < 0) p.mesh.position.set((Math.random()-0.5)*72, 22+Math.random()*4, (Math.random()-0.5)*72);
+    } else if (gs.biome === 'jungle') {
+      p.mesh.position.x += (p.vx + Math.sin(p.wb) * 0.22) * dt;
+      p.mesh.position.y += p.vy * dt;
+      p.mesh.position.z += (p.vz + Math.cos(p.wb * 0.7) * 0.14) * dt;
+      p.mesh.rotation.x += p.spin * dt * 0.55; p.mesh.rotation.z += p.spin * dt * 0.35;
+      if (p.mesh.position.y < 0.2) { p.mesh.position.set((Math.random()-0.5)*66, 18+Math.random()*4, (Math.random()-0.5)*66); p.mesh.rotation.set(Math.random()*Math.PI,Math.random()*Math.PI,Math.random()*Math.PI); }
+    } else if (gs.biome === 'deepsea') {
+      p.mesh.position.x += (p.vx + Math.sin(p.wb*0.65)*0.09) * dt;
+      p.mesh.position.y += p.vy * dt;
+      p.mesh.position.z += p.vz * dt;
+      if (p.mesh.position.y > 18) p.mesh.position.set((Math.random()-0.5)*56, -0.3, (Math.random()-0.5)*56);
+    }
+  }
 }
 
 // ═══════════════════════════════════════
