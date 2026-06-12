@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Stick Wars - Major Overhaul
+
+#### Fixed
+- Melee attacks dealt damage every frame of the swing animation (~20x intended damage); each swing now lands once at the moment of impact
+- A scoping bug (`const Combat = window.Combat || ...`) crashed the frame whenever a projectile or explosion hit, skipping game logic and suppressing all hit effects
+- Enemy ranged attacks fired backwards (away from their target) due to a facing-direction mismatch with `Object3D.lookAt`
+- Player movement used an inverted rotation, so WASD drifted in the wrong direction at most camera angles; first-person mode ignored facing entirely
+- Enemy health bars never faced the camera (looked at the ambient light instead)
+- Weapon key 7 did nothing despite the "Press 7 to equip" message; keyboard weapon switching now also syncs the weapon-bar highlight
+- Player death removed the camera from the scene and the game kept running; there is now a proper game-over state that freezes the battle
+- Damage flash could get stuck leaving figures permanently red when hits overlapped
+- Bomb unlock threshold was inconsistent (20 vs 200 coins); unlocks are now 100 coins (rifle) and 150 coins (bomb) with progress shown in the HUD
+- Enemies could spawn on top of the player; they now spawn in a ring around the player and avoid obstacles
+- Mobile attack button was unreachable (covered by the look-touch area) and now supports hold-to-attack
+- Local 2P passed a color where a character type was expected, player 2's controls never registered, and player 2's attacks damaged player 1; all fixed, and player 2 is tinted blue
+- Removed the non-functional online multiplayer buttons (connection handshake could never complete)
+
+#### Changed
+- Full combat rebalance: player 200 HP, enemy HP 50-140 by type, sensible weapon damage/cooldown tradeoffs, gentler wave scaling
+- Smarter AI: melee types charge with type-specific weapons, archers/mages keep distance and kite, enemies slide around obstacles and no longer stack on one spot
+- Player projectiles follow the camera pitch so you can aim up and down
+
+#### Added
+- Procedural sound effects (Web Audio): attacks, hits, coins, explosions, reloads, wave start, unlocks, victory/defeat
+- Visual HUD health bar, damage vignette when hurt, reload indicator, named weapon slots with lock state
+- Pause (P key), hold-to-attack on desktop and mobile, coin magnet pickup, richer wave/victory/defeat screens with run stats
+
 ### Added
 - Comprehensive issue templates for bug reports, feature requests, and questions
 - Enhanced GitHub Actions workflows for CI/CD, security, and automation

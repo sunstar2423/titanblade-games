@@ -14,17 +14,25 @@ class MultiplayerManager {
         this.isConnected = false;
     }
 
-    // Simple local multiplayer (split-screen or turn-based)
+    // Simple local multiplayer (shared screen)
     enableLocalMultiplayer() {
+        if (this.localMultiplayerEnabled) return;
+        this.localMultiplayerEnabled = true;
         this.createSecondPlayer();
         this.setupLocalControls();
     }
 
     createSecondPlayer() {
-        // Create second player with different color and position
-        const player2 = new StickFigure(this.game.scene, 5, 0, 5, 0x00ff00, true);
+        const player2 = new StickFigure(this.game.scene, 5, 0, 5, 'warrior', true);
         player2.playerId = 'player2';
+        player2.isHudOwner = false; // Player 1's HUD stays in charge
         this.game.players.push(player2);
+
+        // Tint player 2 blue so the players can tell each other apart
+        const blueMaterial = new THREE.MeshLambertMaterial({ color: 0x0066ff });
+        player2.head.material = blueMaterial;
+        player2.body.material = blueMaterial;
+        player2.baseColor = 0x0066ff;
 
         // Different weapon loadout for variety
         player2.switchWeapon(1); // Start with axe
@@ -56,7 +64,7 @@ class MultiplayerManager {
                         this.game.keys['Player2Right'] = true;
                         break;
                     case 'Numpad0':
-                        player2.attack();
+                        player2.attack(this.game);
                         break;
                     case 'Numpad1':
                         player2.switchWeapon(0);
@@ -112,9 +120,10 @@ class MultiplayerManager {
                 if (this.game.keys['Player2Left']) direction.x -= 1;
                 if (this.game.keys['Player2Right']) direction.x += 1;
 
-                if (direction.length() > 0) {
+                if (direction.length() > 0 && player2.health > 0) {
                     direction.normalize();
                     player2.move(direction.x * moveSpeed, direction.z * moveSpeed);
+                    this.game.clampToMapBoundaries(player2);
                 }
             }
         };
@@ -207,7 +216,7 @@ class MultiplayerManager {
             this.isHost ? 5 : -5,
             0,
             this.isHost ? 5 : -5,
-            this.isHost ? 0x00ff00 : 0x0066ff,
+            'warrior',
             false
         );
         remotePlayer.playerId = this.isHost ? 'guest' : 'host';

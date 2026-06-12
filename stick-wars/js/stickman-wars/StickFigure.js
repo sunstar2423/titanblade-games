@@ -2,6 +2,7 @@ class StickFigure {
     constructor(scene, x, y, z, characterType = 'warrior', isPlayer = false, isNeutral = false) {
         this.scene = scene;
         this.isPlayer = isPlayer;
+        this.isHudOwner = isPlayer; // Only the main player drives the HUD (player 2 sets this false)
         this.isNeutral = isNeutral; // Neutral units attack everyone
         this.characterType = characterType;
 
@@ -10,6 +11,10 @@ class StickFigure {
 
         this.isAttacking = false;
         this.attackCooldown = 0;
+        this.meleeHitPending = false; // Set when a melee swing should land (consumed by Game3D)
+        this.isFlashing = false;
+        this.aiTarget = null;
+        this.prefersRanged = false;
         this.weapons = [];
         this.currentWeaponIndex = 0;
         this.currentWeapon = null;
@@ -30,32 +35,29 @@ class StickFigure {
 
     setCharacterStats(type) {
         const stats = {
-            warrior: { health: 3000, speed: 1.0, damage: 1.2 }, // Player health
-            rogue: { health: 4000, speed: 1.4, damage: 1.0 }, // Enemy health
-            mage: { health: 4000, speed: 0.8, damage: 1.5 }, // Enemy health
-            tank: { health: 4000, speed: 0.7, damage: 0.9 }, // Enemy health
-            archer: { health: 4000, speed: 1.2, damage: 1.1 }, // Enemy health
-            skateboarder: { health: 3500, speed: 4.0, damage: 1.0 }, // Super fast skateboard enemy!
-            neutralTank: { health: 10000, speed: 0.5, damage: 3.0 } // Neutral super tank
+            warrior: { health: 90, speed: 1.0, damage: 1.0 },
+            rogue: { health: 70, speed: 1.3, damage: 0.9 },
+            mage: { health: 55, speed: 0.8, damage: 1.3 },
+            tank: { health: 140, speed: 0.6, damage: 1.1 },
+            archer: { health: 60, speed: 1.1, damage: 1.0 },
+            skateboarder: { health: 50, speed: 2.2, damage: 0.8 }, // Fast hit-and-run attacker
+            neutralTank: { health: 500, speed: 0.5, damage: 2.5 } // Neutral super tank
         };
 
         const charStats = stats[type] || stats.warrior;
 
-        // Special case: if this is a player character, use player stats
-        if (this.isPlayer && type === 'warrior') {
-            this.health = 3000;
-            this.maxHealth = 3000;
-        } else if (this.isNeutral && type === 'neutralTank') {
-            // Neutral tank gets massive health
-            this.health = charStats.health;
-            this.maxHealth = charStats.health;
+        if (this.isPlayer) {
+            // Player is tougher and hits harder than a regular warrior
+            this.health = 200;
+            this.maxHealth = 200;
+            this.speedMultiplier = 1.0;
+            this.damageMultiplier = 1.2;
         } else {
             this.health = charStats.health;
             this.maxHealth = charStats.health;
+            this.speedMultiplier = charStats.speed;
+            this.damageMultiplier = charStats.damage;
         }
-
-        this.speedMultiplier = charStats.speed;
-        this.damageMultiplier = charStats.damage;
 
         // Set color based on player/enemy/neutral
         if (this.isPlayer) {
@@ -392,21 +394,27 @@ class StickFigure {
     }
 
     initializeWeapons() {
+        // damage / range / color; cooldowns set below
         this.weapons = [
-            new Weapon('Sword', 30, 2.0, 0x888888),
-            new Weapon('Axe', 35, 1.8, 0x8B4513),
-            new Weapon('Spear', 20, 3.0, 0x654321),
-            new Weapon('Hammer', 40, 1.5, 0x696969),
-            new Weapon('Crossbow', 100, 7.0, 0x4A4A4A),
-            null, // Rifle slot - unlocked with 100 coins
-            null  // Bomb slot - unlocked with 200 coins
+            new Weapon('Sword', 25, 2.2, 0x888888),   // Fast all-rounder
+            new Weapon('Axe', 40, 2.0, 0x8B4513),     // Slower, heavier hits
+            new Weapon('Spear', 30, 3.2, 0x654321),   // Extra reach
+            new Weapon('Hammer', 60, 1.8, 0x696969),  // Slow but devastating
+            new Weapon('Crossbow', 35, 12.0, 0x4A4A4A), // Ranged
+            null, // Rifle slot - unlocked with coins
+            null  // Bomb slot - unlocked with coins
         ];
 
-        // Set crossbow stats
-        this.weapons[4].cooldown = 0.2; // Very fast fire rate
-        this.weapons[4].maxAmmo = 10; // 10 bolts per reload
+        this.weapons[0].cooldown = 0.5;
+        this.weapons[1].cooldown = 0.8;
+        this.weapons[2].cooldown = 0.7;
+        this.weapons[3].cooldown = 1.2;
+
+        // Crossbow ammo / fire rate
+        this.weapons[4].cooldown = 0.6;
+        this.weapons[4].maxAmmo = 10;
         this.weapons[4].currentAmmo = 10;
-        this.weapons[4].reloadTime = 1.5; // 1.5 seconds to reload
+        this.weapons[4].reloadTime = 1.5;
 
         this.currentWeapon = this.weapons[0];
         this.currentWeapon.attachTo(this.rightArm);
@@ -418,22 +426,15 @@ class StickFigure {
 
     unlockRifle() {
         if (!this.hasRifle) {
-            console.log('Creating rifle weapon...');
-            // Create the rifle weapon
-            const rifle = new Weapon('Rifle', 200, 15.0, 0x2F4F4F);
+            const rifle = new Weapon('Rifle', 22, 15.0, 0x2F4F4F);
 
-            // Set rifle stats
             rifle.cooldown = 0.15; // Fast fire rate
-            rifle.maxAmmo = 30; // 30 bullets per reload
+            rifle.maxAmmo = 30;
             rifle.currentAmmo = 30;
-            rifle.reloadTime = 2.0; // 2 seconds to reload
+            rifle.reloadTime = 2.0;
 
-            // Add to weapons array
             this.weapons[5] = rifle;
             this.hasRifle = true;
-
-            console.log('Rifle unlocked! Weapon:', rifle);
-            console.log('Weapons array:', this.weapons);
 
             // Auto-switch to rifle
             if (this.isPlayer) {
@@ -449,23 +450,16 @@ class StickFigure {
 
     unlockBomb() {
         if (!this.hasBomb) {
-            console.log('Creating bomb weapon...');
-            // Create the bomb weapon
-            const bomb = new Weapon('Bomb', 500, 5.0, 0xFF4500);
+            const bomb = new Weapon('Bomb', 120, 5.0, 0xFF4500);
 
-            // Set bomb stats
-            bomb.cooldown = 1.5; // Slower fire rate (grenades take time)
-            bomb.maxAmmo = 5; // 5 bombs per reload
+            bomb.cooldown = 1.5; // Grenades take time to throw
+            bomb.maxAmmo = 5;
             bomb.currentAmmo = 5;
-            bomb.reloadTime = 3.0; // 3 seconds to reload
+            bomb.reloadTime = 3.0;
             bomb.explosionRadius = 4.0; // Area of effect damage
 
-            // Add to weapons array
             this.weapons[6] = bomb;
             this.hasBomb = true;
-
-            console.log('Bomb unlocked! Weapon:', bomb);
-            console.log('Weapons array:', this.weapons);
 
             // Auto-switch to bomb
             if (this.isPlayer) {
@@ -480,8 +474,6 @@ class StickFigure {
     }
 
     switchWeapon(index) {
-        console.log(`Attempting to switch to weapon ${index}, weapon exists:`, this.weapons[index] !== null);
-
         if (index >= 0 && index < this.weapons.length && this.weapons[index] !== null) {
             // Remove current weapon
             if (this.currentWeapon) {
@@ -493,19 +485,13 @@ class StickFigure {
             this.currentWeapon = this.weapons[index];
             this.currentWeapon.attachTo(this.rightArm);
 
-            console.log(`Switched to weapon: ${this.currentWeapon.name}`);
-
-            // Update UI
-            if (this.isPlayer) {
-                if (this.currentWeapon.maxAmmo !== null) {
-                    document.getElementById('currentWeapon').textContent =
-                        `${this.currentWeapon.name} (${this.currentWeapon.currentAmmo}/${this.currentWeapon.maxAmmo})`;
-                } else {
-                    document.getElementById('currentWeapon').textContent = this.currentWeapon.name;
-                }
+            // Update UI (weapon text + slot highlight)
+            if (this.isHudOwner) {
+                this.updateAmmoUI();
+                document.querySelectorAll('.weapon-slot').forEach(slot => slot.classList.remove('active'));
+                const slot = document.querySelector(`[data-weapon="${index}"]`);
+                if (slot) slot.classList.add('active');
             }
-        } else {
-            console.log(`Cannot switch to weapon ${index} - not available`);
         }
     }
 
@@ -532,63 +518,54 @@ class StickFigure {
     }
 
     attack(gameInstance) {
-        if (this.attackCooldown <= 0 && this.currentWeapon && !this.currentWeapon.isReloading) {
-            console.log(`Attacking with weapon: ${this.currentWeapon.name}, ammo: ${this.currentWeapon.currentAmmo}`);
+        if (this.health <= 0) return;
+        if (this.attackCooldown > 0 || !this.currentWeapon || this.currentWeapon.isReloading) return;
 
-            // Check if weapon needs ammo and is out
-            if (this.currentWeapon.maxAmmo !== null && this.currentWeapon.currentAmmo <= 0) {
-                console.log('Out of ammo, reloading...');
-                this.reloadWeapon();
-                return;
+        // Check if weapon needs ammo and is out
+        if (this.currentWeapon.maxAmmo !== null && this.currentWeapon.currentAmmo <= 0) {
+            this.reloadWeapon();
+            return;
+        }
+
+        this.isAttacking = true;
+        this.attackCooldown = this.currentWeapon.cooldown;
+
+        const weaponName = this.currentWeapon.name;
+
+        if (weaponName === 'Bomb' && gameInstance) {
+            if (this.currentWeapon.currentAmmo !== null) {
+                this.currentWeapon.currentAmmo--;
+                this.updateAmmoUI();
             }
 
-            this.isAttacking = true;
-            this.attackCooldown = this.currentWeapon.cooldown;
-
-            // Check if using bomb
-            if (this.currentWeapon.name === 'Bomb' && gameInstance) {
-                console.log('Throwing bomb!');
-
-                // Use ammo
-                if (this.currentWeapon.currentAmmo !== null) {
-                    this.currentWeapon.currentAmmo--;
-                    this.updateAmmoUI();
-                }
-
-                // Throw bomb
-                this.throwBomb(gameInstance);
-
-                // Throwing animation
-                this.performThrowAnimation();
+            this.throwBomb(gameInstance);
+            this.performThrowAnimation();
+            if (this.isPlayer && window.Sound) window.Sound.swing();
+        }
+        // Ranged weapons shoot a projectile instead of melee
+        else if ((weaponName === 'Crossbow' || weaponName === 'Rifle') && gameInstance) {
+            if (this.currentWeapon.currentAmmo !== null) {
+                this.currentWeapon.currentAmmo--;
+                this.updateAmmoUI();
             }
-            // Check if using ranged weapon - shoot projectile instead of melee
-            else if ((this.currentWeapon.name === 'Crossbow' || this.currentWeapon.name === 'Rifle') && gameInstance) {
-                console.log('Firing ranged weapon:', this.currentWeapon.name);
 
-                // Use ammo
-                if (this.currentWeapon.currentAmmo !== null) {
-                    this.currentWeapon.currentAmmo--;
-                    this.updateAmmoUI();
-                }
+            this.shootArrow(gameInstance);
 
-                // Shoot projectile (using arrow system)
-                this.shootArrow(gameInstance);
-
-                // Shooting animation
-                if (this.currentWeapon.name === 'Rifle') {
-                    this.performRifleAnimation();
-                } else {
-                    this.performCrossbowAnimation();
-                }
+            if (weaponName === 'Rifle') {
+                this.performRifleAnimation();
             } else {
-                console.log('Performing melee attack');
-                // Melee attack animation based on weapon
-                this.performMeleeAnimation();
+                this.performCrossbowAnimation();
             }
+            if (this.isPlayer && window.Sound) window.Sound.shoot();
+        } else {
+            // Melee attack animation; the hit lands mid-swing via meleeHitPending
+            this.performMeleeAnimation();
+            if (this.isPlayer && window.Sound) window.Sound.swing();
         }
     }
 
     reloadWeapon() {
+        if (!this.currentWeapon) return;
         if (this.currentWeapon.isReloading || this.currentWeapon.maxAmmo === null) return;
         if (this.currentWeapon.currentAmmo >= this.currentWeapon.maxAmmo) return;
 
@@ -596,14 +573,38 @@ class StickFigure {
         this.currentWeapon.reloadProgress = 0;
 
         if (this.isPlayer) {
-            console.log('Reloading...');
+            this.updateAmmoUI();
+            if (window.Sound) window.Sound.reload();
         }
     }
 
     updateAmmoUI() {
-        if (this.isPlayer && this.currentWeapon.maxAmmo !== null) {
-            const weaponText = document.getElementById('currentWeapon');
-            weaponText.textContent = `${this.currentWeapon.name} (${this.currentWeapon.currentAmmo}/${this.currentWeapon.maxAmmo})`;
+        if (!this.isHudOwner || !this.currentWeapon) return;
+        const weaponText = document.getElementById('currentWeapon');
+        if (!weaponText) return;
+
+        if (this.currentWeapon.maxAmmo !== null) {
+            weaponText.textContent = this.currentWeapon.isReloading
+                ? `${this.currentWeapon.name} (Reloading...)`
+                : `${this.currentWeapon.name} (${this.currentWeapon.currentAmmo}/${this.currentWeapon.maxAmmo})`;
+        } else {
+            weaponText.textContent = this.currentWeapon.name;
+        }
+    }
+
+    updateHealthUI() {
+        if (!this.isHudOwner) return;
+
+        const healthValue = document.getElementById('healthValue');
+        if (healthValue) {
+            healthValue.textContent = `${Math.max(0, Math.ceil(this.health))}/${this.maxHealth}`;
+        }
+
+        const bar = document.getElementById('healthBarInner');
+        if (bar) {
+            const pct = Math.max(0, this.health / this.maxHealth);
+            bar.style.width = (pct * 100) + '%';
+            bar.style.background = pct > 0.6 ? '#4CAF50' : (pct > 0.3 ? '#FFC107' : '#F44336');
         }
     }
 
@@ -739,6 +740,9 @@ class StickFigure {
             this.body.rotation.x = 0.15;
             this.body.rotation.z = 0.1;
 
+            // This is the moment the swing connects - Game3D resolves the hit
+            this.meleeHitPending = true;
+
             // Step forward (only if character has legs)
             if (this.leftLeg && this.rightLeg) {
                 this.leftLeg.rotation.x = 0.3;
@@ -765,56 +769,51 @@ class StickFigure {
         }, 150);
     }
 
-    shootArrow(gameInstance) {
-        // Get shooting direction from where character is facing
+    getShootDirection(gameInstance) {
+        // AI characters aim straight at their target (lookAt points the model's
+        // +Z at the target, so deriving the direction from the facing would
+        // fire backwards). A bit of spread keeps them beatable.
+        if (!this.isPlayer && this.aiTarget && this.aiTarget.health > 0) {
+            const direction = new THREE.Vector3()
+                .subVectors(this.aiTarget.group.position, this.group.position);
+            direction.y = 0;
+            direction.normalize();
+            direction.x += (Math.random() - 0.5) * 0.12;
+            direction.z += (Math.random() - 0.5) * 0.12;
+            direction.y = 0.02 + (Math.random() - 0.5) * 0.04;
+            return direction.normalize();
+        }
+
+        // Players shoot where they're facing
         const direction = new THREE.Vector3(0, 0, -1);
         direction.applyQuaternion(this.group.quaternion);
-
-        // Normalize to ensure consistent speed
         direction.normalize();
 
-        // Rifles shoot straighter, crossbows have slight arc
-        if (this.currentWeapon.name === 'Rifle') {
-            direction.y += 0.02; // Very slight upward angle
-        } else {
-            direction.y += 0.05; // Slight upward angle for realistic arc
+        // Apply the camera pitch so aiming up/down works
+        if (this.isPlayer && gameInstance && gameInstance.camera) {
+            direction.y = Math.tan(gameInstance.camera.rotation.x);
         }
-        direction.normalize();
 
-        // Create and add arrow/bullet
+        // Slight upward arc to compensate for gravity (rifles shoot flatter)
+        direction.y += (this.currentWeapon && this.currentWeapon.name === 'Rifle') ? 0.01 : 0.04;
+        return direction.normalize();
+    }
+
+    shootArrow(gameInstance) {
+        const direction = this.getShootDirection(gameInstance);
         const arrow = new Arrow(this.scene, this.group.position.clone(), direction, this);
         gameInstance.arrows.push(arrow);
-
-        // Debug: log projectile creation
-        console.log('Projectile shot by', this.isPlayer ? 'player' : 'enemy',
-                    'weapon:', this.currentWeapon.name,
-                    'damage:', this.currentWeapon.damage,
-                    'at position', this.group.position,
-                    'direction', direction);
     }
 
     throwBomb(gameInstance) {
-        // Get throwing direction from where character is facing
-        const direction = new THREE.Vector3(0, 0, -1);
-        direction.applyQuaternion(this.group.quaternion);
+        const direction = this.getShootDirection(gameInstance);
 
-        // Normalize to ensure consistent speed
+        // Bombs are lobbed in a high arc
+        direction.y += 0.4;
         direction.normalize();
 
-        // Bombs are thrown in an arc
-        direction.y += 0.4; // High arc for grenade throw
-        direction.normalize();
-
-        // Create and add bomb
         const bomb = new Bomb(this.scene, this.group.position.clone(), direction, this);
         gameInstance.bombs.push(bomb);
-
-        // Debug: log bomb creation
-        console.log('💣 Bomb thrown by', this.isPlayer ? 'player' : 'enemy',
-                    'damage:', this.currentWeapon.damage,
-                    'explosion radius:', this.currentWeapon.explosionRadius,
-                    'at position', this.group.position,
-                    'direction', direction);
     }
 
     performThrowAnimation() {
@@ -868,18 +867,27 @@ class StickFigure {
     }
 
     takeDamage(amount) {
-        const oldHealth = this.health;
+        if (this.health <= 0) return; // Already down
+
         this.health = Math.max(0, this.health - amount);
 
-        console.log('takeDamage called:', 'Amount:', amount, 'Old Health:', oldHealth, 'New Health:', this.health, 'isPlayer:', this.isPlayer, 'hasHealthBar:', !!this.healthBar);
+        if (this.isPlayer) {
+            if (window.Sound) window.Sound.playerHurt();
+            this.updateHealthUI();
 
-        // Update health bar for enemies
-        if (!this.isPlayer && this.healthBar) {
+            // Red vignette flash so getting hit is obvious
+            if (this.isHudOwner) {
+                const overlay = document.getElementById('damageOverlay');
+                if (overlay) {
+                    overlay.style.opacity = '0.55';
+                    clearTimeout(this.vignetteTimer);
+                    this.vignetteTimer = setTimeout(() => { overlay.style.opacity = '0'; }, 150);
+                }
+            }
+        } else if (this.healthBar) {
             const healthPercent = this.health / this.maxHealth;
-            this.healthBar.scale.x = healthPercent;
+            this.healthBar.scale.x = Math.max(0.001, healthPercent);
             this.healthBar.position.x = (healthPercent - 1) * 0.5;
-
-            console.log('Updating health bar:', 'healthPercent:', healthPercent, 'scale.x:', this.healthBar.scale.x);
 
             // Change color based on health
             if (healthPercent > 0.6) {
@@ -889,8 +897,6 @@ class StickFigure {
             } else {
                 this.healthBar.material.color.setHex(0xff0000);
             }
-        } else if (!this.isPlayer && !this.healthBar) {
-            console.warn('Enemy has no health bar!');
         }
 
         // Death or conversion
@@ -901,6 +907,7 @@ class StickFigure {
             } else {
                 this.die();
             }
+            return;
         }
 
         // Damage effect
@@ -979,8 +986,12 @@ class StickFigure {
     }
 
     showDamageEffect() {
+        // Don't stack flashes - overlapping hits would capture red as the
+        // "original" color and leave the figure permanently red
+        if (this.isFlashing) return;
+        this.isFlashing = true;
+
         // Flash red briefly
-        const originalColor = this.head.material.color.clone();
         this.head.material.color.setHex(0xff0000);
         this.body.material.color.setHex(0xff0000);
 
@@ -1003,21 +1014,24 @@ class StickFigure {
         this.head.rotation.x = -0.2;
 
         setTimeout(() => {
-            // Return color and position
-            this.head.material.color.copy(originalColor);
-            this.body.material.color.copy(originalColor);
+            // Restore the faction color and pose
+            this.head.material.color.setHex(this.baseColor);
+            this.body.material.color.setHex(this.baseColor);
 
             this.body.rotation.x = originalBodyRotX;
             this.body.rotation.z = originalBodyRotZ;
             this.leftArm.rotation.x = originalLeftArmRotX;
             this.rightArm.rotation.x = originalRightArmRotX;
             this.head.rotation.x = originalHeadRotX;
+            this.isFlashing = false;
         }, 150);
     }
 
     die() {
         // Store death position for coin drop
         this.deathPosition = this.group.position.clone();
+
+        if (!this.isPlayer && window.Sound) window.Sound.enemyDie();
 
         // Dramatic death animation
         let fallProgress = 0;
@@ -1058,8 +1072,9 @@ class StickFigure {
 
             if (fallProgress < 1) {
                 requestAnimationFrame(deathAnimation);
-            } else {
-                // Final position - fully collapsed
+            } else if (!this.isPlayer) {
+                // Remove the body after a moment. The player group stays -
+                // the camera is parented to it and must remain valid.
                 setTimeout(() => {
                     this.scene.remove(this.group);
                 }, 1000);
@@ -1069,7 +1084,7 @@ class StickFigure {
         deathAnimation();
     }
 
-    update(deltaTime) {
+    update(deltaTime, cameraPosition) {
         // Update attack cooldown
         if (this.attackCooldown > 0) {
             this.attackCooldown -= deltaTime;
@@ -1086,11 +1101,13 @@ class StickFigure {
                 this.currentWeapon.reloadProgress = 0;
 
                 if (this.isPlayer) {
-                    console.log('Reload complete!');
                     this.updateAmmoUI();
                 }
             }
         }
+
+        // Dead characters are owned by the death animation - don't fight it
+        if (this.health <= 0) return;
 
         // Idle animation - breathing
         if (!this.isWalking && !this.isAttacking && this.health > 0) {
@@ -1176,9 +1193,9 @@ class StickFigure {
             }
         }
 
-        // Make health bar face camera (for enemies)
-        if (this.healthBarGroup && this.scene.children[0] && this.scene.children[0].type === 'PerspectiveCamera') {
-            this.healthBarGroup.lookAt(this.scene.children[0].position);
+        // Make health bar face the camera (for enemies)
+        if (this.healthBarGroup && cameraPosition) {
+            this.healthBarGroup.lookAt(cameraPosition);
         }
 
         this.isWalking = false;

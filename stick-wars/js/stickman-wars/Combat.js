@@ -1,16 +1,11 @@
 class Combat {
-    static calculateDamage(attacker, target, weapon) {
-        let baseDamage = weapon.damage;
+    static calculateDamage(attacker, weapon) {
+        // Weapon damage scaled by the attacker's multiplier (character type +
+        // wave scaling), with a little randomness
+        const baseDamage = weapon.damage * (attacker.damageMultiplier || 1);
+        const randomFactor = 0.85 + Math.random() * 0.3; // 85% to 115% damage
 
-        // Enemies deal fixed 100 damage
-        if (!attacker.isPlayer) {
-            baseDamage = 100;
-        }
-
-        // Add some randomness
-        const randomFactor = 0.8 + Math.random() * 0.4; // 80% to 120% damage
-
-        return Math.floor(baseDamage * randomFactor);
+        return Math.max(1, Math.floor(baseDamage * randomFactor));
     }
 
     static isInRange(attacker, target, weapon) {
@@ -162,7 +157,7 @@ class Combat {
 
         targets.forEach(target => {
             if (target.health > 0 && this.isInRange(attacker, target, attacker.currentWeapon)) {
-                const damage = this.calculateDamage(attacker, target, attacker.currentWeapon);
+                const damage = this.calculateDamage(attacker, attacker.currentWeapon);
 
                 target.takeDamage(damage);
 

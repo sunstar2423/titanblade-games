@@ -4,10 +4,9 @@ class Game3D {
         this.camera = null;
         this.renderer = null;
         this.players = [];
-        this.weapons = [];
         this.keys = {};
-        this.mouse = { x: 0, y: 0 };
         this.isPointerLocked = false;
+        this.isMouseDown = false;
         this.cameraMode = 'third'; // 'first' or 'third'
 
         this.currentPlayer = null;
@@ -17,7 +16,8 @@ class Game3D {
         this.arrows = [];
         this.bombs = []; // Thrown bombs
         this.coins = []; // Collectible coins dropped by enemies
-        this.playerCoins = 0; // Total coins collected
+        this.playerCoins = 0; // Coins currently held
+        this.totalCoinsEarned = 0; // Lifetime coins (for the victory screen)
         this.environment = null;
 
         this.clock = new THREE.Clock();
@@ -36,14 +36,14 @@ class Game3D {
         this.waveInProgress = false;
         this.waveCompleteTimer = 0;
         this.gameWon = false;
+        this.gameOver = false;
+        this.paused = false;
 
-        // Bind methods
+        // Weapon unlock costs (auto-purchased when affordable)
+        this.rifleCost = 100;
+        this.bombCost = 150;
+
         this.animate = this.animate.bind(this);
-        this.onKeyDown = this.onKeyDown.bind(this);
-        this.onKeyUp = this.onKeyUp.bind(this);
-        this.onMouseMove = this.onMouseMove.bind(this);
-        this.onMouseClick = this.onMouseClick.bind(this);
-        this.onPointerLockChange = this.onPointerLockChange.bind(this);
     }
 
     init() {
@@ -58,12 +58,13 @@ class Game3D {
         this.createPlayer();
         this.createNeutralTanks();
         this.startWave(1);
+        this.updateCoinUI();
 
         this.animate();
     }
 
     createNeutralTanks() {
-        // Create 1-2 powerful neutral tanks that attack everyone
+        // Powerful neutral tanks that attack everyone - defeat one to convert it to your side
         const tankCount = 2;
 
         for (let i = 0; i < tankCount; i++) {
@@ -81,12 +82,9 @@ class Game3D {
 
             this.neutralTanks.push(neutralTank);
 
-            // AI will be updated in updateEnemyAI
-            neutralTank.aiTarget = null; // Will find nearest target
+            neutralTank.aiTarget = null;
             neutralTank.aiUpdateTimer = Math.random() * 2;
         }
-
-        console.log(`Spawned ${tankCount} neutral tanks`);
     }
 
     setupScene() {
@@ -155,11 +153,14 @@ class Game3D {
     }
 
     setupControls() {
-        document.addEventListener('keydown', this.onKeyDown);
-        document.addEventListener('keyup', this.onKeyUp);
-        document.addEventListener('mousemove', this.onMouseMove);
-        document.addEventListener('click', this.onMouseClick);
-        document.addEventListener('pointerlockchange', this.onPointerLockChange);
+        // Wrappers (instead of bound references) so MultiplayerManager can override
+        // the handlers at runtime and the listeners pick up the new versions.
+        document.addEventListener('keydown', (e) => this.onKeyDown(e));
+        document.addEventListener('keyup', (e) => this.onKeyUp(e));
+        document.addEventListener('mousemove', (e) => this.onMouseMove(e));
+        document.addEventListener('mousedown', (e) => this.onMouseDown(e));
+        document.addEventListener('mouseup', (e) => this.onMouseUp(e));
+        document.addEventListener('pointerlockchange', () => this.onPointerLockChange());
 
         // Request pointer lock on first click (only on non-touch devices)
         const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -176,12 +177,10 @@ class Game3D {
     onKeyDown(event) {
         this.keys[event.code] = true;
 
-        // Weapon switching (1-6)
-        if (event.code >= 'Digit1' && event.code <= 'Digit6') {
-            const weaponIndex = parseInt(event.code.charAt(5)) - 1;
-            if (this.currentPlayer) {
-                this.currentPlayer.switchWeapon(weaponIndex);
-            }
+        // Weapon switching (1-7)
+        const digitMatch = /^Digit([1-7])$/.exec(event.code);
+        if (digitMatch && this.currentPlayer) {
+            this.currentPlayer.switchWeapon(parseInt(digitMatch[1]) - 1);
         }
 
         // Camera mode toggle with C key
@@ -190,10 +189,13 @@ class Game3D {
         }
 
         // Reload with R key
-        if (event.code === 'KeyR') {
-            if (this.currentPlayer) {
-                this.currentPlayer.reloadWeapon();
-            }
+        if (event.code === 'KeyR' && this.currentPlayer) {
+            this.currentPlayer.reloadWeapon();
+        }
+
+        // Pause with P key
+        if (event.code === 'KeyP') {
+            this.togglePause();
         }
     }
 
@@ -202,7 +204,7 @@ class Game3D {
     }
 
     onMouseMove(event) {
-        if (this.isPointerLocked && this.currentPlayer) {
+        if (this.isPointerLocked && this.currentPlayer && !this.paused) {
             const sensitivity = 0.002;
 
             if (this.cameraMode === 'third') {
@@ -222,14 +224,31 @@ class Game3D {
         }
     }
 
-    onMouseClick(event) {
-        if (this.isPointerLocked && this.currentPlayer) {
+    onMouseDown(event) {
+        if (event.button !== 0) return;
+        this.isMouseDown = true;
+        if (this.isPointerLocked && this.currentPlayer && !this.paused && !this.gameOver && !this.gameWon) {
             this.currentPlayer.attack(this);
+        }
+    }
+
+    onMouseUp(event) {
+        if (event.button === 0) {
+            this.isMouseDown = false;
         }
     }
 
     onPointerLockChange() {
         this.isPointerLocked = document.pointerLockElement === this.renderer.domElement;
+    }
+
+    togglePause() {
+        if (this.gameOver || this.gameWon) return;
+        this.paused = !this.paused;
+        const overlay = document.getElementById('pauseOverlay');
+        if (overlay) {
+            overlay.style.display = this.paused ? 'flex' : 'none';
+        }
     }
 
     createPlayer() {
@@ -243,47 +262,70 @@ class Game3D {
     }
 
     startWave(waveNumber) {
-        console.log(`Starting wave ${waveNumber}`);
+        if (this.gameOver || this.gameWon) return;
+
         this.currentWave = waveNumber;
         this.waveInProgress = true;
 
-        // Restore player health to full
+        // Drop dead enemies from the list so it doesn't grow forever
+        this.enemies = this.enemies.filter(e => e.health > 0);
+
+        // Restore player health to full between waves
         if (this.currentPlayer) {
             this.currentPlayer.health = this.currentPlayer.maxHealth;
-            document.getElementById('healthValue').textContent = this.currentPlayer.health;
-            console.log(`Player health restored to ${this.currentPlayer.health}`);
+            this.currentPlayer.updateHealthUI();
         }
 
         // Update UI
         document.getElementById('waveNumber').textContent = `${waveNumber}/${this.maxWaves}`;
 
-        // Show wave start message
-        this.showWaveMessage(`Wave ${waveNumber} Starting!`);
+        const enemyCount = this.createEnemies(waveNumber);
 
-        // Create enemies for this wave
-        this.createEnemies(waveNumber);
-
-        console.log(`Wave ${waveNumber} started with ${this.enemies.filter(e => e.health > 0).length} enemies`);
+        this.showWaveMessage(`Wave ${waveNumber} Starting!`, `Health restored • ${enemyCount} enemies incoming`);
+        if (window.Sound) window.Sound.waveStart();
     }
 
     createEnemies(waveNumber) {
-        // Create diverse enemy types
         const enemyTypes = ['rogue', 'mage', 'tank', 'archer', 'warrior'];
+
+        // Starting weapon per enemy type (melee types charge, ranged types kite)
+        const weaponByType = {
+            rogue: 0,        // sword
+            warrior: 1,      // axe
+            tank: 3,         // hammer
+            skateboarder: 2, // spear (fast drive-by attacker)
+            archer: 4,       // crossbow
+            mage: 4          // crossbow
+        };
 
         // More enemies each wave (3 + 2 per wave)
         const enemyCount = 3 + (waveNumber * 2);
 
         // Enemy scaling per wave
-        const healthMultiplier = 1 + (waveNumber - 1) * 0.3; // +30% health per wave
-        const damageMultiplier = 1 + (waveNumber - 1) * 0.25; // +25% damage per wave
+        const healthMultiplier = 1 + (waveNumber - 1) * 0.15;
+        const damageMultiplier = 1 + (waveNumber - 1) * 0.10;
 
-        // First enemy is ALWAYS a skateboarder (fast enemy)
+        // Fast skateboarders show up more often in later waves
+        const skateboarderCount = Math.min(3, 1 + Math.floor((waveNumber - 1) / 2));
+
+        const playerPos = this.currentPlayer ? this.currentPlayer.group.position : new THREE.Vector3();
+
         for (let i = 0; i < enemyCount; i++) {
-            const x = (Math.random() - 0.5) * 30;
-            const z = (Math.random() - 0.5) * 30;
+            // Spawn in a ring around the player so nothing pops in on top of them
+            let x = 0, z = 0, attempts = 0;
+            do {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 15 + Math.random() * 12;
+                x = playerPos.x + Math.cos(angle) * radius;
+                z = playerPos.z + Math.sin(angle) * radius;
+                x = Math.max(this.mapBoundary.minX, Math.min(this.mapBoundary.maxX, x));
+                z = Math.max(this.mapBoundary.minZ, Math.min(this.mapBoundary.maxZ, z));
+                attempts++;
+            } while (this.environment.checkCollision(new THREE.Vector3(x, 0, z), 1) && attempts < 10);
 
-            // First enemy is skateboarder, rest are normal types
-            const enemyType = i === 0 ? 'skateboarder' : enemyTypes[i % enemyTypes.length];
+            const enemyType = i < skateboarderCount
+                ? 'skateboarder'
+                : enemyTypes[(i - skateboarderCount) % enemyTypes.length];
 
             const enemy = new StickFigure(this.scene, x, 0, z, enemyType, false);
 
@@ -292,46 +334,38 @@ class Game3D {
             enemy.health = enemy.maxHealth;
             enemy.damageMultiplier *= damageMultiplier;
 
-            this.enemies.push(enemy);
-
-            // Give enemies simple AI - initially target player
             enemy.aiTarget = this.currentPlayer;
             enemy.aiUpdateTimer = Math.random() * 2; // Randomize update timing
+            enemy.prefersRanged = (enemyType === 'archer' || enemyType === 'mage');
+            enemy.switchWeapon(weaponByType[enemyType] !== undefined ? weaponByType[enemyType] : 0);
 
-            // Archers and mages start with pistol equipped
-            if (enemyType === 'archer' || enemyType === 'mage') {
-                enemy.switchWeapon(4); // Pistol is weapon index 4
-            }
+            this.enemies.push(enemy);
         }
 
-        console.log(`Wave ${waveNumber} enemies: ${enemyCount} total (1 skateboarder!), Health x${healthMultiplier.toFixed(2)}, Damage x${damageMultiplier.toFixed(2)}`);
+        return enemyCount;
     }
 
     createCoin(position, offsetX = 0, offsetZ = 0) {
         // Create a spinning golden coin
         const coinGroup = new THREE.Group();
 
-        // Coin cylinder (flat disc) - slightly bigger for visibility
         const coinGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.06, 16);
         const coinMaterial = new THREE.MeshLambertMaterial({ color: 0xFFD700, emissive: 0x886600 });
         const coin = new THREE.Mesh(coinGeometry, coinMaterial);
         coin.castShadow = true;
         coinGroup.add(coin);
 
-        // Add a rim for detail
         const rimGeometry = new THREE.TorusGeometry(0.2, 0.03, 8, 16);
         const rimMaterial = new THREE.MeshLambertMaterial({ color: 0xFFA500 });
         const rim = new THREE.Mesh(rimGeometry, rimMaterial);
         rim.rotation.x = Math.PI / 2;
         coinGroup.add(rim);
 
-        // Position coin slightly above ground with offset
         coinGroup.position.copy(position);
         coinGroup.position.x += offsetX;
         coinGroup.position.z += offsetZ;
         coinGroup.position.y = 0.4;
 
-        // Store coin data
         const coinData = {
             group: coinGroup,
             rotation: 0,
@@ -341,30 +375,22 @@ class Game3D {
 
         this.scene.add(coinGroup);
         this.coins.push(coinData);
-
-        console.log(`Coin created at: x=${coinGroup.position.x.toFixed(2)}, y=${coinGroup.position.y.toFixed(2)}, z=${coinGroup.position.z.toFixed(2)}`);
     }
 
     checkDeadEnemies() {
         // Check for dead enemies and spawn coins
         this.enemies.forEach(enemy => {
             if (enemy.health <= 0 && enemy.deathPosition && !enemy.coinDropped) {
-                // Mark that we've dropped coins for this enemy
                 enemy.coinDropped = true;
 
                 // Drop 5-10 coins per enemy
                 const numCoins = 5 + Math.floor(Math.random() * 6);
 
-                console.log(`Enemy died at position:`, enemy.deathPosition, `dropping ${numCoins} coins`);
-
-                // Spread coins in a wider circle around death position
+                // Spread coins in a circle around the death position
                 for (let i = 0; i < numCoins; i++) {
                     const angle = (Math.PI * 2 * i) / numCoins + (Math.random() - 0.5) * 0.5;
-                    const radius = 0.8 + Math.random() * 0.8; // Increased scatter radius
-                    const offsetX = Math.cos(angle) * radius;
-                    const offsetZ = Math.sin(angle) * radius;
-
-                    this.createCoin(enemy.deathPosition, offsetX, offsetZ);
+                    const radius = 0.8 + Math.random() * 0.8;
+                    this.createCoin(enemy.deathPosition, Math.cos(angle) * radius, Math.sin(angle) * radius);
                 }
             }
         });
@@ -375,37 +401,39 @@ class Game3D {
         for (let i = this.neutralTanks.length - 1; i >= 0; i--) {
             const tank = this.neutralTanks[i];
             if (tank.isAlly) {
-                // Remove from neutral tanks and add to allies
                 this.neutralTanks.splice(i, 1);
                 this.allyTanks.push(tank);
-                console.log('Tank converted! Now have', this.allyTanks.length, 'ally tanks');
             }
         }
     }
 
     checkWaveComplete() {
-        if (!this.waveInProgress || this.gameWon) return;
+        if (!this.waveInProgress || this.gameWon || this.gameOver) return;
 
-        // Count alive enemies
         const aliveEnemies = this.enemies.filter(enemy => enemy.health > 0).length;
 
         if (aliveEnemies === 0) {
-            console.log(`Wave ${this.currentWave} complete! Starting wave ${this.currentWave + 1} in 3 seconds...`);
             this.waveInProgress = false;
             this.waveCompleteTimer = 3; // 3 second delay before next wave
 
             if (this.currentWave >= this.maxWaves) {
-                // Game won!
                 this.gameWon = true;
                 this.showVictoryMessage();
+                if (window.Sound) window.Sound.victory();
             } else {
-                // Show wave complete message
-                this.showWaveMessage(`Wave ${this.currentWave} Complete! Next wave in 3 seconds...`);
+                this.showWaveMessage(`Wave ${this.currentWave} Complete!`, 'Next wave in 3 seconds...');
             }
         }
     }
 
-    showWaveMessage(message) {
+    checkPlayerDefeat() {
+        if (!this.gameOver && this.currentPlayer && this.currentPlayer.health <= 0) {
+            this.gameOver = true;
+            if (window.Sound) window.Sound.defeat();
+        }
+    }
+
+    showWaveMessage(message, subMessage = '') {
         // Remove old message if exists
         const oldMessage = document.getElementById('waveMessage');
         if (oldMessage) oldMessage.remove();
@@ -427,9 +455,18 @@ class Game3D {
         messageDiv.style.border = '3px solid #FFD700';
         messageDiv.textContent = message;
 
+        if (subMessage) {
+            const sub = document.createElement('div');
+            sub.textContent = subMessage;
+            sub.style.fontSize = '18px';
+            sub.style.color = '#FFFFFF';
+            sub.style.marginTop = '8px';
+            sub.style.fontWeight = 'normal';
+            messageDiv.appendChild(sub);
+        }
+
         document.body.appendChild(messageDiv);
 
-        // Remove after 3 seconds
         setTimeout(() => {
             if (messageDiv.parentNode) {
                 messageDiv.parentNode.removeChild(messageDiv);
@@ -465,8 +502,14 @@ class Game3D {
 
         const text = document.createElement('p');
         text.textContent = `All ${this.maxWaves} waves defeated!`;
-        text.style.margin = '0 0 30px 0';
+        text.style.margin = '0 0 10px 0';
         messageDiv.appendChild(text);
+
+        const stats = document.createElement('p');
+        stats.textContent = `🪙 Coins collected: ${this.totalCoinsEarned}`;
+        stats.style.margin = '0 0 30px 0';
+        stats.style.fontSize = '24px';
+        messageDiv.appendChild(stats);
 
         const button = document.createElement('button');
         button.textContent = 'Play Again';
@@ -482,10 +525,14 @@ class Game3D {
         messageDiv.appendChild(button);
 
         document.body.appendChild(messageDiv);
+
+        if (document.pointerLockElement) {
+            document.exitPointerLock();
+        }
     }
 
     updatePlayer(deltaTime) {
-        if (!this.currentPlayer) return;
+        if (!this.currentPlayer || this.currentPlayer.health <= 0) return;
 
         const moveSpeed = 5 * deltaTime;
         const direction = new THREE.Vector3();
@@ -495,139 +542,78 @@ class Game3D {
         if (this.keys['KeyA']) direction.x -= 1;
         if (this.keys['KeyD']) direction.x += 1;
 
-        if (direction.length() > 0) {
-            direction.normalize();
+        if (direction.length() === 0) return;
 
-            // Apply player rotation to movement direction
-            if (this.cameraMode === 'third') {
-                const playerRotation = this.currentPlayer.group.rotation.y;
-                const rotatedDirection = new THREE.Vector3(
-                    direction.x * Math.cos(playerRotation) - direction.z * Math.sin(playerRotation),
-                    0,
-                    direction.x * Math.sin(playerRotation) + direction.z * Math.cos(playerRotation)
-                );
-                direction.copy(rotatedDirection);
+        direction.normalize();
+
+        // Rotate the input by the player's facing so W always moves forward
+        direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.currentPlayer.group.rotation.y);
+
+        const pos = this.currentPlayer.group.position;
+        const tryStep = (dx, dz) => {
+            const nx = Math.max(this.mapBoundary.minX, Math.min(this.mapBoundary.maxX, pos.x + dx));
+            const nz = Math.max(this.mapBoundary.minZ, Math.min(this.mapBoundary.maxZ, pos.z + dz));
+            if (!this.environment.checkCollision(new THREE.Vector3(nx, 0, nz), 0.5)) {
+                this.currentPlayer.move(nx - pos.x, nz - pos.z);
+                return true;
             }
+            return false;
+        };
 
-            // Calculate new position
-            const newPosition = this.currentPlayer.group.position.clone();
-            newPosition.x += direction.x * moveSpeed;
-            newPosition.z += direction.z * moveSpeed;
-
-            // Clamp position to map boundaries
-            newPosition.x = Math.max(this.mapBoundary.minX, Math.min(this.mapBoundary.maxX, newPosition.x));
-            newPosition.z = Math.max(this.mapBoundary.minZ, Math.min(this.mapBoundary.maxZ, newPosition.z));
-
-            // Check for environment collisions
-            if (!this.environment.checkCollision(newPosition, 0.5)) {
-                // Calculate the actual movement delta after boundary clamping
-                const deltaX = newPosition.x - this.currentPlayer.group.position.x;
-                const deltaZ = newPosition.z - this.currentPlayer.group.position.z;
-                this.currentPlayer.move(deltaX, deltaZ);
+        // Try the full move first, then slide along each axis if blocked
+        const stepX = direction.x * moveSpeed;
+        const stepZ = direction.z * moveSpeed;
+        if (!tryStep(stepX, stepZ)) {
+            if (!tryStep(stepX, 0)) {
+                tryStep(0, stepZ);
             }
         }
     }
 
-    updateAllyTanks(deltaTime) {
-        this.allyTanks.forEach(tank => {
-            if (tank.health <= 0) return;
-
-            // Update AI target timer
-            tank.aiUpdateTimer -= deltaTime;
-            if (tank.aiUpdateTimer <= 0) {
-                // Re-evaluate target every 2-3 seconds
-                tank.aiUpdateTimer = 2 + Math.random();
-                tank.aiTarget = this.chooseAllyTarget(tank);
-            }
-
-            if (tank.aiTarget && tank.aiTarget.health > 0) {
-                const targetPos = tank.aiTarget.group.position;
-                const tankPos = tank.group.position;
-
-                const direction = new THREE.Vector3()
-                    .subVectors(targetPos, tankPos)
-                    .normalize();
-
-                const distance = tankPos.distanceTo(targetPos);
-
-                // Get weapon range for attack distance
-                const attackRange = tank.currentWeapon ? tank.currentWeapon.range : 2.0;
-                const minDistance = attackRange * 0.8;
-
-                if (distance > minDistance) {
-                    // Move towards target
-                    tank.move(direction.x * deltaTime * 2, direction.z * deltaTime * 2);
-
-                    // Clamp to map boundaries
-                    this.clampToMapBoundaries(tank);
-                } else if (distance <= attackRange) {
-                    // Attack if within weapon range
-                    if (Math.random() < 0.03) { // Slightly higher attack chance
-                        tank.attack(this);
-                    }
-                }
-
-                // Face the target
-                tank.group.lookAt(targetPos.x, tankPos.y, targetPos.z);
-            }
-        });
+    // Which characters this attacker is allowed to damage
+    getTargetsFor(owner) {
+        const alivePlayers = this.players.filter(p => p.health > 0);
+        if (owner.isNeutral) {
+            // Neutral tanks attack everyone except other neutral tanks
+            return [...alivePlayers, ...this.enemies, ...this.neutralTanks.filter(t => t !== owner), ...this.allyTanks];
+        }
+        if (owner.isAlly) {
+            // Ally tanks only attack enemies
+            return [...this.enemies];
+        }
+        if (this.players.includes(owner)) {
+            // Players hit enemies and neutral tanks (not ally tanks)
+            return [...this.enemies, ...this.neutralTanks];
+        }
+        // Enemies work together - they hit players, neutral tanks and ally tanks
+        return [...alivePlayers, ...this.neutralTanks, ...this.allyTanks];
     }
 
-    updateNeutralTanks(deltaTime) {
-        this.neutralTanks.forEach(tank => {
-            if (tank.health <= 0) return;
+    chooseTarget(char) {
+        let potentialTargets;
+        const alivePlayers = this.players.filter(p => p.health > 0);
 
-            // Update AI target timer
-            tank.aiUpdateTimer -= deltaTime;
-            if (tank.aiUpdateTimer <= 0) {
-                // Re-evaluate target every 2-3 seconds
-                tank.aiUpdateTimer = 2 + Math.random();
-                tank.aiTarget = this.chooseNeutralTarget(tank);
-            }
+        if (char.isAlly) {
+            potentialTargets = this.enemies.filter(e => e.health > 0);
+        } else if (char.isNeutral) {
+            potentialTargets = [
+                ...alivePlayers,
+                ...this.enemies.filter(e => e.health > 0),
+                ...this.neutralTanks.filter(t => t !== char && t.health > 0)
+            ];
+        } else {
+            potentialTargets = [
+                ...alivePlayers,
+                ...this.neutralTanks.filter(t => t.health > 0),
+                ...this.allyTanks.filter(t => t.health > 0)
+            ];
+        }
 
-            if (tank.aiTarget && tank.aiTarget.health > 0) {
-                const targetPos = tank.aiTarget.group.position;
-                const tankPos = tank.group.position;
-
-                const direction = new THREE.Vector3()
-                    .subVectors(targetPos, tankPos)
-                    .normalize();
-
-                const distance = tankPos.distanceTo(targetPos);
-
-                // Get weapon range for attack distance
-                const attackRange = tank.currentWeapon ? tank.currentWeapon.range : 2.0;
-                const minDistance = attackRange * 0.8;
-
-                if (distance > minDistance) {
-                    // Move towards target
-                    tank.move(direction.x * deltaTime * 2, direction.z * deltaTime * 2);
-
-                    // Clamp to map boundaries
-                    this.clampToMapBoundaries(tank);
-                } else if (distance <= attackRange) {
-                    // Attack if within weapon range
-                    if (Math.random() < 0.03) { // Slightly higher attack chance
-                        tank.attack(this);
-                    }
-                }
-
-                // Face the target
-                tank.group.lookAt(targetPos.x, tankPos.y, targetPos.z);
-            }
-        });
-    }
-
-    chooseAllyTarget(tank) {
-        // Ally tanks only attack enemies
-        const potentialTargets = this.enemies.filter(e => e.health > 0);
-
-        // Find nearest enemy
         let closestTarget = null;
         let closestDistance = Infinity;
 
         potentialTargets.forEach(target => {
-            const dist = tank.group.position.distanceTo(target.group.position);
+            const dist = char.group.position.distanceTo(target.group.position);
             if (dist < closestDistance) {
                 closestDistance = dist;
                 closestTarget = target;
@@ -637,158 +623,160 @@ class Game3D {
         return closestTarget;
     }
 
-    chooseNeutralTarget(tank) {
-        // Neutral tanks attack EVERYONE - player and all enemies
-        const potentialTargets = [
-            this.currentPlayer,
-            ...this.enemies.filter(e => e.health > 0),
-            ...this.neutralTanks.filter(t => t !== tank && t.health > 0)
-        ];
+    // Move an AI character with environment collision (slides along obstacles)
+    tryMoveAI(char, dx, dz) {
+        const adx = dx * char.speedMultiplier;
+        const adz = dz * char.speedMultiplier;
+        const pos = char.group.position;
+        const clear = (x, z) => !this.environment.checkCollision(new THREE.Vector3(pos.x + x, 0, pos.z + z), 0.5);
 
-        // Find nearest target
-        let closestTarget = null;
-        let closestDistance = Infinity;
+        if (clear(adx, adz)) {
+            pos.x += adx;
+            pos.z += adz;
+            char.isWalking = true;
+        } else if (clear(adx, 0)) {
+            pos.x += adx;
+            char.isWalking = true;
+        } else if (clear(0, adz)) {
+            pos.z += adz;
+            char.isWalking = true;
+        }
 
-        potentialTargets.forEach(target => {
-            const dist = tank.group.position.distanceTo(target.group.position);
-            if (dist < closestDistance) {
-                closestDistance = dist;
-                closestTarget = target;
+        this.clampToMapBoundaries(char);
+    }
+
+    updateAICharacter(char, deltaTime) {
+        if (char.health <= 0) return;
+
+        char.aiUpdateTimer -= deltaTime;
+        if (char.aiUpdateTimer <= 0) {
+            char.aiUpdateTimer = 1.5 + Math.random();
+            char.aiTarget = this.chooseTarget(char);
+        }
+
+        const target = char.aiTarget;
+        if (!target || target.health <= 0) return;
+
+        const charPos = char.group.position;
+        const targetPos = target.group.position;
+        const distance = charPos.distanceTo(targetPos);
+
+        const direction = new THREE.Vector3().subVectors(targetPos, charPos);
+        direction.y = 0;
+        direction.normalize();
+
+        const attackRange = char.currentWeapon ? char.currentWeapon.range : 2.0;
+        const step = 2 * deltaTime;
+
+        if (char.prefersRanged) {
+            // Ranged enemies keep their distance and kite
+            if (distance < 5) {
+                this.tryMoveAI(char, -direction.x * step, -direction.z * step);
+            } else if (distance > attackRange * 0.9) {
+                this.tryMoveAI(char, direction.x * step, direction.z * step);
             }
-        });
+            if (distance <= attackRange && char.attackCooldown <= 0 && Math.random() < deltaTime * 1.2) {
+                char.attack(this);
+            }
+        } else {
+            // Melee characters charge in
+            if (distance > attackRange * 0.7) {
+                this.tryMoveAI(char, direction.x * step, direction.z * step);
+            } else if (char.attackCooldown <= 0 && Math.random() < deltaTime * 1.5) {
+                char.attack(this);
+            }
+        }
 
-        return closestTarget;
+        char.group.lookAt(targetPos.x, charPos.y, targetPos.z);
     }
 
     updateEnemies(deltaTime) {
-        this.enemies.forEach(enemy => {
-            if (enemy.health <= 0) return;
-
-            // Update AI target timer
-            enemy.aiUpdateTimer -= deltaTime;
-            if (enemy.aiUpdateTimer <= 0) {
-                // Re-evaluate target every 2-3 seconds
-                enemy.aiUpdateTimer = 2 + Math.random();
-                enemy.aiTarget = this.chooseEnemyTarget(enemy);
-            }
-
-            if (enemy.aiTarget && enemy.aiTarget.health > 0) {
-                const targetPos = enemy.aiTarget.group.position;
-                const enemyPos = enemy.group.position;
-
-                const direction = new THREE.Vector3()
-                    .subVectors(targetPos, enemyPos)
-                    .normalize();
-
-                const distance = enemyPos.distanceTo(targetPos);
-
-                // Smart weapon switching based on distance
-                if (distance > 6 && enemy.currentWeaponIndex !== 4) {
-                    // Far away - switch to pistol
-                    enemy.switchWeapon(4);
-                } else if (distance <= 4 && enemy.currentWeaponIndex === 4) {
-                    // Close range - switch to sword for melee
-                    enemy.switchWeapon(0);
-                }
-
-                // Get weapon range for attack distance
-                const attackRange = enemy.currentWeapon ? enemy.currentWeapon.range : 2.0;
-                const minDistance = attackRange * 0.8; // Stay at 80% of weapon range
-
-                if (distance > minDistance) {
-                    // Move towards target
-                    enemy.move(direction.x * deltaTime * 2, direction.z * deltaTime * 2);
-
-                    // Clamp to map boundaries
-                    this.clampToMapBoundaries(enemy);
-                } else if (distance <= attackRange) {
-                    // Attack if within weapon range
-                    if (Math.random() < 0.02) { // Random attack chance
-                        enemy.attack(this);
-                    }
-                }
-
-                // Face the target
-                enemy.group.lookAt(targetPos.x, enemyPos.y, targetPos.z);
-            }
-        });
+        this.enemies.forEach(enemy => this.updateAICharacter(enemy, deltaTime));
     }
 
-    chooseEnemyTarget(enemy) {
-        // All enemies work together - they only attack player, neutral tanks, and ally tanks
-        const potentialTargets = [
-            this.currentPlayer,
-            ...this.neutralTanks.filter(t => t.health > 0),
-            ...this.allyTanks.filter(t => t.health > 0)
-        ];
+    updateNeutralTanks(deltaTime) {
+        this.neutralTanks.forEach(tank => this.updateAICharacter(tank, deltaTime));
+    }
 
-        // Find nearest target
-        let closestTarget = null;
-        let closestDistance = Infinity;
+    updateAllyTanks(deltaTime) {
+        this.allyTanks.forEach(tank => this.updateAICharacter(tank, deltaTime));
+    }
 
-        potentialTargets.forEach(target => {
-            const dist = enemy.group.position.distanceTo(target.group.position);
-            if (dist < closestDistance) {
-                closestDistance = dist;
-                closestTarget = target;
+    // Keep enemies from stacking on the same spot
+    applySeparation(characters) {
+        const minDist = 1.0;
+        for (let i = 0; i < characters.length; i++) {
+            const a = characters[i];
+            if (a.health <= 0) continue;
+            for (let j = i + 1; j < characters.length; j++) {
+                const b = characters[j];
+                if (b.health <= 0) continue;
+
+                const dx = b.group.position.x - a.group.position.x;
+                const dz = b.group.position.z - a.group.position.z;
+                const distSq = dx * dx + dz * dz;
+                if (distSq > 0.0001 && distSq < minDist * minDist) {
+                    const dist = Math.sqrt(distSq);
+                    const push = (minDist - dist) * 0.5;
+                    const nx = dx / dist;
+                    const nz = dz / dist;
+                    a.group.position.x -= nx * push;
+                    a.group.position.z -= nz * push;
+                    b.group.position.x += nx * push;
+                    b.group.position.z += nz * push;
+                }
             }
-        });
-
-        // Default to player if no other targets
-        return closestTarget || this.currentPlayer;
+        }
     }
 
     checkCollisions() {
-        // Check weapon hits (melee only, crossbows/pistols use arrows)
-        const allCombatants = this.players.concat(this.enemies).concat(this.neutralTanks).concat(this.allyTanks);
+        // Resolve melee strikes. Each swing lands at most once, at the moment
+        // the strike animation connects (meleeHitPending is set by StickFigure).
+        const allCombatants = [...this.players, ...this.enemies, ...this.neutralTanks, ...this.allyTanks];
 
         allCombatants.forEach(attacker => {
-            if (attacker.isAttacking && attacker.currentWeapon) {
-                // Skip ranged weapon attacks - they use arrow projectiles
-                if (attacker.currentWeapon.name === 'Crossbow' || attacker.currentWeapon.name === 'Pistol' || attacker.currentWeapon.name === 'Rifle') {
-                    return;
-                }
+            if (!attacker.meleeHitPending) return;
+            attacker.meleeHitPending = false;
 
-                // Get all potential targets
-                let targets = [];
+            if (!attacker.currentWeapon || attacker.health <= 0) return;
+
+            const weapon = attacker.currentWeapon;
+            const targets = this.getTargetsFor(attacker);
+            let hitSomething = false;
+
+            targets.forEach(target => {
+                if (target.health <= 0) return;
+
+                const distance = attacker.group.position.distanceTo(target.group.position);
+                if (distance >= weapon.range) return;
+
+                // The controlled player only hits what they're facing
                 if (attacker === this.currentPlayer) {
-                    // Player can hit enemies and neutral tanks (NOT ally tanks)
-                    targets = [...this.enemies, ...this.neutralTanks];
-                } else if (attacker.isNeutral) {
-                    // Neutral tanks hit EVERYONE except themselves
-                    targets = [this.currentPlayer, ...this.enemies, ...this.neutralTanks.filter(t => t !== attacker), ...this.allyTanks];
-                } else if (attacker.isAlly) {
-                    // Ally tanks only hit enemies
-                    targets = [...this.enemies];
-                } else {
-                    // Regular enemies work together - only hit player, neutral tanks, and ally tanks (NOT other enemies)
-                    targets = [this.currentPlayer, ...this.neutralTanks, ...this.allyTanks];
+                    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(attacker.group.quaternion);
+                    const toTarget = new THREE.Vector3().subVectors(target.group.position, attacker.group.position).normalize();
+                    if (forward.dot(toTarget) < 0.25) return;
                 }
 
-                targets.forEach(target => {
-                    if (target.health > 0) {
-                        const distance = attacker.group.position.distanceTo(target.group.position);
-                        if (distance < attacker.currentWeapon.range) {
-                            // Apply damage multiplier from attacker
-                            const damage = Math.floor(attacker.currentWeapon.damage * attacker.damageMultiplier);
-                            target.takeDamage(damage);
+                const damage = Combat.calculateDamage(attacker, weapon);
+                target.takeDamage(damage);
+                hitSomething = true;
 
-                            // Update UI if player is hit
-                            if (target === this.currentPlayer) {
-                                document.getElementById('healthValue').textContent = target.health;
-                            }
-                        }
-                    }
-                });
+                Combat.createBloodEffect(this.scene, target.group.position.clone());
+                Combat.showDamageNumber(this.scene, target.group.position.clone(), damage);
+            });
+
+            if (hitSomething && window.Sound) {
+                window.Sound.hit();
             }
         });
     }
 
     updateCoins(deltaTime) {
-        // Update coin animations and check for collection
+        if (!this.currentPlayer) return;
+        const playerPos = this.currentPlayer.group.position;
+
         for (let i = this.coins.length - 1; i >= 0; i--) {
             const coinData = this.coins[i];
-
             if (coinData.collected) continue;
 
             // Spin the coin
@@ -799,46 +787,63 @@ class Game3D {
             coinData.bobPhase += deltaTime * 2;
             coinData.group.position.y = 0.5 + Math.sin(coinData.bobPhase) * 0.15;
 
-            // Check if player is close enough to collect
-            if (this.currentPlayer) {
-                const distance = this.currentPlayer.group.position.distanceTo(coinData.group.position);
+            const distance = playerPos.distanceTo(coinData.group.position);
 
-                if (distance < 1.2) {
-                    // Collect the coin!
-                    this.playerCoins += 1;
-                    coinData.collected = true;
+            // Magnet effect - nearby coins drift toward the player
+            if (distance < 3.5 && distance > 1.0) {
+                const dir = new THREE.Vector3().subVectors(playerPos, coinData.group.position);
+                dir.y = 0;
+                dir.normalize();
+                coinData.group.position.x += dir.x * 6 * deltaTime;
+                coinData.group.position.z += dir.z * 6 * deltaTime;
+            }
 
-                    // Update UI
-                    document.getElementById('coinCount').textContent = this.playerCoins;
+            if (distance < 1.2) {
+                // Collect the coin!
+                this.playerCoins += 1;
+                this.totalCoinsEarned += 1;
+                coinData.collected = true;
 
-                    // Check if player reached 100 coins and hasn't unlocked rifle yet
-                    if (this.playerCoins >= 100 && !this.currentPlayer.hasRifle) {
-                        this.currentPlayer.unlockRifle();
-                        this.playerCoins -= 100; // Deduct the cost
-                        document.getElementById('coinCount').textContent = this.playerCoins;
-                        this.showRifleUnlockedMessage();
-                    }
+                if (window.Sound) window.Sound.coin();
 
-                    // Check if player reached 20 coins and hasn't unlocked bomb yet
-                    if (this.playerCoins >= 20 && this.currentPlayer.hasRifle && !this.currentPlayer.hasBomb) {
-                        this.currentPlayer.unlockBomb();
-                        this.playerCoins -= 20; // Deduct the cost
-                        document.getElementById('coinCount').textContent = this.playerCoins;
-                        this.showBombUnlockedMessage();
-                    }
-
-                    // Remove coin from scene
-                    this.scene.remove(coinData.group);
-                    this.coins.splice(i, 1);
-
-                    console.log('Coin collected! Total coins:', this.playerCoins);
+                // Auto-unlock weapons when affordable
+                if (!this.currentPlayer.hasRifle && this.playerCoins >= this.rifleCost) {
+                    this.playerCoins -= this.rifleCost;
+                    this.currentPlayer.unlockRifle();
+                    this.showRifleUnlockedMessage();
+                    if (window.Sound) window.Sound.unlock();
+                } else if (this.currentPlayer.hasRifle && !this.currentPlayer.hasBomb && this.playerCoins >= this.bombCost) {
+                    this.playerCoins -= this.bombCost;
+                    this.currentPlayer.unlockBomb();
+                    this.showBombUnlockedMessage();
+                    if (window.Sound) window.Sound.unlock();
                 }
+
+                this.updateCoinUI();
+
+                this.scene.remove(coinData.group);
+                this.coins.splice(i, 1);
+            }
+        }
+    }
+
+    updateCoinUI() {
+        const coinCount = document.getElementById('coinCount');
+        if (coinCount) coinCount.textContent = this.playerCoins;
+
+        const goal = document.getElementById('coinGoal');
+        if (goal && this.currentPlayer) {
+            if (!this.currentPlayer.hasRifle) {
+                goal.textContent = ` / ${this.rifleCost} unlocks Rifle`;
+            } else if (!this.currentPlayer.hasBomb) {
+                goal.textContent = ` / ${this.bombCost} unlocks Bomb`;
+            } else {
+                goal.textContent = '';
             }
         }
     }
 
     showRifleUnlockedMessage() {
-        // Remove old message if exists
         const oldMessage = document.getElementById('rifleMessage');
         if (oldMessage) oldMessage.remove();
 
@@ -847,6 +852,8 @@ class Game3D {
         if (weaponSlot6) {
             weaponSlot6.style.opacity = '1';
             weaponSlot6.style.border = '2px solid #FFD700';
+            const label = weaponSlot6.querySelector('small');
+            if (label) label.textContent = 'Rifle';
         }
 
         const messageDiv = document.createElement('div');
@@ -868,7 +875,6 @@ class Game3D {
 
         document.body.appendChild(messageDiv);
 
-        // Remove after 5 seconds
         setTimeout(() => {
             if (messageDiv.parentNode) {
                 messageDiv.parentNode.removeChild(messageDiv);
@@ -877,7 +883,6 @@ class Game3D {
     }
 
     showBombUnlockedMessage() {
-        // Remove old message if exists
         const oldMessage = document.getElementById('bombMessage');
         if (oldMessage) oldMessage.remove();
 
@@ -886,6 +891,8 @@ class Game3D {
         if (weaponSlot7) {
             weaponSlot7.style.opacity = '1';
             weaponSlot7.style.border = '2px solid #FF4500';
+            const label = weaponSlot7.querySelector('small');
+            if (label) label.textContent = 'Bomb';
         }
 
         const messageDiv = document.createElement('div');
@@ -907,7 +914,6 @@ class Game3D {
 
         document.body.appendChild(messageDiv);
 
-        // Remove after 5 seconds
         setTimeout(() => {
             if (messageDiv.parentNode) {
                 messageDiv.parentNode.removeChild(messageDiv);
@@ -918,83 +924,73 @@ class Game3D {
     animate() {
         requestAnimationFrame(this.animate);
 
-        const deltaTime = this.clock.getDelta();
+        // Clamp delta so a backgrounded tab doesn't cause huge jumps
+        const deltaTime = Math.min(this.clock.getDelta(), 0.1);
 
-        this.updatePlayer(deltaTime);
-        this.updateEnemies(deltaTime);
-        this.updateNeutralTanks(deltaTime);
-        this.updateAllyTanks(deltaTime);
-        this.updateArrows(deltaTime);
-        this.updateBombs(deltaTime);
-        this.updateCoins(deltaTime);
-        this.checkCollisions();
-        this.checkDeadEnemies();
-        this.checkTankConversions();
-        this.checkWaveComplete();
+        if (!this.paused && !this.gameOver && !this.gameWon) {
+            this.updatePlayer(deltaTime);
 
-        // Update wave timer
-        if (!this.waveInProgress && this.waveCompleteTimer > 0 && !this.gameWon) {
-            this.waveCompleteTimer -= deltaTime;
-            if (this.waveCompleteTimer <= 0) {
-                console.log(`Wave timer expired, starting next wave`);
-                this.startWave(this.currentWave + 1);
+            // Hold to attack (auto-fire; weapon cooldowns limit the rate)
+            if (this.isMouseDown && this.isPointerLocked && this.currentPlayer && this.currentPlayer.health > 0) {
+                this.currentPlayer.attack(this);
             }
-        }
 
-        // Update all characters including neutral and ally tanks
-        this.players.concat(this.enemies).concat(this.neutralTanks).concat(this.allyTanks).forEach(character => {
-            character.update(deltaTime);
-        });
+            this.updateEnemies(deltaTime);
+            this.updateNeutralTanks(deltaTime);
+            this.updateAllyTanks(deltaTime);
+            this.applySeparation(this.enemies);
+            this.updateArrows(deltaTime);
+            this.updateBombs(deltaTime);
+            this.updateCoins(deltaTime);
+            this.checkCollisions();
+            this.checkDeadEnemies();
+            this.checkTankConversions();
+            this.checkWaveComplete();
+            this.checkPlayerDefeat();
 
-        // Update environment effects (wind)
-        if (this.environment) {
-            this.environment.addWindEffect();
+            // Update wave timer
+            if (!this.waveInProgress && this.waveCompleteTimer > 0 && !this.gameWon) {
+                this.waveCompleteTimer -= deltaTime;
+                if (this.waveCompleteTimer <= 0) {
+                    this.startWave(this.currentWave + 1);
+                }
+            }
+
+            // Update all characters; pass the camera position so health bars can face it
+            const cameraWorldPos = new THREE.Vector3();
+            this.camera.getWorldPosition(cameraWorldPos);
+            [...this.players, ...this.enemies, ...this.neutralTanks, ...this.allyTanks].forEach(character => {
+                character.update(deltaTime, cameraWorldPos);
+            });
+
+            // Update environment effects (wind)
+            if (this.environment) {
+                this.environment.addWindEffect();
+            }
         }
 
         this.renderer.render(this.scene, this.camera);
     }
 
     updateArrows(deltaTime) {
-        // Update all arrows
         for (let i = this.arrows.length - 1; i >= 0; i--) {
             const arrow = this.arrows[i];
             arrow.update(deltaTime);
 
-            // Check collisions with all characters (excluding the shooter)
-            let allTargets = [];
-            if (arrow.owner.isNeutral) {
-                // Neutral tank arrows hit everyone except other neutral tanks
-                allTargets = [this.currentPlayer, ...this.enemies, ...this.allyTanks];
-            } else if (arrow.owner.isAlly) {
-                // Ally tank arrows only hit enemies
-                allTargets = [...this.enemies];
-            } else if (arrow.owner === this.currentPlayer) {
-                // Player arrows hit enemies and neutral tanks (NOT ally tanks)
-                allTargets = [...this.enemies, ...this.neutralTanks];
-            } else {
-                // Enemy arrows work together - only hit player, neutral tanks, and ally tanks (NOT other enemies)
-                allTargets = [this.currentPlayer, ...this.neutralTanks, ...this.allyTanks];
-            }
-
-            const hit = arrow.checkCollision(allTargets);
+            const hit = arrow.checkCollision(this.getTargetsFor(arrow.owner));
 
             if (hit) {
-                // Apply damage multiplier from shooter
-                const damage = Math.floor(hit.damage * arrow.owner.damageMultiplier);
+                // Apply the shooter's damage multiplier with a little variance
+                const damage = Math.max(1, Math.floor(
+                    hit.damage * (arrow.owner.damageMultiplier || 1) * (0.85 + Math.random() * 0.3)
+                ));
                 hit.target.takeDamage(damage);
 
-                console.log('Arrow dealt damage:', damage, 'to target. New health:', hit.target.health);
+                Combat.createBloodEffect(this.scene, hit.target.group.position.clone());
+                Combat.showDamageNumber(this.scene, hit.target.group.position.clone(), damage);
 
-                // Update UI if player is hit
-                if (hit.target === this.currentPlayer) {
-                    document.getElementById('healthValue').textContent = hit.target.health;
-                }
-
-                // Visual effects
-                const Combat = window.Combat || (typeof Combat !== 'undefined' ? Combat : null);
-                if (Combat) {
-                    Combat.createBloodEffect(this.scene, hit.target.group.position.clone());
-                    Combat.showDamageNumber(this.scene, hit.target.group.position.clone(), hit.damage);
+                if (this.players.includes(arrow.owner) && window.Sound) {
+                    window.Sound.hit();
                 }
             }
 
@@ -1006,83 +1002,35 @@ class Game3D {
     }
 
     updateBombs(deltaTime) {
-        // Update all bombs
         for (let i = this.bombs.length - 1; i >= 0; i--) {
             const bomb = this.bombs[i];
             bomb.update(deltaTime);
 
-            // If bomb has exploded, check explosion damage
             if (bomb.hasExploded) {
-                // Check collisions with all characters (excluding the thrower)
-                let allTargets = [];
-                if (bomb.owner.isNeutral) {
-                    // Neutral tank bombs hit everyone except other neutral tanks
-                    allTargets = [this.currentPlayer, ...this.enemies, ...this.allyTanks];
-                } else if (bomb.owner.isAlly) {
-                    // Ally tank bombs only hit enemies
-                    allTargets = [...this.enemies];
-                } else if (bomb.owner === this.currentPlayer) {
-                    // Player bombs hit enemies and neutral tanks (NOT ally tanks)
-                    allTargets = [...this.enemies, ...this.neutralTanks];
-                } else {
-                    // Enemy bombs work together - only hit player, neutral tanks, and ally tanks (NOT other enemies)
-                    allTargets = [this.currentPlayer, ...this.neutralTanks, ...this.allyTanks];
-                }
-
-                const explosionHits = bomb.checkExplosionDamage(allTargets);
+                const explosionHits = bomb.checkExplosionDamage(this.getTargetsFor(bomb.owner));
 
                 explosionHits.forEach(hit => {
-                    // Apply damage multiplier from thrower
-                    const damage = Math.floor(hit.damage * bomb.owner.damageMultiplier);
+                    const damage = Math.max(1, Math.floor(hit.damage * (bomb.owner.damageMultiplier || 1)));
                     hit.target.takeDamage(damage);
 
-                    console.log('💥 Explosion dealt damage:', damage, 'to target. New health:', hit.target.health);
-
-                    // Update UI if player is hit
-                    if (hit.target === this.currentPlayer) {
-                        document.getElementById('healthValue').textContent = hit.target.health;
-                    }
-
-                    // Visual effects
-                    const Combat = window.Combat || (typeof Combat !== 'undefined' ? Combat : null);
-                    if (Combat) {
-                        Combat.createBloodEffect(this.scene, hit.target.group.position.clone());
-                        Combat.showDamageNumber(this.scene, hit.target.group.position.clone(), damage);
-                    }
+                    Combat.createBloodEffect(this.scene, hit.target.group.position.clone());
+                    Combat.showDamageNumber(this.scene, hit.target.group.position.clone(), damage);
                 });
 
                 // Remove bomb after explosion is processed
                 this.bombs.splice(i, 1);
             } else {
-                // Check direct hit (before explosion)
-                let allTargets = [];
-                if (bomb.owner.isNeutral) {
-                    allTargets = [this.currentPlayer, ...this.enemies, ...this.allyTanks];
-                } else if (bomb.owner.isAlly) {
-                    allTargets = [...this.enemies];
-                } else if (bomb.owner === this.currentPlayer) {
-                    allTargets = [...this.enemies, ...this.neutralTanks];
-                } else {
-                    allTargets = [this.currentPlayer, ...this.neutralTanks, ...this.allyTanks];
+                // Direct hit triggers the explosion; damage is applied next frame
+                bomb.checkCollision(this.getTargetsFor(bomb.owner));
+
+                if (!bomb.alive && !bomb.hasExploded) {
+                    this.bombs.splice(i, 1);
                 }
-
-                const hit = bomb.checkCollision(allTargets);
-
-                if (hit) {
-                    // Direct hit triggers explosion, damage will be handled in next update
-                    console.log('💥 Bomb hit target directly!');
-                }
-            }
-
-            // Remove dead bombs
-            if (!bomb.alive && !bomb.hasExploded) {
-                this.bombs.splice(i, 1);
             }
         }
     }
 
     clampToMapBoundaries(character) {
-        // Clamp character position to stay within map boundaries
         character.group.position.x = Math.max(
             this.mapBoundary.minX,
             Math.min(this.mapBoundary.maxX, character.group.position.x)
@@ -1095,14 +1043,11 @@ class Game3D {
 
     toggleCameraMode() {
         if (this.cameraMode === 'first') {
-            // Switch to third person
             this.cameraMode = 'third';
             this.camera.position.set(0, 4, 8);
         } else {
-            // Switch to first person
             this.cameraMode = 'first';
             this.camera.position.set(0, 1.8, 0.5);
         }
-        console.log('Camera mode:', this.cameraMode);
     }
 }
