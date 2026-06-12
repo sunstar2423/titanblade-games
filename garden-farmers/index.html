@@ -4850,7 +4850,7 @@ function showScreen(id) {
       <button class="bbtn" onclick="showScreen('biome')">▶ New Game</button>
       ${hasSave() ? `<button class="bbtn" style="background:#1565c0" onclick="loadAndPlay()">📂 Continue</button>` : ''}
       <button class="bbtn" style="background:#444" onclick="window._tutStep=0;showScreen('tutorial')">❓ How to Play</button>
-      <br><div style="color:#555;font-size:12px;margin-top:18px">A Titan Blade Games game • Made by Oliver</div>`;
+      `;
   } else if (id === 'tutorial') {
     const STEPS = [
       { icon:'🌱', title:'Welcome to Garden Farmers!',
