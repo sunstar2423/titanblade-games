@@ -132,6 +132,7 @@ export default class PortalScene extends Phaser.Scene {
         const victoryMusic = this.sound.add('star_music', { loop: true, volume: 0.3 });
         victoryMusic.play();
         this.registry.set('currentMusic', victoryMusic);
+        this.registry.set('currentMusicKey', 'star_music');
         
         // Victory background with looping credits video
         this.add.rectangle(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, SCREEN_WIDTH, SCREEN_HEIGHT, 0x000000);
@@ -206,13 +207,18 @@ export default class PortalScene extends Phaser.Scene {
     }
 
     startGameMusic(musicKey) {
-        // Stop any existing global music and start new music
+        // Don't restart the same track when moving between scenes that share it
         const currentMusic = this.registry.get('currentMusic');
+        const currentKey = this.registry.get('currentMusicKey');
+        if (currentKey === musicKey && currentMusic && currentMusic.isPlaying) {
+            return;
+        }
         if (currentMusic) {
             currentMusic.stop();
         }
         const newMusic = this.sound.add(musicKey, { loop: true, volume: 0.2 });
         newMusic.play();
         this.registry.set('currentMusic', newMusic);
+        this.registry.set('currentMusicKey', musicKey);
     }
 }

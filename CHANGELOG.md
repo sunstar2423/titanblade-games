@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Isle of Adventure - Review & Improvements
+
+#### Added
+- Save/load persistence via `localStorage`: progress (inventory, visited locations, defeated enemies) is now stored automatically as you play
+- "Continue Game" on the main menu now actually resumes a saved game; it is greyed out when no save exists
+- Global mute/unmute button (🔊/🔇) in the top-left corner that toggles all audio
+
+#### Fixed
+- Background music restarted from the beginning on every scene change between scenes that share a track; the same track now keeps playing seamlessly across those transitions
+- Main menu layout: the "Opening Credits" button overlapped the "Progress Reset!" confirmation text; menu buttons are now spaced without overlap
+- Scene titles (Rocky Mountains, Rocky Shore, Out at Sea, Giant Squid Battle) lacked an outline and were hard to read over bright backgrounds; all titles now use a consistent black stroke
+
+#### Changed
+- The inventory panel is hidden when empty (e.g. on the menu) and shows a live item count in its heading
+
 ### Stick Wars - Major Overhaul
 
 #### Fixed

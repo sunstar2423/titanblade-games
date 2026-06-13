@@ -97,6 +97,27 @@
             border-radius: 5px;
             max-width: 200px;
             font-size: 12px;
+            display: none;
+        }
+        #audio-toggle {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 1px solid #FFD700;
+            border-radius: 6px;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            transition: background 0.15s ease;
+        }
+        #audio-toggle:hover {
+            background: rgba(40, 40, 40, 0.9);
         }
         #inventory h3 {
             margin: 0 0 5px 0;
@@ -126,6 +147,7 @@
 </head>
 <body>
     <div id="game-container">
+        <button id="audio-toggle" type="button" aria-label="Mute audio" aria-pressed="false">🔊</button>
         <div id="inventory">
             <h3>Inventory</h3>
             <ul id="inventory-list"></ul>

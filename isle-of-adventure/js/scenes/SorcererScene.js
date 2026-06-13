@@ -193,14 +193,19 @@ export default class SorcererScene extends Phaser.Scene {
     }
 
     startGameMusic(musicKey) {
-        // Stop any existing global music and start new music
+        // Don't restart the same track when moving between scenes that share it
         const currentMusic = this.registry.get('currentMusic');
+        const currentKey = this.registry.get('currentMusicKey');
+        if (currentKey === musicKey && currentMusic && currentMusic.isPlaying) {
+            return;
+        }
         if (currentMusic) {
             currentMusic.stop();
         }
         const newMusic = this.sound.add(musicKey, { loop: true, volume: 0.2 });
         newMusic.play();
         this.registry.set('currentMusic', newMusic);
+        this.registry.set('currentMusicKey', musicKey);
     }
 
     createSorcererDialogueButton(x, y, text, callback) {
