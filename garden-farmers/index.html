@@ -111,6 +111,12 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 #barn-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:20; display:flex; align-items:center; justify-content:center; }
 #barn-overlay.hidden { display:none; }
 #barn-box { background:linear-gradient(160deg,#2a1408,#1a0d04); border:3px solid #8B5E3C; border-radius:20px; padding:28px 32px; max-width:480px; width:92%; max-height:80vh; overflow-y:auto; color:#fff; box-shadow:0 0 40px rgba(200,100,0,0.3); }
+.save-slots-grid { display:flex; gap:16px; margin:20px 0; flex-wrap:wrap; justify-content:center; }
+.save-slot { background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.15); border-radius:16px; padding:20px 24px; min-width:170px; text-align:center; }
+.save-slot-num { color:#888; font-size:12px; margin-bottom:8px; letter-spacing:1px; text-transform:uppercase; }
+.save-slot-biome { color:#fff; font-size:22px; font-weight:bold; margin-bottom:4px; }
+.save-slot-wave { color:#FFD700; font-size:14px; margin-bottom:4px; }
+.save-slot-date { color:#666; font-size:11px; margin-bottom:12px; }
 </style>
 </head>
 <body>
@@ -179,11 +185,11 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 // ═══════════════════════════════════════
 //  THREE.JS SETUP
 // ═══════════════════════════════════════
-const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: false });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.70;
 renderer.outputEncoding = THREE.sRGBEncoding;
@@ -249,7 +255,7 @@ scene.add(hemiLight);
 const sun = new THREE.DirectionalLight(0xfff0cc, 1.0);
 sun.position.set(18, 28, 12);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(1024, 1024);
 sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
 sun.shadow.camera.top = 75;  sun.shadow.camera.bottom = -75;
 sun.shadow.bias = -0.0008;
@@ -486,14 +492,15 @@ const hayWrap = new THREE.MeshStandardMaterial({ color: 0xb8880a, roughness: 0.9
 // Clouds
 const cloudMat  = new THREE.MeshStandardMaterial({ color: 0xfff0e8, roughness:1, transparent:true, opacity:0.92 });
 const cloudMat2 = new THREE.MeshStandardMaterial({ color: 0xffe0c8, roughness:1, transparent:true, opacity:0.78 });
+const _cloudMeshes = [];
 [[0,22,-15],[-14,25,9],[20,21,-7],[-6,27,20],[10,19,14]].forEach(([x,y,z], ci) => {
   const cg = new THREE.Group();
   const cm = ci % 2 === 0 ? cloudMat : cloudMat2;
   [[0,0,0,2.2],[2.0,0.4,0,1.7],[-1.9,0.1,0,1.6],[1.0,0.7,1.2,1.3],[-0.9,0.5,-1.1,1.2],[0,0.6,0,1.5],[-2.5,-0.2,0.6,1.0]].forEach(([cx,cy,cz,r]) => {
-    const sp = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 8), cm);
+    const sp = new THREE.Mesh(new THREE.SphereGeometry(r, 6, 6), cm);
     sp.position.set(cx,cy,cz); cg.add(sp);
   });
-  cg.position.set(x, y, z); cg._isCloud = true; scene.add(cg);
+  cg.position.set(x, y, z); scene.add(cg); _cloudMeshes.push(cg);
 });
 
 // Silo — tall metal grain silo right of barn
@@ -1040,7 +1047,7 @@ const ENEMY_TYPES = [
   { id:'bomb',   name:'Bomb Scarecrow',         hp:90,  spd:3.2, dmg:14, straw:22,  sz:1.1, color:0x2a2a2a },
   { id:'ice',    name:'Ice Scarecrow',          hp:75,  spd:3.1, dmg:9,  straw:18,  sz:1,   color:0x88ccff, ranged:true },
   { id:'shadow', name:'Shadow Scarecrow',       hp:65,  spd:6.2, dmg:12, straw:20,  sz:0.9, color:0x440088 },
-  { id:'giant',  name:'Giant Scarecrow',        hp:700, spd:1.4, dmg:28, straw:120, sz:2.6, color:0x5c3d1e },
+  { id:'giant',  name:'Giant Scarecrow',        hp:350, spd:1.4, dmg:28, straw:120, sz:2.6, color:0x5c3d1e },
   { id:'mage',   name:'Magician Scarecrow',     hp:90,  spd:4.1, dmg:14, straw:28,  sz:1,   color:0x6600cc, ranged:true, teleport:true },
   { id:'golden', name:'Golden Scarecrow',       hp:260, spd:1.8, dmg:15, straw:200, sz:1.25,color:0xFFD700 },
   { id:'guard',  name:'Guard Scarecrow',        hp:120, spd:3.9, dmg:13, straw:8,   sz:1.05,color:0x5c3000 },
@@ -1224,7 +1231,7 @@ const ENEMY_TYPES_JUNGLE = [
   { id:'spider_monk',name:'Spider Monkey',       hp:35,  spd:5.0, dmg:5,  straw:8,   sz:0.85, color:0x8b4513 },
   { id:'poison_monk',name:'Poison Monkey',       hp:70,  spd:1.6, dmg:10, straw:16,  sz:1,    color:0x4a7c20, ranged:true },
   { id:'troop',      name:'Monkey Troop',         hp:28,  spd:3.5, dmg:4,  straw:6,   sz:0.8,  color:0x9b6a3c },
-  { id:'kong',       name:'Mega Kong',             hp:750, spd:0.6, dmg:30, straw:120, sz:2.8,  color:0x0f0a05 },
+  { id:'kong',       name:'Mega Kong',             hp:380, spd:0.6, dmg:30, straw:120, sz:2.8,  color:0x0f0a05 },
   { id:'golden',     name:'Golden Chimp',           hp:260, spd:1.3, dmg:15, straw:200, sz:1.25, color:0xFFD700 },
   { id:'guard',      name:'Guard Chimp',             hp:40,  spd:2.8, dmg:5,  straw:3,   sz:0.85, color:0x996633 },
 ];
@@ -1396,10 +1403,10 @@ const ENEMY_TYPES_SNOW = [
   { id:'snow_boss',     name:'Blizzard Boss',     hp:380, spd:1.0, dmg:20, straw:100, sz:1.9,  color:0x2244aa },
   { id:'snow_bomb',     name:'Bomb Snowman',      hp:90,  spd:1.5, dmg:15, straw:22,  sz:1.1,  color:0x444466 },
   { id:'snow_shadow',   name:'Shadow Frost',      hp:65,  spd:3.2, dmg:12, straw:20,  sz:0.9,  color:0x222244 },
-  { id:'snow_giant',    name:'Ice Golem',         hp:750, spd:0.55,dmg:30, straw:120, sz:2.7,  color:0x8899bb },
+  { id:'snow_giant',    name:'Ice Golem',         hp:380, spd:0.55,dmg:30, straw:120, sz:2.7,  color:0x8899bb },
   { id:'yeti',          name:'Yeti',              hp:320, spd:1.3, dmg:22, straw:85,  sz:1.7,  color:0xeeeedd },
   { id:'snow_troop',    name:'Snow Troop',        hp:30,  spd:3.2, dmg:4,  straw:6,   sz:0.85, color:0xccddee },
-  { id:'glacier',       name:'Glacier Giant',     hp:800, spd:0.5, dmg:35, straw:130, sz:2.9,  color:0x6688aa },
+  { id:'glacier',       name:'Glacier Giant',     hp:420, spd:0.5, dmg:35, straw:130, sz:2.9,  color:0x6688aa },
   { id:'golden',        name:'Golden Frosty',      hp:260, spd:1.3, dmg:15, straw:200, sz:1.25, color:0xFFD700 },
   { id:'guard',         name:'Guard Snowman',       hp:40,  spd:2.8, dmg:5,  straw:3,   sz:0.85, color:0xaabbcc },
 ];
@@ -1571,7 +1578,7 @@ const ENEMY_TYPES_DEEPSEA = [
   { id:'nautilus',   name:'Nautilus Guard',   hp:160, spd:1.1, dmg:15, straw:30,  sz:1.15, color:0xddcc99, armor:0.35 },
   { id:'deep_boss',  name:'Kraken',           hp:450, spd:1.0, dmg:22, straw:100, sz:2.0,  color:0x220044 },
   { id:'giant_crab', name:'Giant Crab',       hp:320, spd:0.9, dmg:20, straw:60,  sz:1.8,  color:0xaa3300, armor:0.3 },
-  { id:'leviathan',  name:'Leviathan',        hp:800, spd:0.6, dmg:30, straw:140, sz:3.0,  color:0x001133 },
+  { id:'leviathan',  name:'Leviathan',        hp:420, spd:0.6, dmg:30, straw:140, sz:3.0,  color:0x001133 },
   { id:'ghost_fish', name:'Ghost Fish',       hp:40,  spd:5.0, dmg:6,  straw:8,   sz:0.75, color:0x88ccee },
   { id:'golden',     name:'Golden Fish',      hp:260, spd:1.3, dmg:15, straw:200, sz:1.25, color:0xFFD700 },
   { id:'guard',      name:'Guard Crab',       hp:40,  spd:2.8, dmg:5,  straw:3,   sz:0.85, color:0xdd6644 },
@@ -2081,28 +2088,24 @@ function floatText(pos, text, color) {
 }
 
 function spawnFX(pos, color, dur, size) {
+  if (gs.effects.length > 50) return; // cap effects to reduce GPU load
   const g = new THREE.Group(); g.position.copy(pos); scene.add(g);
   const orb = new THREE.Mesh(
-    new THREE.SphereGeometry(size * 0.55, 10, 10),
+    new THREE.SphereGeometry(size * 0.55, 5, 5),
     new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1.0 })
   );
   g.add(orb);
   const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(size * 0.4, size * 0.11, 6, 22),
+    new THREE.TorusGeometry(size * 0.4, size * 0.11, 4, 12),
     new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1.0 })
   );
   ring.rotation.x = Math.PI / 2; ring.position.y = 0.1; g.add(ring);
   const ring2 = new THREE.Mesh(
-    new THREE.TorusGeometry(size * 0.22, size * 0.07, 5, 16),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 })
-  );
-  ring2.rotation.x = Math.PI / 2; ring2.position.y = 0.1; g.add(ring2);
-  const ring3 = new THREE.Mesh(
-    new THREE.TorusGeometry(size * 0.6, size * 0.08, 5, 22),
+    new THREE.TorusGeometry(size * 0.6, size * 0.08, 4, 12),
     new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55 })
   );
-  ring3.rotation.x = Math.PI / 2; ring3.position.y = 0.1; g.add(ring3);
-  gs.effects.push({ mesh: g, timer: dur, max: dur, type: 'fx', _orb: orb, _ring: ring, _ring2: ring2, _ring3: ring3, size });
+  ring2.rotation.x = Math.PI / 2; ring2.position.y = 0.1; g.add(ring2);
+  gs.effects.push({ mesh: g, timer: dur, max: dur, type: 'fx', _orb: orb, _ring: ring, _ring2: ring2, size });
 }
 
 function spawnImpact(pos, color) {
@@ -4905,8 +4908,7 @@ function updateEffects(dt) {
       // Default spawnFX: orb + expanding rings
       if (ef._orb) { ef._orb.material.opacity = pct; ef._orb.scale.setScalar(0.4 + (1 - pct) * 1.8); }
       if (ef._ring)  { ef._ring.material.opacity  = pct; ef._ring.scale.setScalar(1 + (1 - pct) * 4.5); }
-      if (ef._ring2) { ef._ring2.material.opacity = pct * 0.9; ef._ring2.scale.setScalar(1 + (1 - pct) * 7.0); }
-      if (ef._ring3) { ef._ring3.material.opacity = pct * 0.55; ef._ring3.scale.setScalar(1 + (1 - pct) * 3.5); }
+      if (ef._ring2) { ef._ring2.material.opacity = pct * 0.55; ef._ring2.scale.setScalar(1 + (1 - pct) * 3.5); }
       if (!ef._orb && ef.mesh && ef.mesh.material) ef.mesh.material.opacity = Math.max(0, pct * 0.7);
     }
     if (ef.type === 'cloud') {
@@ -5303,8 +5305,7 @@ function showScreen(id) {
   if (id === 'menu') {
     inn.innerHTML = `<div class="stitle">🌱 Garden Farmers</div>
       <div class="ssub">Grow plants. Arm yourself. Defend your farm!</div>
-      <button class="bbtn" onclick="showScreen('biome')">▶ New Game</button>
-      ${hasSave() ? `<button class="bbtn" style="background:#1565c0" onclick="loadAndPlay()">📂 Continue</button>` : ''}
+      <button class="bbtn" onclick="showScreen('saves')">▶ Play</button>
       <button class="bbtn" style="background:#444" onclick="window._tutStep=0;showScreen('tutorial')">❓ How to Play</button>
       `;
   } else if (id === 'tutorial') {
@@ -5409,6 +5410,35 @@ function showScreen(id) {
       <div class="ssub">You survived all ${totalW} waves in the ${gs.biome === 'snow' ? 'Snowy Tundra' : gs.biome === 'jungle' ? 'Jungle Forest' : gs.biome === 'deepsea' ? 'Deep Sea Abyss' : 'Garden Farm'}!</div>
       <div style="color:#FFD700;font-size:20px;margin:10px">${getActiveData().resourceEmoji} ${gs.straw} | 💀 ${gs.totalKills} ${getActiveData().enemyName} defeated</div>
       <button class="bbtn" onclick="showScreen('menu')">Main Menu</button>`;
+  } else if (id === 'saves') {
+    const BIOME_NAMES = { garden:'🌾 Garden Farm', jungle:'🌿 Jungle Forest', snow:'❄️ Snowy Tundra', deepsea:'🌊 Deep Sea Abyss' };
+    const slots = [0, 1, 2].map(n => {
+      const meta = getSlotMeta(n);
+      if (!meta) {
+        return `<div class="save-slot">
+          <div class="save-slot-num">Slot ${n+1}</div>
+          <div class="save-slot-biome" style="color:#555;font-size:16px">Empty</div>
+          <div class="save-slot-date" style="margin-bottom:16px">No save data</div>
+          <button class="bbtn" style="padding:10px 22px;font-size:15px" onclick="startNewGameInSlot(${n})">▶ New Game</button>
+        </div>`;
+      }
+      const biomeName = BIOME_NAMES[meta.biome] || '🌾 Garden Farm';
+      const date = meta.savedAt ? new Date(meta.savedAt).toLocaleDateString() : '';
+      return `<div class="save-slot">
+        <div class="save-slot-num">Slot ${n+1}</div>
+        <div class="save-slot-biome">${biomeName}</div>
+        <div class="save-slot-wave">Wave ${meta.wave}</div>
+        <div class="save-slot-date">${date}</div>
+        <div style="display:flex;gap:8px;justify-content:center">
+          <button class="bbtn" style="padding:10px 22px;font-size:15px" onclick="loadSlot(${n})">▶ Continue</button>
+          <button class="bbtn red" style="padding:10px 14px;font-size:14px" onclick="deleteSaveSlot(${n})">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+    inn.innerHTML = `<div class="stitle" style="font-size:42px">💾 Choose a Slot</div>
+      <div class="ssub">Pick a save slot to play or start fresh!</div>
+      <div class="save-slots-grid">${slots}</div>
+      <button class="bbtn gray" style="margin-top:8px" onclick="showScreen('menu')">◀ Back</button>`;
   }
 }
 
@@ -5518,8 +5548,43 @@ function endGame() {
 // ═══════════════════════════════════════
 //  SAVE / LOAD
 // ═══════════════════════════════════════
-const SAVE_KEY = 'gardenFarmers_v1';
-function hasSave() { return !!localStorage.getItem(SAVE_KEY); }
+let _activeSaveSlot = 0;
+function getSaveSlotKey(n) { return 'gardenFarmers_v1_slot' + n; }
+function hasSaveSlot(n) { return !!localStorage.getItem(getSaveSlotKey(n)); }
+function hasSave() { return hasSaveSlot(_activeSaveSlot); }
+
+function getSlotMeta(n) {
+  try {
+    const d = JSON.parse(localStorage.getItem(getSaveSlotKey(n)));
+    if (!d) return null;
+    return { biome: d.biome || 'garden', wave: d.wave || 0, savedAt: d.savedAt || null };
+  } catch(e) { return null; }
+}
+
+function deleteSaveSlot(n) {
+  if (!confirm('Delete Slot ' + (n+1) + '? This cannot be undone.')) return;
+  localStorage.removeItem(getSaveSlotKey(n));
+  showScreen('saves');
+}
+
+function startNewGameInSlot(n) {
+  _activeSaveSlot = n;
+  showScreen('biome');
+}
+
+function loadSlot(n) {
+  _activeSaveSlot = n;
+  loadAndPlay();
+}
+
+// Migrate old single-slot save to slot 0
+(function() {
+  const old = localStorage.getItem('gardenFarmers_v1');
+  if (old && !localStorage.getItem(getSaveSlotKey(0))) {
+    localStorage.setItem(getSaveSlotKey(0), old);
+    localStorage.removeItem('gardenFarmers_v1');
+  }
+})();
 
 function saveGame() {
   try {
@@ -5529,6 +5594,7 @@ function saveGame() {
       playerHP: gs.playerHP, totalKills: gs.totalKills,
       ownedWeapons: [...gs.ownedWeapons], ownedPlaceables: [...gs.ownedPlaceables],
       hotbar: gs.hotbar, farmExpansions: gs.farmExpansions,
+      savedAt: new Date().toISOString(),
       placedPlants: gs.placedPlants
         .filter(p => p && p.data && p.pos)
         .map(p => ({ id: p.data.id, x: +(p._homePos || p.pos).x.toFixed(3), z: +(p._homePos || p.pos).z.toFixed(3), hp: p.hp })),
@@ -5536,7 +5602,7 @@ function saveGame() {
         .filter(d => d && d.data && d.pos)
         .map(d => ({ id: d.data.id, x: +d.pos.x.toFixed(3), z: +d.pos.z.toFixed(3) })),
     };
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    localStorage.setItem(getSaveSlotKey(_activeSaveSlot), JSON.stringify(data));
   } catch (err) {
     console.error('saveGame failed:', err);
   }
@@ -5544,7 +5610,7 @@ function saveGame() {
 
 function loadGame() {
   try {
-    const d = JSON.parse(localStorage.getItem(SAVE_KEY));
+    const d = JSON.parse(localStorage.getItem(getSaveSlotKey(_activeSaveSlot)));
     gs.straw = d.straw || 0; gs.wave = d.wave || 0; gs.skin = d.skin || 'classic';
     if (d.biome) gs.biome = d.biome;
     gs.barnHP = d.barnHP || 200; gs.barnMaxHP = d.barnMaxHP || 200;
@@ -6418,21 +6484,24 @@ function loop(ts) {
   }
 
   // Drift clouds slowly
-  scene.children.forEach(c => { if (c._isCloud) { c.position.x += 0.4 * dt; if (c.position.x > 50) c.position.x = -50; } });
+  _cloudMeshes.forEach(c => { c.position.x += 0.4 * dt; if (c.position.x > 50) c.position.x = -50; });
   // Spin windmill blades
   if (windmillBlades) windmillBlades.rotation.z += dt * 0.7;
   // Sway plants gently in the wind
   const t = Date.now() * 0.001;
-  // Barn lantern flicker
-  if (window._barnLantern) window._barnLantern.intensity = 2.2 + Math.sin(t * 9.3) * 0.5 + Math.sin(t * 17.7) * 0.2;
-  gs.placedPlants.forEach((p, i) => {
-    if (!p.mesh || p.data.kind === 'animal') return; // animals move themselves
-    if (!p._swayPh)  p._swayPh  = i * 2.4 + Math.random() * 1.8;
-    if (!p._swaySpd) p._swaySpd = 0.6 + (i % 5) * 0.16;
-    const sp = p._swaySpd, ph = p._swayPh;
-    p.mesh.rotation.z = Math.sin(t * sp + ph) * 0.15 + Math.sin(t * sp * 2.2 + ph + 1.3) * 0.05;
-    p.mesh.rotation.x = Math.cos(t * sp * 0.87 + ph + 1.0) * 0.1 + Math.sin(t * sp * 1.7 + ph + 0.6) * 0.03;
-  });
+  // Barn lantern flicker (every other frame)
+  if (window._barnLantern && (loop._fc & 1) === 0) window._barnLantern.intensity = 2.2 + Math.sin(t * 9.3) * 0.5 + Math.sin(t * 17.7) * 0.2;
+  loop._fc = (loop._fc || 0) + 1;
+  if ((loop._fc & 1) === 0) {
+    gs.placedPlants.forEach((p, i) => {
+      if (!p.mesh || p.data.kind === 'animal') return;
+      if (!p._swayPh)  p._swayPh  = i * 2.4 + Math.random() * 1.8;
+      if (!p._swaySpd) p._swaySpd = 0.6 + (i % 5) * 0.16;
+      const sp = p._swaySpd, ph = p._swayPh;
+      p.mesh.rotation.z = Math.sin(t * sp + ph) * 0.15 + Math.sin(t * sp * 2.2 + ph + 1.3) * 0.05;
+      p.mesh.rotation.x = Math.cos(t * sp * 0.87 + ph + 1.0) * 0.1 + Math.sin(t * sp * 1.7 + ph + 0.6) * 0.03;
+    });
+  }
 
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
