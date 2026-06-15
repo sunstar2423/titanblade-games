@@ -669,11 +669,11 @@ const WEAPONS = [
   { id:'acorn',   name:'Acorn Star',            emoji:'🌰', cost:30, desc:'Spinning 4-point star projectile',kind:'star',    dmg:22, range:10,  cd:0.5,  color:0xa0522d },
   { id:'beet_orb',name:'Beet Orb',              emoji:'🫒', cost:40, desc:'Orb with rings — explodes at end', kind:'orb',    dmg:30, range:12,  cd:1.1,  color:0x990055, aoe:2.8 },
   { id:'magic_wand',name:"Magician's Wand",    emoji:'🪄', cost:45, desc:'Click to TELEPORT to cursor — blasts enemies at destination', kind:'wand', dmg:35, range:20, cd:0.9, aoe:6.0, color:0xcc44ff },
-  { id:'rake',      name:'Iron Rake',          emoji:'🔧', cost:20, desc:'Fast wide arc melee — hits all nearby enemies',           kind:'melee',    dmg:20, range:3.0, cd:0.45, color:0x888888, aoe:2.2 },
-  { id:'slingshot', name:'Slingshot',          emoji:'🪃', cost:20, desc:'Fast stone dart — quick single target',                  kind:'dart',     dmg:18, range:13,  cd:0.22, color:0xa0522d },
-  { id:'frost_seed',name:'Frost Seed',         emoji:'🔷', cost:30, desc:'Lobbed ice seed — HARD FREEZES enemies in AoE',         kind:'slow',     dmg:16, range:12,  cd:1.0, aoe:2.5, slow:0.7, slowDur:3, color:0x88ccff, hardFreeze:true },
-  { id:'scythe',    name:'Harvest Scythe',     emoji:'⚔️', cost:45, desc:'Heavy swing — AoE knockback slam',                      kind:'heavy',    dmg:85, range:2.5, cd:2.0, color:0x5c3d1e, aoe:2.5 },
-  { id:'fire_seed', name:'Blazing Berry',      emoji:'🔥', cost:35, desc:'Thrown fire berry — burns over time',                   kind:'throw',    dmg:30, range:12,  cd:1.4, color:0xff4500, aoe:2.8, burn:8 },
+  { id:'pitchfork', name:'Pitchfork Throw',    emoji:'🔱', cost:20, desc:'Hurled pitchfork — PIERCES through ALL enemies in a line!', kind:'javelin', dmg:48, range:14,  cd:1.2,  color:0x886644, pierce:true },
+  { id:'slingshot', name:'Slingshot',          emoji:'🪃', cost:20, desc:'Fast stone dart — quick single target',                    kind:'dart',    dmg:18, range:13,  cd:0.22, color:0xa0522d },
+  { id:'vine_lasso',name:'Vine Lasso',         emoji:'🌿', cost:25, desc:'Thrown lasso — PULLS enemies toward you!',                kind:'slow',    dmg:14, range:12,  cd:1.0,  aoe:2.0, slow:0.6, slowDur:3, color:0x228b22, pull:true },
+  { id:'pepper_ndl',name:'Pepper Needle',      emoji:'🌶️', cost:35, desc:'Ultra-rapid fire pepper needles — shreds enemies',       kind:'needle',  dmg:9,  range:11,  cd:0.16, color:0xff2200 },
+  { id:'frost_seed',name:'Frost Seed',         emoji:'🔷', cost:30, desc:'Lobbed ice seed — HARD FREEZES enemies in AoE',          kind:'slow',    dmg:16, range:12,  cd:1.0,  aoe:2.5, slow:0.7, slowDur:3, color:0x88ccff, hardFreeze:true },
 ];
 
 const PLACEABLES = [
@@ -1178,10 +1178,10 @@ const WEAPONS_JUNGLE = [
   { id:'sunray',       name:'Sun Prism Beam',  emoji:'🔆', cost:50, desc:'Giant instant light beam',                   kind:'beam',     dmg:85, range:18,  cd:2.5,  color:0xffe066 },
   { id:'needle_shot',  name:'Thorn Needle',    emoji:'🪡', cost:25, desc:'Ultra-fast poison needle spam',               kind:'needle',   dmg:7,  range:12,  cd:0.18, color:0x44cc00, poison:true },
   { id:'jungle_orb',   name:'Jungle Orb',      emoji:'🌐', cost:40, desc:'Toxic spinning orb — explodes at end',       kind:'orb',      dmg:26, range:12,  cd:1.1,  color:0x33aa00, aoe:3.0, burn:4 },
-  { id:'bone_club',    name:'Bone Club',        emoji:'🦴', cost:35, desc:'Heavy slam with AoE knockback',               kind:'heavy',    dmg:75, range:2.5, cd:1.8,  color:0xeeddcc, aoe:2.2 },
-  { id:'machete',      name:'Machete',          emoji:'🗡️', cost:20, desc:'Ultra-fast melee — chains to 3 enemies',     kind:'melee',    dmg:18, range:3.0, cd:0.35, color:0x888866, chainMelee:3 },
-  { id:'toxic_dart',   name:'Toxic Dart',       emoji:'💉', cost:30, desc:'Heavy poison dart — DoT + slow',              kind:'dart',     dmg:20, range:13,  cd:0.55, color:0x44cc00, poison:true, slow:0.6, slowDur:2 },
-  { id:'vine_net',     name:'Vine Net',         emoji:'🕸️', cost:25, desc:'Thrown net — ROOTS enemies in AoE',          kind:'slow',     dmg:12, range:12,  cd:1.2,  aoe:2.8, slow:0.7, slowDur:3, color:0x228b22, root:true },
+  { id:'spear_hurl',   name:'Bone Spear',       emoji:'🎯', cost:30, desc:'Hurled spear — PIERCES through ALL enemies in a line!', kind:'javelin',  dmg:58, range:16,  cd:1.4,  color:0xeeddcc, pierce:true },
+  { id:'bounce_coco',  name:'Bouncing Coconut', emoji:'🥥', cost:35, desc:'Coconut bounces between 5 enemies — stuns each hit',     kind:'bounce',   dmg:30, range:14,  cd:0.9,  bounces:5, color:0x7a5c3c },
+  { id:'crystal_bark', name:'Crystal Bark',     emoji:'🔮', cost:25, desc:'Spinning crystal shard — slows and damages on hit',      kind:'crystal',  dmg:22, range:10,  cd:0.55, color:0x88cc44, slow:0.65, slowDur:3 },
+  { id:'monkey_wand',  name:'Ancient Staff',    emoji:'🪄', cost:45, desc:'Click to TELEPORT to cursor — blasts nearby foes!',      kind:'wand',     dmg:38, range:20,  cd:1.0,  aoe:5.5, color:0xa0522d },
 ];
 const PLACEABLES_JUNGLE = [
   { id:'pitcher',      name:'Pitcher Plant',   emoji:'🪴', cost:40, desc:'⚔️ Snaps shut on close enemies',        kind:'turret', dmg:32, range:2.5, cd:1.8, hp:80,  color:0x006400 },
@@ -1353,10 +1353,10 @@ const WEAPONS_SNOW = [
   { id:'avalanche',     name:'Avalanche Bomb',    emoji:'🏔️', cost:30, desc:'Bounces between 3 enemies',                    kind:'bounce',   dmg:22, range:14,  cd:0.6,  bounces:3, color:0xddddff },
   { id:'ice_shard',     name:'Ice Crystal',       emoji:'💠', cost:25, desc:'Spinning crystal — slows on hit',              kind:'crystal',  dmg:20, range:10,  cd:0.55, color:0x66ccff, slow:0.7, slowDur:3 },
   { id:'bliz_orb',      name:'Blizzard Orb',      emoji:'🔵', cost:40, desc:'Freeze orb with rings — explodes frozen AoE',  kind:'orb',      dmg:22, range:12,  cd:1.1,  color:0x7788ff, aoe:3.0, hardFreeze:true },
-  { id:'ice_blade',     name:'Ice Blade',          emoji:'🗡️', cost:25, desc:'Fast ice melee — +50% dmg on frozen foes',    kind:'melee',    dmg:22, range:3.0, cd:0.4,  color:0x88ccff, shatter:true, chainMelee:2 },
-  { id:'hail_cloud',    name:'Hail Storm',         emoji:'🌨️', cost:35, desc:'Hail cloud — rains ice damage + freezes',     kind:'cloud',    dmg:8,  range:4,   cd:1.2,  aoe:4, dur:5, color:0x99ddee, hardFreeze:true },
-  { id:'frost_nova',    name:'Frost Nova',         emoji:'💎', cost:50, desc:'Instant freeze beam — HARD FREEZES all hit',  kind:'beam',     dmg:55, range:18,  cd:2.5,  color:0x88ffff, hardFreeze:true },
-  { id:'snow_globe',    name:'Snow Globe',         emoji:'🔮', cost:40, desc:'Orb explodes — hard freezes large AoE',       kind:'orb',      dmg:18, range:14,  cd:1.2,  color:0xaaddff, aoe:4.5, hardFreeze:true },
+  { id:'frost_star',    name:'Frost Star',         emoji:'⭐', cost:25, desc:'Spinning ice star — slows all enemies it hits',       kind:'star',     dmg:24, range:10,  cd:0.5,  color:0x99ddff, slow:0.7, slowDur:3 },
+  { id:'snow_needle',   name:'Icicle Spray',       emoji:'💠', cost:25, desc:'Ultra-rapid fire icicle spray — shreds enemies fast',  kind:'needle',   dmg:8,  range:12,  cd:0.17, color:0xaaddff },
+  { id:'ice_block',     name:'Ice Block Drop',     emoji:'🧊', cost:45, desc:'Drop a massive ice block — HUGE AoE knockback slam',   kind:'heavy',    dmg:90, range:2.5, cd:2.0,  color:0x66aadd, aoe:2.8 },
+  { id:'bliz_wand',     name:'Blizzard Wand',      emoji:'🪄', cost:50, desc:'Click to TELEPORT to cursor — HARD FREEZES all nearby!',kind:'wand',    dmg:32, range:20,  cd:1.0,  aoe:5.5, color:0x88ccff, hardFreeze:true },
 ];
 const PLACEABLES_SNOW = [
   { id:'snow_turret',   name:'Snowball Turret',   emoji:'⛄', cost:30, desc:'⚔️ Auto-fires snowballs at enemies',  kind:'turret', dmg:14, range:5.5, cd:0.5, hp:60,  color:0xffffff },
@@ -1526,9 +1526,9 @@ const WEAPONS_DEEPSEA = [
   { id:'depth_charge', name:'Depth Charge',  emoji:'💣', cost:55, desc:'⚔️ Massive AoE explosion + knockback',         kind:'throw',  dmg:65, range:12,  cd:2.0,  color:0x225577, aoe:4.0 },
   { id:'sonar_pulse',  name:'Sonar Pulse',   emoji:'🔊', cost:50, desc:'⚔️ Shockwave — damages & slows all nearby',   kind:'melee',  dmg:18, range:5.5, cd:1.2,  color:0x44ffcc, slow:0.5, aoe:5.5 },
   { id:'ink_blast',    name:'Ink Blast',     emoji:'🦑', cost:35, desc:'⚔️ Ink cloud — poisons group of enemies',     kind:'dart',   dmg:12, range:9,   cd:0.6,  color:0x220044, poison:true, aoe:2.5 },
-  { id:'sea_sword',   name:'Sea Blade',     emoji:'🗡️', cost:25, desc:'⚔️ Fast slash — chains to 3 nearby enemies',  kind:'melee',  dmg:24, range:3.0, cd:0.45, color:0x4499cc, chainMelee:3 },
-  { id:'torpedo',     name:'Torpedo',       emoji:'🚀', cost:40, desc:'⚔️ Fast pierce — punches through enemies',    kind:'dart',   dmg:35, range:14,  cd:0.8,  color:0x336688, pierce:true },
-  { id:'current_gun', name:'Current Cannon',emoji:'🌊', cost:35, desc:'⚔️ Current wave — AoE slow + knockback',     kind:'slow',   dmg:22, range:10,  cd:1.0,  aoe:3.5, slow:0.7, slowDur:3, color:0x0088cc },
+  { id:'sea_star',    name:'Coral Star',    emoji:'⭐', cost:25, desc:'⚔️ Spinning coral star — ricochets between foes', kind:'star',   dmg:26, range:10,  cd:0.5,  color:0xff6688 },
+  { id:'torpedo',    name:'Torpedo',        emoji:'🚀', cost:40, desc:'⚔️ Fast pierce — punches through ALL enemies', kind:'dart',   dmg:35, range:14,  cd:0.8,  color:0x336688, pierce:true },
+  { id:'void_lance', name:'Void Lance',     emoji:'🔱', cost:40, desc:'⚔️ Deep-sea javelin — PIERCES every enemy in line!', kind:'javelin', dmg:65, range:16, cd:1.6, color:0x113355, pierce:true },
   { id:'urchin_throw',name:'Poison Urchin', emoji:'🦔', cost:30, desc:'⚔️ Thrown urchin — AoE poison on impact',   kind:'throw',  dmg:28, range:12,  cd:1.2,  color:0x886655, aoe:3.0, poison:true },
   { id:'shock_ray',   name:'Shock Ray',     emoji:'⚡', cost:50, desc:'⚔️ Instant shock beam — chains 4 foes',    kind:'beam',   dmg:75, range:18,  cd:2.5,  color:0xffee22, chain:4 },
   { id:'net_throw',   name:'Net Launcher',  emoji:'🕸️', cost:20, desc:'⚔️ Net — ROOTS enemies, stops movement',   kind:'slow',   dmg:10, range:12,  cd:1.0,  aoe:2.5, slow:0.7, slowDur:3, color:0xcccccc, root:true },
@@ -2591,6 +2591,7 @@ function spawnMonkey(data, pos) {
   const g = new THREE.Group();
   const isBoss = data.id === 'chimp_boss' || data.id === 'kong';
   const isArmor = data.id === 'alpha';
+  const isGolden = data.id === 'golden';
   const bodyCol = data.color;
   const darkCol = Math.max(0, bodyCol - 0x222222);
   const S = (col, rough=0.8, met=0) => new THREE.MeshStandardMaterial({color:col, roughness:rough, metalness:met});
@@ -2636,6 +2637,29 @@ function spawnMonkey(data, pos) {
   if (isArmor) {
     mk(new THREE.BoxGeometry(0.88*sz, 0.55*sz, 0.15*sz), 0x4a4a4a, 1.02*sz, 0, 0.4*sz, 0, 0, 0, 0.4, 0.75);
   }
+  if (isGolden) {
+    const Sg = (c, met=0.95, rough=0.15, emCol=0, emInt=0) => {
+      const m = new THREE.MeshStandardMaterial({color:c, metalness:met, roughness:rough});
+      if (emInt > 0) { m.emissive.setHex(emCol); m.emissiveIntensity = emInt; }
+      return m;
+    };
+    // Gold crown above monkey head (head is at ~1.65*sz)
+    const crownBase = new THREE.Mesh(new THREE.CylinderGeometry(0.48*sz, 0.46*sz, 0.16*sz, 10), Sg(0xFFD700, 0.95, 0.15, 0xFFD700, 0.6));
+    crownBase.position.y = 2.08*sz; g.add(crownBase);
+    for (let i = 0; i < 5; i++) {
+      const ca = (i/5)*Math.PI*2;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.065*sz, 0.26*sz, 5), Sg(0xFFD700, 0.95, 0.15, 0xFFD700, 0.8));
+      spike.position.set(Math.cos(ca)*0.42*sz, 2.3*sz, Math.sin(ca)*0.42*sz); g.add(spike);
+    }
+    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.1*sz, 0), Sg(0xff2222, 0.1, 0.1, 0xff2200, 2.5));
+    gem.position.y = 2.36*sz; g.add(gem);
+    // Gold orbit rings at base
+    const gr1 = new THREE.Mesh(new THREE.TorusGeometry(0.9*sz, 0.055*sz, 6, 18), Sg(0xFFD700, 0.95, 0.15, 0xFFD700, 1.4));
+    gr1.rotation.x = Math.PI/2; gr1.position.y = 0.15; g.add(gr1);
+    const gr2 = new THREE.Mesh(new THREE.TorusGeometry(1.12*sz, 0.04*sz, 6, 18), Sg(0xffcc44, 0.9, 0.15, 0xffcc44, 0.9));
+    gr2.rotation.x = Math.PI/5; gr2.position.y = 0.22; g.add(gr2);
+    const gl = new THREE.PointLight(0xFFD700, 1.2, 5); gl.position.y = 1.0; g.add(gl);
+  }
   _addEnemyToScene(g, pos, data, sz);
 }
 
@@ -2645,6 +2669,7 @@ function spawnSnowman(data, pos) {
   const isBoss = data.id === 'snow_boss' || data.id === 'snow_giant' || data.id === 'glacier';
   const isYeti = data.id === 'yeti';
   const isArmor = data.id === 'snow_armor';
+  const isGolden = data.id === 'golden';
   const bodyCol = data.color;
   const S = (col, rough=0.7, met=0, emCol=0, emInt=0) => {
     const m = new THREE.MeshStandardMaterial({color:col, roughness:rough, metalness:met});
@@ -2715,6 +2740,25 @@ function spawnSnowman(data, pos) {
     });
     const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.8*sz, 0.07*sz, 6, 18), new THREE.MeshStandardMaterial({color:0x88ccff, emissive:0x88ccff, emissiveIntensity:1.2}));
     ring1.rotation.x = Math.PI/2; ring1.position.y = 0.12; g.add(ring1);
+  } else if (isGolden) {
+    // Gold crown for golden snowman (head at ~1.88*sz)
+    mk(new THREE.CylinderGeometry(0.36*sz, 0.34*sz, 0.16*sz, 10), 0xFFD700, 2.14*sz, 0,0, 0,0,0, 0.15, 0.95, 0xFFD700, 0.6);
+    for (let i = 0; i < 5; i++) {
+      const ca = (i/5)*Math.PI*2;
+      mk(new THREE.ConeGeometry(0.055*sz, 0.22*sz, 5), 0xFFD700, 2.36*sz, Math.cos(ca)*0.3*sz, Math.sin(ca)*0.3*sz, 0,0,0, 0.15, 0.95, 0xFFD700, 0.8);
+    }
+    mk(new THREE.OctahedronGeometry(0.09*sz, 0), 0xff2222, 2.4*sz, 0,0, 0,0,0, 0.1, 0.1, 0xff2200, 2.5);
+    // Make snowman eyes glow golden
+    [-0.1*sz, 0.1*sz].forEach(x => {
+      const eye = g.children.find(c => c.position.x === x && Math.abs(c.position.y - 1.92*sz) < 0.05);
+      if (eye) eye.material = new THREE.MeshStandardMaterial({color:0xffcc00, emissive:0xFFD700, emissiveIntensity:2.2});
+    });
+    // Gold orbit rings
+    const gr1 = new THREE.Mesh(new THREE.TorusGeometry(0.88*sz, 0.055*sz, 6, 18), new THREE.MeshStandardMaterial({color:0xFFD700, emissive:0xFFD700, emissiveIntensity:1.4, metalness:0.95, roughness:0.15}));
+    gr1.rotation.x = Math.PI/2; gr1.position.y = 0.12; g.add(gr1);
+    const gr2 = new THREE.Mesh(new THREE.TorusGeometry(1.1*sz, 0.04*sz, 6, 18), new THREE.MeshStandardMaterial({color:0xffcc44, emissive:0xffcc44, emissiveIntensity:0.9, metalness:0.9, roughness:0.15}));
+    gr2.rotation.x = Math.PI/5; gr2.position.y = 0.2; g.add(gr2);
+    const gl = new THREE.PointLight(0xFFD700, 1.2, 5); gl.position.y = 1.0; g.add(gl);
   } else {
     // Regular hat
     mk(new THREE.CylinderGeometry(0.34*sz, 0.34*sz, 0.06*sz, 10), 0x1a1a1a, 2.14*sz);
@@ -2871,6 +2915,31 @@ function spawnSeaCreature(data, pos) {
     const aura2 = new THREE.Mesh(new THREE.TorusGeometry(1.5*sz, 0.1*sz, 6, 24), new THREE.MeshStandardMaterial({color:0x0033aa, emissive:0x0011ff, emissiveIntensity:1.2}));
     aura2.rotation.x = Math.PI/2; aura2.position.y = 0.2*sz; g.add(aura2);
 
+  } else if (id === 'golden') {
+    // Golden Fish — large shimmering gold fish with crown and orbit rings
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.42*sz, 10, 9), S(col, 0.15, 0.95, col, 0.5));
+    body.scale.set(0.68, 0.52, 1.42); body.position.y = 0.55*sz; body.castShadow = true; g.add(body);
+    // Tail fin
+    mk(new THREE.ConeGeometry(0.28*sz, 0.44*sz, 4), col, 0.55*sz, 0, -0.64*sz, Math.PI/2, 0, 0, 0.15, 0.95, col, 0.4);
+    // Dorsal fin
+    mk(new THREE.ConeGeometry(0.1*sz, 0.32*sz, 3), col, 0.9*sz, 0, 0, 0, 0, 0.18, 0.15, 0.95, col, 0.3);
+    // Side fins
+    [-0.46*sz, 0.46*sz].forEach((x, i) => mk(new THREE.ConeGeometry(0.08*sz, 0.26*sz, 3), col, 0.55*sz, x, 0, 0, 0, i===0?-0.9:0.9, 0.15, 0.95, col, 0.3));
+    // Glowing red eyes
+    [-0.14*sz, 0.14*sz].forEach(x => mk(new THREE.SphereGeometry(0.08*sz, 6, 6), 0xff4400, 0.62*sz, x, 0.42*sz, 0,0,0, 0.1, 0, 0xff2200, 2.5));
+    // Crown on top of fish
+    mk(new THREE.CylinderGeometry(0.3*sz, 0.28*sz, 0.16*sz, 10), 0xFFD700, 0.96*sz, 0,0, 0,0,0, 0.15, 0.95, 0xFFD700, 0.7);
+    for (let i = 0; i < 5; i++) {
+      const ca = (i/5)*Math.PI*2;
+      mk(new THREE.ConeGeometry(0.055*sz, 0.22*sz, 5), 0xFFD700, 1.18*sz, Math.cos(ca)*0.25*sz, Math.sin(ca)*0.25*sz, 0,0,0, 0.15, 0.95, 0xFFD700, 0.9);
+    }
+    mk(new THREE.OctahedronGeometry(0.09*sz, 0), 0xff2222, 1.22*sz, 0,0, 0,0,0, 0.1, 0.1, 0xff2200, 2.5);
+    // Gold orbit rings
+    const gr1 = new THREE.Mesh(new THREE.TorusGeometry(0.9*sz, 0.055*sz, 6, 18), new THREE.MeshStandardMaterial({color:0xFFD700, emissive:0xFFD700, emissiveIntensity:1.4, metalness:0.95, roughness:0.15}));
+    gr1.rotation.x = Math.PI/2; gr1.position.y = 0.15; g.add(gr1);
+    const gr2 = new THREE.Mesh(new THREE.TorusGeometry(1.12*sz, 0.04*sz, 6, 18), new THREE.MeshStandardMaterial({color:0xffcc44, emissive:0xffcc44, emissiveIntensity:0.9, metalness:0.9, roughness:0.15}));
+    gr2.rotation.x = Math.PI/5; gr2.position.y = 0.2; g.add(gr2);
+    const gl = new THREE.PointLight(0xFFD700, 1.5, 6); gl.position.y = 0.6; g.add(gl);
   } else {
     // Default fish (clownfish, ghost_fish)
     const isGhost = id === 'ghost_fish';
