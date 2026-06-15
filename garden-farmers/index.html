@@ -701,6 +701,7 @@ const PLACEABLES = [
   { id:'honeypot',   name:'Honey Pot',          emoji:'🍯', cost:25, desc:'💚 Lures & HEAVILY slows nearby enemies',    kind:'freeze', dmg:0,  range:5.0,        hp:50,  color:0xf5a623, support:true },
   { id:'crystal_plt',name:'Crystal Shard',      emoji:'💎', cost:40, desc:'⚔️ Chains lightning to 8 nearby foes',      kind:'turret', dmg:18, range:6,   cd:1.2, hp:55,  color:0x66ccff, chains:8 },
   { id:'mega_mine',  name:'Mega Mine',          emoji:'💥', cost:30, desc:'⚔️ Massive explosion — huge AoE damage',    kind:'mine',   dmg:120,range:4,   aoe:5,  hp:1,   color:0xff2200 },
+  { id:'vortex_bloom',name:'Vortex Blossom',   emoji:'🌀', cost:50, desc:'🌀 Sucks ALL enemies inward — dmg while pulling', kind:'vortex', dmg:5, range:9, pull:6, hp:75, color:0x9900cc },
 ];
 
 const DEFENSE_ITEMS = [
@@ -1201,6 +1202,7 @@ const PLACEABLES_JUNGLE = [
   { id:'toxic_pool',   name:'Toxic Pool',      emoji:'☠️', cost:40, desc:'⚔️ Poison gas clouds burn enemies',    kind:'turret', dmg:18, range:7,   cd:0.9, hp:60,  color:0x44aa00, burn:6 },
   { id:'drum_totem',   name:'Drum Totem',      emoji:'🥁', cost:35, desc:'💚 Drum pulses slow nearby enemies',   kind:'freeze', dmg:0,  range:5,          hp:70,  color:0xa0522d, support:true },
   { id:'kong_cannon',  name:'Kong Cannon',     emoji:'🦍', cost:55, desc:'⚔️ Massive AoE coconut shockwave',     kind:'turret', dmg:52, range:11,  cd:4.0, hp:110, color:0x3a2010, aoe:4 },
+  { id:'whirl_fern',  name:'Whirlpool Fern',  emoji:'🌀', cost:50, desc:'🌀 Spinning vines drag all enemies inward', kind:'vortex', dmg:6, range:9, pull:7, hp:75, color:0x226600 },
   { id:'mist_cloud',   name:'Mist Sprayer',    emoji:'🌫️', cost:30, desc:'⚔️ Slow mist blasts chill enemies',   kind:'turret', dmg:8,  range:6.5, cd:1.8, hp:50,  color:0xaaddcc, slow:0.8, slowDur:4 },
   { id:'gorilla_drum', name:'Gorilla Drum',    emoji:'🥁', cost:35, desc:'💚 Beat slows ALL nearby enemies',    kind:'freeze', dmg:0,  range:5.5,        hp:75,  color:0x3a1a00, support:true },
   { id:'liana_trap',   name:'Liana Trap',      emoji:'🌿', cost:18, desc:'⚔️ Roots enemies + deals damage',    kind:'passive',dmg:14, range:1.8,        hp:65,  color:0x3a5a10, root:true },
@@ -1381,6 +1383,7 @@ const PLACEABLES_SNOW = [
   { id:'bliz_fan',      name:'Blizzard Fan',      emoji:'🌀', cost:30, desc:'💚 Wide fan blast slows all nearby',  kind:'freeze', dmg:0,  range:6.0,        hp:55,  color:0x99bbff, support:true },
   { id:'cryo_tower',    name:'Cryogenic Tower',   emoji:'💙', cost:55, desc:'⚔️ HARD FREEZES foes in big range',  kind:'turret', dmg:0,  range:8,   cd:4.0, hp:100, color:0x0055cc, hardFreeze:true },
   { id:'ice_mines',     name:'Ice Mine Array',    emoji:'💥', cost:35, desc:'⚔️ Ice spike eruption — huge AoE',   kind:'mine',   dmg:80, range:4,   aoe:4.5,hp:1,   color:0x88ddff },
+  { id:'frost_vortex',  name:'Frost Vortex',      emoji:'🌀', cost:50, desc:'🌀 Ice whirlwind pulls + FREEZES enemies', kind:'vortex', dmg:3, range:9, pull:5, hp:75, color:0x44ccff, slow:true },
 ];
 const DEFENSES_SNOW = [
   { id:'ice_barrier',   name:'Ice Barrier',       emoji:'🧊', cost:10, desc:'Blocks and slows enemy path',         type:'fence',    hp:70,  color:0x99ccee },
@@ -1552,6 +1555,7 @@ const PLACEABLES_DEEPSEA = [
   { id:'giant_anem',   name:'Giant Anemone',      emoji:'🌸', cost:40, desc:'⚔️ Stinging tentacles chain to 4 foes', kind:'turret', dmg:20, range:4.5, cd:0.7, hp:80,  color:0xff88aa, chains:4 },
   { id:'lure_beacon',  name:'Lure Beacon',        emoji:'💡', cost:20, desc:'💚 Lures enemies toward it — slows all', kind:'passive',dmg:0,  range:8,          hp:60,  color:0xffff44, slow:0.4 },
   { id:'shark_turret', name:'Shark Fin Turret',   emoji:'🦈', cost:50, desc:'⚔️ Razor fins shred nearby enemies',    kind:'turret', dmg:38, range:6.5, cd:1.2, hp:90,  color:0x5577aa },
+  { id:'whirlpool',    name:'Whirlpool Node',     emoji:'🌀', cost:50, desc:'🌀 Powerful whirlpool drags ALL foes inward', kind:'vortex', dmg:5, range:10, pull:8, hp:75, color:0x1144bb },
 ];
 const DEFENSES_DEEPSEA = [
   { id:'kelp_wall',    name:'Kelp Wall',     emoji:'🌿', cost:10, desc:'Dense kelp — blocks enemies',                  type:'fence',    hp:70,  color:0x226633 },
@@ -4541,6 +4545,20 @@ function updatePlacedPlants(dt) {
             else if (p.data.slow) e.slowTimer = Math.max(e.slowTimer || 0, 0.35);
           }
         }
+      }
+      if (p.data.kind === 'vortex') {
+        const r2 = p.data.range * p.data.range;
+        for (const e of gs.enemies) {
+          const dsq = e.pos.distanceToSquared(p.pos);
+          if (dsq > 0.25 && dsq < r2) {
+            const pullDir = p.pos.clone().sub(e.pos).setY(0).normalize();
+            e.vel.add(pullDir.multiplyScalar((p.data.pull || 5) * tdt));
+            if (p.data.dmg > 0) { e.hp -= p.data.dmg * tdt; if (e.hp <= 0) killEnemy(e); }
+            if (p.data.slow) e.slowTimer = Math.max(e.slowTimer || 0, 0.6);
+          }
+        }
+        p._vfxT = (p._vfxT || 0) - tdt;
+        if (p._vfxT <= 0) { p._vfxT = 1.0; spawnFX(p.pos.clone(), p.data.color, 0.9, p.data.range * 0.22); }
       }
     }
 
