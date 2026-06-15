@@ -2587,6 +2587,7 @@ function spawnMonkey(data, pos) {
   const g = new THREE.Group();
   const isBoss = data.id === 'chimp_boss' || data.id === 'kong';
   const isArmor = data.id === 'alpha';
+  const isGolden = data.id === 'golden';
   const bodyCol = data.color;
   const darkCol = Math.max(0, bodyCol - 0x222222);
   const S = (col, rough=0.8, met=0) => new THREE.MeshStandardMaterial({color:col, roughness:rough, metalness:met});
@@ -2632,6 +2633,29 @@ function spawnMonkey(data, pos) {
   if (isArmor) {
     mk(new THREE.BoxGeometry(0.88*sz, 0.55*sz, 0.15*sz), 0x4a4a4a, 1.02*sz, 0, 0.4*sz, 0, 0, 0, 0.4, 0.75);
   }
+  if (isGolden) {
+    const Sg = (c, met=0.95, rough=0.15, emCol=0, emInt=0) => {
+      const m = new THREE.MeshStandardMaterial({color:c, metalness:met, roughness:rough});
+      if (emInt > 0) { m.emissive.setHex(emCol); m.emissiveIntensity = emInt; }
+      return m;
+    };
+    // Gold crown above monkey head (head is at ~1.65*sz)
+    const crownBase = new THREE.Mesh(new THREE.CylinderGeometry(0.48*sz, 0.46*sz, 0.16*sz, 10), Sg(0xFFD700, 0.95, 0.15, 0xFFD700, 0.6));
+    crownBase.position.y = 2.08*sz; g.add(crownBase);
+    for (let i = 0; i < 5; i++) {
+      const ca = (i/5)*Math.PI*2;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.065*sz, 0.26*sz, 5), Sg(0xFFD700, 0.95, 0.15, 0xFFD700, 0.8));
+      spike.position.set(Math.cos(ca)*0.42*sz, 2.3*sz, Math.sin(ca)*0.42*sz); g.add(spike);
+    }
+    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.1*sz, 0), Sg(0xff2222, 0.1, 0.1, 0xff2200, 2.5));
+    gem.position.y = 2.36*sz; g.add(gem);
+    // Gold orbit rings at base
+    const gr1 = new THREE.Mesh(new THREE.TorusGeometry(0.9*sz, 0.055*sz, 6, 18), Sg(0xFFD700, 0.95, 0.15, 0xFFD700, 1.4));
+    gr1.rotation.x = Math.PI/2; gr1.position.y = 0.15; g.add(gr1);
+    const gr2 = new THREE.Mesh(new THREE.TorusGeometry(1.12*sz, 0.04*sz, 6, 18), Sg(0xffcc44, 0.9, 0.15, 0xffcc44, 0.9));
+    gr2.rotation.x = Math.PI/5; gr2.position.y = 0.22; g.add(gr2);
+    const gl = new THREE.PointLight(0xFFD700, 1.2, 5); gl.position.y = 1.0; g.add(gl);
+  }
   _addEnemyToScene(g, pos, data, sz);
 }
 
@@ -2641,6 +2665,7 @@ function spawnSnowman(data, pos) {
   const isBoss = data.id === 'snow_boss' || data.id === 'snow_giant' || data.id === 'glacier';
   const isYeti = data.id === 'yeti';
   const isArmor = data.id === 'snow_armor';
+  const isGolden = data.id === 'golden';
   const bodyCol = data.color;
   const S = (col, rough=0.7, met=0, emCol=0, emInt=0) => {
     const m = new THREE.MeshStandardMaterial({color:col, roughness:rough, metalness:met});
@@ -2711,6 +2736,25 @@ function spawnSnowman(data, pos) {
     });
     const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.8*sz, 0.07*sz, 6, 18), new THREE.MeshStandardMaterial({color:0x88ccff, emissive:0x88ccff, emissiveIntensity:1.2}));
     ring1.rotation.x = Math.PI/2; ring1.position.y = 0.12; g.add(ring1);
+  } else if (isGolden) {
+    // Gold crown for golden snowman (head at ~1.88*sz)
+    mk(new THREE.CylinderGeometry(0.36*sz, 0.34*sz, 0.16*sz, 10), 0xFFD700, 2.14*sz, 0,0, 0,0,0, 0.15, 0.95, 0xFFD700, 0.6);
+    for (let i = 0; i < 5; i++) {
+      const ca = (i/5)*Math.PI*2;
+      mk(new THREE.ConeGeometry(0.055*sz, 0.22*sz, 5), 0xFFD700, 2.36*sz, Math.cos(ca)*0.3*sz, Math.sin(ca)*0.3*sz, 0,0,0, 0.15, 0.95, 0xFFD700, 0.8);
+    }
+    mk(new THREE.OctahedronGeometry(0.09*sz, 0), 0xff2222, 2.4*sz, 0,0, 0,0,0, 0.1, 0.1, 0xff2200, 2.5);
+    // Make snowman eyes glow golden
+    [-0.1*sz, 0.1*sz].forEach(x => {
+      const eye = g.children.find(c => c.position.x === x && Math.abs(c.position.y - 1.92*sz) < 0.05);
+      if (eye) eye.material = new THREE.MeshStandardMaterial({color:0xffcc00, emissive:0xFFD700, emissiveIntensity:2.2});
+    });
+    // Gold orbit rings
+    const gr1 = new THREE.Mesh(new THREE.TorusGeometry(0.88*sz, 0.055*sz, 6, 18), new THREE.MeshStandardMaterial({color:0xFFD700, emissive:0xFFD700, emissiveIntensity:1.4, metalness:0.95, roughness:0.15}));
+    gr1.rotation.x = Math.PI/2; gr1.position.y = 0.12; g.add(gr1);
+    const gr2 = new THREE.Mesh(new THREE.TorusGeometry(1.1*sz, 0.04*sz, 6, 18), new THREE.MeshStandardMaterial({color:0xffcc44, emissive:0xffcc44, emissiveIntensity:0.9, metalness:0.9, roughness:0.15}));
+    gr2.rotation.x = Math.PI/5; gr2.position.y = 0.2; g.add(gr2);
+    const gl = new THREE.PointLight(0xFFD700, 1.2, 5); gl.position.y = 1.0; g.add(gl);
   } else {
     // Regular hat
     mk(new THREE.CylinderGeometry(0.34*sz, 0.34*sz, 0.06*sz, 10), 0x1a1a1a, 2.14*sz);
@@ -2867,6 +2911,31 @@ function spawnSeaCreature(data, pos) {
     const aura2 = new THREE.Mesh(new THREE.TorusGeometry(1.5*sz, 0.1*sz, 6, 24), new THREE.MeshStandardMaterial({color:0x0033aa, emissive:0x0011ff, emissiveIntensity:1.2}));
     aura2.rotation.x = Math.PI/2; aura2.position.y = 0.2*sz; g.add(aura2);
 
+  } else if (id === 'golden') {
+    // Golden Fish — large shimmering gold fish with crown and orbit rings
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.42*sz, 10, 9), S(col, 0.15, 0.95, col, 0.5));
+    body.scale.set(0.68, 0.52, 1.42); body.position.y = 0.55*sz; body.castShadow = true; g.add(body);
+    // Tail fin
+    mk(new THREE.ConeGeometry(0.28*sz, 0.44*sz, 4), col, 0.55*sz, 0, -0.64*sz, Math.PI/2, 0, 0, 0.15, 0.95, col, 0.4);
+    // Dorsal fin
+    mk(new THREE.ConeGeometry(0.1*sz, 0.32*sz, 3), col, 0.9*sz, 0, 0, 0, 0, 0.18, 0.15, 0.95, col, 0.3);
+    // Side fins
+    [-0.46*sz, 0.46*sz].forEach((x, i) => mk(new THREE.ConeGeometry(0.08*sz, 0.26*sz, 3), col, 0.55*sz, x, 0, 0, 0, i===0?-0.9:0.9, 0.15, 0.95, col, 0.3));
+    // Glowing red eyes
+    [-0.14*sz, 0.14*sz].forEach(x => mk(new THREE.SphereGeometry(0.08*sz, 6, 6), 0xff4400, 0.62*sz, x, 0.42*sz, 0,0,0, 0.1, 0, 0xff2200, 2.5));
+    // Crown on top of fish
+    mk(new THREE.CylinderGeometry(0.3*sz, 0.28*sz, 0.16*sz, 10), 0xFFD700, 0.96*sz, 0,0, 0,0,0, 0.15, 0.95, 0xFFD700, 0.7);
+    for (let i = 0; i < 5; i++) {
+      const ca = (i/5)*Math.PI*2;
+      mk(new THREE.ConeGeometry(0.055*sz, 0.22*sz, 5), 0xFFD700, 1.18*sz, Math.cos(ca)*0.25*sz, Math.sin(ca)*0.25*sz, 0,0,0, 0.15, 0.95, 0xFFD700, 0.9);
+    }
+    mk(new THREE.OctahedronGeometry(0.09*sz, 0), 0xff2222, 1.22*sz, 0,0, 0,0,0, 0.1, 0.1, 0xff2200, 2.5);
+    // Gold orbit rings
+    const gr1 = new THREE.Mesh(new THREE.TorusGeometry(0.9*sz, 0.055*sz, 6, 18), new THREE.MeshStandardMaterial({color:0xFFD700, emissive:0xFFD700, emissiveIntensity:1.4, metalness:0.95, roughness:0.15}));
+    gr1.rotation.x = Math.PI/2; gr1.position.y = 0.15; g.add(gr1);
+    const gr2 = new THREE.Mesh(new THREE.TorusGeometry(1.12*sz, 0.04*sz, 6, 18), new THREE.MeshStandardMaterial({color:0xffcc44, emissive:0xffcc44, emissiveIntensity:0.9, metalness:0.9, roughness:0.15}));
+    gr2.rotation.x = Math.PI/5; gr2.position.y = 0.2; g.add(gr2);
+    const gl = new THREE.PointLight(0xFFD700, 1.5, 6); gl.position.y = 0.6; g.add(gl);
   } else {
     // Default fish (clownfish, ghost_fish)
     const isGhost = id === 'ghost_fish';
