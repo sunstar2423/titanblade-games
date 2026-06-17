@@ -1046,8 +1046,15 @@ const ENEMY_TYPES = [
   { id:'shadow', name:'Shadow Scarecrow',       hp:65,  spd:6.2, dmg:12, straw:20,  sz:0.9, color:0x440088 },
   { id:'giant',  name:'Giant Scarecrow',        hp:350, spd:1.4, dmg:28, straw:120, sz:2.6, color:0x5c3d1e },
   { id:'mage',   name:'Magician Scarecrow',     hp:90,  spd:4.1, dmg:14, straw:28,  sz:1,   color:0x6600cc, ranged:true, teleport:true },
-  { id:'golden', name:'Golden Scarecrow',       hp:260, spd:1.8, dmg:15, straw:200, sz:1.25,color:0xFFD700 },
-  { id:'guard',  name:'Guard Scarecrow',        hp:120, spd:3.9, dmg:13, straw:8,   sz:1.05,color:0x5c3000 },
+  { id:'golden',    name:'Golden Scarecrow',      hp:260, spd:1.8, dmg:15, straw:200, sz:1.25,color:0xFFD700 },
+  { id:'guard',     name:'Guard Scarecrow',       hp:120, spd:3.9, dmg:13, straw:8,   sz:1.05,color:0x5c3000 },
+  { id:'shield',    name:'Shield Bearer',         hp:180, spd:1.8, dmg:12, straw:35,  sz:1.05,color:0x6677aa, armor:0.6 },
+  { id:'berserker', name:'Berserker Crow',        hp:85,  spd:3.5, dmg:16, straw:22,  sz:1.0, color:0xcc2200, berserk:true },
+  { id:'healer',    name:'Medic Scarecrow',       hp:65,  spd:3.2, dmg:5,  straw:28,  sz:1.0, color:0x00aa44, healer:true },
+  { id:'tiny',      name:'Micro Crow',            hp:12,  spd:8.5, dmg:3,  straw:2,   sz:0.45,color:0xaa8844 },
+  { id:'tank',      name:'Iron Tank Crow',        hp:300, spd:0.85,dmg:22, straw:60,  sz:1.45,color:0x334455, armor:0.4 },
+  { id:'spider',    name:'Spider Crow',           hp:55,  spd:4.0, dmg:8,  straw:14,  sz:0.9, color:0x330033, ranged:true },
+  { id:'vampire',   name:'Vampire Crow',          hp:85,  spd:4.2, dmg:10, straw:22,  sz:1.0, color:0x660022, ranged:true },
 ];
 
 const WAVES = [
@@ -1230,8 +1237,15 @@ const ENEMY_TYPES_JUNGLE = [
   { id:'poison_monk',name:'Poison Monkey',       hp:70,  spd:1.6, dmg:10, straw:16,  sz:1,    color:0x4a7c20, ranged:true },
   { id:'troop',      name:'Monkey Troop',         hp:28,  spd:3.5, dmg:4,  straw:6,   sz:0.8,  color:0x9b6a3c },
   { id:'kong',       name:'Mega Kong',             hp:380, spd:0.6, dmg:30, straw:120, sz:2.8,  color:0x0f0a05 },
-  { id:'golden',     name:'Golden Chimp',           hp:260, spd:1.3, dmg:15, straw:200, sz:1.25, color:0xFFD700 },
-  { id:'guard',      name:'Guard Chimp',             hp:40,  spd:2.8, dmg:5,  straw:3,   sz:0.85, color:0x996633 },
+  { id:'golden',       name:'Golden Chimp',          hp:260, spd:1.3, dmg:15, straw:200, sz:1.25, color:0xFFD700 },
+  { id:'guard',        name:'Guard Chimp',            hp:40,  spd:2.8, dmg:5,  straw:3,   sz:0.85, color:0x996633 },
+  { id:'leaper',       name:'Leaping Lemur',          hp:40,  spd:7.5, dmg:8,  straw:10,  sz:0.75, color:0x8b6914 },
+  { id:'mandrill',     name:'War Mandrill',           hp:130, spd:3.8, dmg:24, straw:32,  sz:1.2,  color:0xcc4422 },
+  { id:'shaman',       name:'Jungle Shaman',          hp:80,  spd:2.5, dmg:8,  straw:32,  sz:1.0,  color:0xaa6600, healer:true, ranged:true },
+  { id:'gorilla_shld', name:'Shield Gorilla',         hp:220, spd:1.2, dmg:18, straw:48,  sz:1.25, color:0x2a1505, armor:0.55 },
+  { id:'tiny_monk',    name:'Micro Monkey',           hp:12,  spd:8.0, dmg:3,  straw:2,   sz:0.45, color:0x9b6a3c },
+  { id:'vine_whipper', name:'Vine Whipper',           hp:75,  spd:2.5, dmg:12, straw:18,  sz:1.0,  color:0x3a6a10, ranged:true },
+  { id:'berserk_ape',  name:'Berserk Ape',            hp:100, spd:3.0, dmg:15, straw:26,  sz:1.1,  color:0xaa2200, berserk:true },
 ];
 const WAVES_JUNGLE = [
   [{t:'chimp',n:5}],
@@ -1406,8 +1420,15 @@ const ENEMY_TYPES_SNOW = [
   { id:'yeti',          name:'Yeti',              hp:320, spd:1.3, dmg:22, straw:85,  sz:1.7,  color:0xeeeedd },
   { id:'snow_troop',    name:'Snow Troop',        hp:30,  spd:3.2, dmg:4,  straw:6,   sz:0.85, color:0xccddee },
   { id:'glacier',       name:'Glacier Giant',     hp:420, spd:0.5, dmg:35, straw:130, sz:2.9,  color:0x6688aa },
-  { id:'golden',        name:'Golden Frosty',      hp:260, spd:1.3, dmg:15, straw:200, sz:1.25, color:0xFFD700 },
-  { id:'guard',         name:'Guard Snowman',       hp:40,  spd:2.8, dmg:5,  straw:3,   sz:0.85, color:0xaabbcc },
+  { id:'golden',         name:'Golden Frosty',      hp:260, spd:1.3, dmg:15, straw:200, sz:1.25, color:0xFFD700 },
+  { id:'guard',          name:'Guard Snowman',       hp:40,  spd:2.8, dmg:5,  straw:3,   sz:0.85, color:0xaabbcc },
+  { id:'penguin',        name:'Attack Penguin',      hp:55,  spd:5.5, dmg:10, straw:12,  sz:0.85, color:0x222244 },
+  { id:'ice_shield',     name:'Ice Shield Bearer',   hp:180, spd:1.4, dmg:14, straw:40,  sz:1.1,  color:0x99ccff, armor:0.55 },
+  { id:'frost_mage',     name:'Frost Mage',          hp:105, spd:2.8, dmg:14, straw:38,  sz:1.0,  color:0x0055cc, ranged:true, teleport:true },
+  { id:'tiny_snow',      name:'Tiny Snowball',       hp:10,  spd:9.5, dmg:3,  straw:2,   sz:0.42, color:0xccddff },
+  { id:'ice_tank',       name:'Ice Tank',            hp:320, spd:0.65,dmg:26, straw:65,  sz:1.55, color:0x445577, armor:0.42 },
+  { id:'snow_healer',    name:'Ice Medic',           hp:75,  spd:2.5, dmg:5,  straw:25,  sz:1.0,  color:0x88ddff, healer:true, ranged:true },
+  { id:'snow_berserker', name:'Frost Berserker',     hp:90,  spd:3.0, dmg:15, straw:25,  sz:1.0,  color:0x4466cc, berserk:true },
 ];
 const WAVES_SNOW = [
   [{t:'snow_basic',n:5}],
@@ -1580,8 +1601,15 @@ const ENEMY_TYPES_DEEPSEA = [
   { id:'giant_crab', name:'Giant Crab',       hp:320, spd:0.9, dmg:20, straw:60,  sz:1.8,  color:0xaa3300, armor:0.3 },
   { id:'leviathan',  name:'Leviathan',        hp:420, spd:0.6, dmg:30, straw:140, sz:3.0,  color:0x001133 },
   { id:'ghost_fish', name:'Ghost Fish',       hp:40,  spd:5.0, dmg:6,  straw:8,   sz:0.75, color:0x88ccee },
-  { id:'golden',     name:'Golden Fish',      hp:260, spd:1.3, dmg:15, straw:200, sz:1.25, color:0xFFD700 },
-  { id:'guard',      name:'Guard Crab',       hp:40,  spd:2.8, dmg:5,  straw:3,   sz:0.85, color:0xdd6644 },
+  { id:'golden',       name:'Golden Fish',      hp:260, spd:1.3, dmg:15, straw:200, sz:1.25, color:0xFFD700 },
+  { id:'guard',        name:'Guard Crab',       hp:40,  spd:2.8, dmg:5,  straw:3,   sz:0.85, color:0xdd6644 },
+  { id:'mantis',       name:'Mantis Shrimp',    hp:70,  spd:4.5, dmg:28, straw:22,  sz:1.0,  color:0xff5566 },
+  { id:'octopus',      name:'Octopus',          hp:90,  spd:2.5, dmg:12, straw:20,  sz:1.05, color:0x553366, ranged:true },
+  { id:'sea_serpent',  name:'Sea Serpent',      hp:150, spd:2.6, dmg:18, straw:35,  sz:1.3,  color:0x225533 },
+  { id:'coral_golem',  name:'Coral Golem',      hp:280, spd:0.7, dmg:22, straw:58,  sz:1.55, color:0xff7755, armor:0.55 },
+  { id:'tiny_fish',    name:'Micro Fish',       hp:12,  spd:9.0, dmg:3,  straw:2,   sz:0.42, color:0x88ccee },
+  { id:'deep_berserk', name:'Deep Berserker',   hp:95,  spd:3.0, dmg:15, straw:26,  sz:1.05, color:0x880033, berserk:true },
+  { id:'siren',        name:'Dark Siren',       hp:80,  spd:2.8, dmg:12, straw:28,  sz:1.0,  color:0xcc88ff, ranged:true, healer:true },
 ];
 const WAVES_DEEPSEA = [
   [{t:'clownfish',n:5}],
@@ -3233,6 +3261,22 @@ function updateEnemies(dt) {
       // Glacier regenerates HP slowly
       if (e.data.id === 'glacier' || e.data.id === 'snow_giant') {
         e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.003 * dt);
+      }
+      // Berserker: go berserk at 30% HP
+      if (e.data.berserk && !e._berserk && e.hp < e.maxHp * 0.3) {
+        e._berserk = true;
+        spawnFX(e.pos.clone().add(new THREE.Vector3(0,1,0)), 0xff2200, 0.6, 2.0);
+      }
+      // Healer: restore HP to nearby allies every 0.5s
+      if (e.data.healer) {
+        e._healT = (e._healT || 0) - dt;
+        if (e._healT <= 0) {
+          e._healT = 0.5;
+          for (const e2 of gs.enemies) {
+            if (e2 !== e && e2.pos.distanceTo(e.pos) < 5) e2.hp = Math.min(e2.maxHp, e2.hp + 10);
+          }
+          spawnFX(e.pos.clone().add(new THREE.Vector3(0,1,0)), 0x00ff88, 0.35, 1.2);
+        }
       }
       const spd = e.data.spd * rageMult * frozenMult * (e.slowTimer > 0 ? 0.3 : 1) * (e._berserk ? 2.8 : 1);
       if (dist > attackRange) {
