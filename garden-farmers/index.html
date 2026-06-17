@@ -4808,11 +4808,29 @@ function updatePlacedPlants(dt) {
       const r2 = d.data.range * d.data.range;
       for (const e of gs.enemies) {
         const dsq = e.pos.distanceToSquared(d.pos);
+        // Tick down breakout immunity
+        e._vortexBreakout = Math.max(0, (e._vortexBreakout || 0) - dt);
         if (dsq > 0.25 && dsq < r2) {
+          if (e._vortexBreakout > 0) continue; // immune — broke free recently
+          // Bosses & armored enemies resist harder
+          const isTough = (e.data.sz || 1) >= 1.8 || e.data.armor;
+          const pullMult = isTough ? 0.35 : 1.0;
           const pullDir = d.pos.clone().sub(e.pos).setY(0).normalize();
-          e.vel.add(pullDir.multiplyScalar((d.data.pull || 5) * dt));
-          if (d.data.dmg > 0) { e.hp -= d.data.dmg * dt; if (e.hp <= 0) killEnemy(e); }
+          e.vel.add(pullDir.multiplyScalar((d.data.pull || 5) * dt * pullMult));
+          if (d.data.dmg > 0) { e.hp -= d.data.dmg * dt; if (e.hp <= 0) { killEnemy(e); continue; } }
           if (d.data.slow) e.slowTimer = Math.max(e.slowTimer || 0, 0.6);
+          // Accumulate pull time; break free after threshold
+          e._vortexPullTime = (e._vortexPullTime || 0) + dt;
+          const thresh = isTough ? 1.8 : 4.0;
+          if (e._vortexPullTime >= thresh) {
+            e._vortexPullTime = 0;
+            e._vortexBreakout = 3.5; // 3.5s immunity after escaping
+            e.vel.add(e.pos.clone().sub(d.pos).setY(0).normalize().multiplyScalar(10));
+            spawnFX(e.pos.clone(), 0xffffff, 0.5, 1.8);
+          }
+        } else {
+          // Out of range — slowly reset pull timer
+          if (e._vortexPullTime) e._vortexPullTime = Math.max(0, e._vortexPullTime - dt * 2);
         }
       }
       d._vfxT = (d._vfxT || 0) - dt;
