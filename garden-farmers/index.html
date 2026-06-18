@@ -175,6 +175,13 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
     </div>
   </div>
 
+  <!-- Merchant corner timer -->
+  <div id="merchant-corner" style="position:absolute;top:68px;right:12px;background:rgba(100,60,0,0.88);border:2px solid rgba(200,140,0,0.5);border-radius:12px;padding:7px 14px;color:#FFD700;font-size:13px;font-weight:bold;display:none;backdrop-filter:blur(4px);text-align:center;min-width:100px;box-shadow:0 2px 12px rgba(0,0,0,0.45)">
+    <div style="font-size:10px;color:#cc9944;margin-bottom:3px">🧙 MERCHANT</div>
+    <div id="merchant-corner-time" style="font-size:18px;letter-spacing:1px">10:00</div>
+    <div id="merchant-corner-sub" style="font-size:10px;color:#cc9944;margin-top:2px">until next visit</div>
+  </div>
+
   <!-- Merchant -->
   <div id="merchant-overlay" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.88);z-index:25;backdrop-filter:blur(4px)">
     <div style="background:linear-gradient(160deg,#2a1800,#1a1000);border:3px solid #c8900a;border-radius:20px;padding:26px 30px;max-width:520px;width:92%;color:#fff;box-shadow:0 0 50px rgba(200,140,0,0.4)">
@@ -1133,19 +1140,36 @@ function applyMerchantEffect(id, cost) {
     showToast('🎁 Mystery revealed!', 1500);
   }
 }
+function _fmtMerchantTime(s) {
+  const m = Math.floor(s / 60);
+  const ss = String(Math.floor(s % 60)).padStart(2, '0');
+  return m + ':' + ss;
+}
 function updateMerchant(dt) {
   const hudEl = document.getElementById('merchant-hud');
   const hudTxt = document.getElementById('merchant-hud-txt');
+  const corner = document.getElementById('merchant-corner');
+  const cornerTime = document.getElementById('merchant-corner-time');
+  const cornerSub = document.getElementById('merchant-corner-sub');
   if (_merchantActive) {
     _merchantDuration -= dt;
     if (hudEl) hudEl.style.display = 'flex';
     if (hudTxt) hudTxt.textContent = Math.ceil(_merchantDuration) + 's left!';
     const cd = document.getElementById('merchant-countdown');
     if (cd) cd.textContent = Math.ceil(_merchantDuration);
+    if (corner) {
+      corner.style.border = '2px solid #FFD700';
+      corner.style.cursor = 'pointer';
+      corner.onclick = openMerchantShop;
+    }
+    if (cornerTime) cornerTime.textContent = _fmtMerchantTime(_merchantDuration);
+    if (cornerSub) { cornerSub.textContent = 'VISIT NOW! →'; cornerSub.style.color = '#FFD700'; }
     if (_merchantDuration <= 0) {
       _merchantActive = false; _merchantTimer = 600;
       closeMerchantShop();
       if (hudEl) hudEl.style.display = 'none';
+      if (corner) { corner.style.border = '2px solid rgba(200,140,0,0.5)'; corner.style.cursor = 'default'; corner.onclick = null; }
+      if (cornerSub) { cornerSub.textContent = 'until next visit'; cornerSub.style.color = '#cc9944'; }
       showToast('🧙 The Merchant has left! Returns in 10 minutes.', 3500);
     }
   } else {
@@ -1155,11 +1179,16 @@ function updateMerchant(dt) {
     } else {
       if (hudEl) hudEl.style.display = 'none';
     }
+    if (corner) { corner.style.border = '2px solid rgba(200,140,0,0.5)'; corner.style.cursor = 'default'; corner.onclick = null; }
+    if (cornerTime) cornerTime.textContent = _fmtMerchantTime(_merchantTimer);
+    if (cornerSub) { cornerSub.textContent = 'until next visit'; cornerSub.style.color = '#cc9944'; }
     if (_merchantTimer <= 0) {
       _merchantActive = true; _merchantDuration = 120;
       _merchantStock = pickMerchantStock();
       if (hudEl) hudEl.style.display = 'flex';
       if (hudTxt) hudTxt.textContent = 'HERE! Click to visit!';
+      if (corner) { corner.style.border = '2px solid #FFD700'; corner.style.cursor = 'pointer'; corner.onclick = openMerchantShop; }
+      if (cornerSub) { cornerSub.textContent = 'VISIT NOW! →'; cornerSub.style.color = '#FFD700'; }
       showToast('🧙 The Traveling Merchant has arrived! 2 minutes only!', 5000);
       spawnFX(new THREE.Vector3(0, 2, 0), 0xFFD700, 1.5, 4.0);
     }
@@ -5730,6 +5759,7 @@ function startGame() {
   document.getElementById('screen').classList.add('hidden');
   gameStarted = true;
   buildPlayerMesh(); buildHotbar(); updateHUD();
+  const mc = document.getElementById('merchant-corner'); if (mc) mc.style.display = 'block';
   const biomeMsg = gs.biome === 'jungle' ? '🌿 Welcome to the Jungle! Watch out for monkeys!' : gs.biome === 'snow' ? '❄️ Brr! Defend against the snowmen!' : gs.biome === 'deepsea' ? '🌊 You descend into the Deep! Beware the sea creatures!' : '🌾 Welcome! Press SPACE to start Wave 1!';
   showToast(isMobile ? 'Tap ▶ START WAVE to begin!' : biomeMsg, 4000);
 }
@@ -5743,6 +5773,7 @@ function loadAndPlay() {
   document.getElementById('screen').classList.add('hidden');
   gameStarted = true;
   buildPlayerMesh(); buildHotbar(); updateHUD();
+  const mc2 = document.getElementById('merchant-corner'); if (mc2) mc2.style.display = 'block';
   showToast(isMobile ? 'Game loaded! Tap ▶ START WAVE.' : 'Game loaded! Press SPACE to continue.', 3000);
 }
 
@@ -5751,6 +5782,7 @@ function endGame() {
   stopBattleTheme();
   _biomeParticles.forEach(p => scene.remove(p.mesh));
   _biomeParticles = [];
+  const mcEnd = document.getElementById('merchant-corner'); if (mcEnd) mcEnd.style.display = 'none';
   showScreen('gameover');
 }
 
@@ -6124,6 +6156,7 @@ function resetGame() {
   _merchantTimer = 600; _merchantActive = false; _merchantDuration = 0; _merchantStock = [];
   closeMerchantShop();
   const _mhud = document.getElementById('merchant-hud'); if (_mhud) _mhud.style.display = 'none';
+  const _mcReset = document.getElementById('merchant-corner'); if (_mcReset) { _mcReset.style.display = 'none'; _mcReset.onclick = null; }
   gs.farmExpansions = 0; FARM_R = 42; rebuildFarmGeometry();
   _evCdEl.style.display = 'none';
   hideEventBanner();
