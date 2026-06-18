@@ -123,6 +123,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
     <div class="hud-block" id="wave-info">Press SPACE to start!</div>
     <div class="hud-block"><span id="straw-emoji">🌾</span> <span id="straw-txt">0</span></div>
     <div class="hud-block" id="event-countdown" style="display:none">🎲 Next event: <span id="event-cd-txt">5:00</span></div>
+    <div class="hud-block" id="merchant-hud" style="display:none;cursor:pointer;background:rgba(130,80,0,0.92);border-color:rgba(255,190,0,0.6)" onclick="openMerchantShop()">🧙 Merchant <span id="merchant-hud-txt">arriving…</span></div>
   </div>
   <div id="hotbar"></div>
   <div id="side-panel">
@@ -167,6 +168,19 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
         <div class="shop-tab" onclick="shopTab('army')">⚔️ Army</div>
       </div>
       <div id="shop-content" class="shop-grid"></div>
+    </div>
+  </div>
+
+  <!-- Merchant -->
+  <div id="merchant-overlay" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.88);z-index:25;backdrop-filter:blur(4px)">
+    <div style="background:linear-gradient(160deg,#2a1800,#1a1000);border:3px solid #c8900a;border-radius:20px;padding:26px 30px;max-width:520px;width:92%;color:#fff;box-shadow:0 0 50px rgba(200,140,0,0.4)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h2 style="color:#FFD700;font-size:21px">🧙 Traveling Merchant</h2>
+        <div style="color:#FFD700;font-size:13px">Leaves in: <span id="merchant-countdown">120</span>s</div>
+        <button onclick="closeMerchantShop()" style="background:#663300;color:#fff;border:none;padding:5px 13px;border-radius:7px;cursor:pointer;font-size:15px">✕</button>
+      </div>
+      <div style="color:#cc9944;font-size:12px;margin-bottom:14px;font-style:italic">"Rare wares, traveler — won't find these in any shop!"</div>
+      <div id="merchant-items" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
     </div>
   </div>
 
@@ -1032,6 +1046,121 @@ const RANDOM_EVENTS = [
   { id:'enemyRage',   name:'😡 Enemy Rage!',          desc:'Enemies move 70% faster for 20s',  bad:true,  dur:20 },
   { id:'stampede',    name:'💀 Stampede!',             desc:'12 scarecrows rush the farm!',      bad:true,  instant:true },
 ];
+
+const MERCHANT_ITEMS = [
+  { id:'full_heal',    name:'Full Heal Potion',  emoji:'💊', desc:'Completely restore your HP',                    cost:60  },
+  { id:'barn_restore', name:'Emergency Repairs', emoji:'🔧', desc:'Fully repair the barn to max HP',               cost:130 },
+  { id:'power_surge',  name:'Power Surge',       emoji:'⚡', desc:'Double weapon damage for 60 seconds',           cost:110 },
+  { id:'freeze_bomb',  name:'Cryo Bomb',         emoji:'❄️', desc:'Freeze ALL enemies on screen for 15 seconds',   cost:85  },
+  { id:'screen_nuke',  name:'Farm Nuke',         emoji:'💥', desc:'Wipe out ALL current enemies instantly',        cost:220 },
+  { id:'gold_rush',    name:'Treasure Map',      emoji:'💰', desc:'Gain +300 straw right now',                    cost:70  },
+  { id:'revive_plants',name:'Life Potion',       emoji:'🌿', desc:'Fully heal all placed plants',                  cost:95  },
+  { id:'harvest_bless',name:'Harvest Blessing',  emoji:'🌾', desc:'2× straw from all kills for 60 seconds',       cost:100 },
+  { id:'free_cannon',  name:'Free Cannon',       emoji:'🔫', desc:'Add a free barn cannon (if under max)',         cost:150 },
+  { id:'land_deed',    name:'Land Deed',         emoji:'🗺️', desc:'Expand farm radius for free',                  cost:160 },
+  { id:'straw_chest',  name:'Straw Chest',       emoji:'📦', desc:'Gain 3× current wave number in straw',        cost:50  },
+  { id:'mystery',      name:'Mystery Crate',     emoji:'🎁', desc:'Unknown surprise — risky but very cheap!',    cost:35  },
+];
+let _merchantTimer = 600, _merchantActive = false, _merchantDuration = 0, _merchantStock = [];
+
+function pickMerchantStock() {
+  return [...MERCHANT_ITEMS].sort(() => Math.random() - 0.5).slice(0, 4);
+}
+function openMerchantShop() {
+  if (!_merchantActive) return;
+  const el = document.getElementById('merchant-overlay');
+  if (el) { el.style.display = 'flex'; renderMerchantShop(); }
+}
+function closeMerchantShop() {
+  const el = document.getElementById('merchant-overlay');
+  if (el) el.style.display = 'none';
+}
+function renderMerchantShop() {
+  const c = document.getElementById('merchant-items'); if (!c) return;
+  const emoji = getActiveData ? getActiveData().resourceEmoji : '🌾';
+  c.innerHTML = _merchantStock.map((item, i) => `
+    <div class="si ${gs.straw < item.cost ? 'dim' : ''}" onclick="buyMerchantItem(${i})" style="border-color:rgba(200,140,0,0.5)">
+      <div class="ie">${item.emoji}</div><div class="in">${item.name}</div>
+      <div class="id">${item.desc}</div><div class="ic">${emoji} ${item.cost}</div>
+    </div>`).join('');
+  const cd = document.getElementById('merchant-countdown');
+  if (cd) cd.textContent = Math.ceil(_merchantDuration);
+}
+function buyMerchantItem(idx) {
+  const item = _merchantStock[idx];
+  if (!item || gs.straw < item.cost) return;
+  gs.straw -= item.cost;
+  applyMerchantEffect(item.id, item.cost);
+  _merchantStock.splice(idx, 1);
+  renderMerchantShop(); saveGame();
+}
+function applyMerchantEffect(id, cost) {
+  const emoji = getActiveData().resourceEmoji;
+  if (id === 'full_heal') {
+    gs.playerHP = gs.playerMaxHP; showToast('💊 Full health restored!', 2500);
+  } else if (id === 'barn_restore') {
+    gs.barnHP = gs.barnMaxHP; updateBarnRing(); showToast('🔧 Barn fully repaired!', 2500);
+  } else if (id === 'power_surge') {
+    gs.activeEvents.powerUp = 60; showToast('⚡ Double damage for 60 seconds!', 2500);
+  } else if (id === 'freeze_bomb') {
+    gs.activeEvents.freezeWave = 15; showToast('❄️ All enemies frozen for 15 seconds!', 2500);
+  } else if (id === 'screen_nuke') {
+    const targets = [...gs.enemies];
+    targets.forEach(e => killEnemy(e));
+    spawnFX(new THREE.Vector3(0, 2, 0), 0xff4400, 1.2, 5); showToast('💥 All enemies obliterated!', 3000);
+  } else if (id === 'gold_rush') {
+    gs.straw += 300; floatText(gs.playerPos.clone().add(new THREE.Vector3(0,2,0)), '+300'+emoji, 0xFFD700); showToast('💰 +300 straw!', 2000);
+  } else if (id === 'revive_plants') {
+    gs.placedPlants.forEach(p => { p.hp = p.maxHp; }); showToast('🌿 All plants fully healed!', 2500);
+  } else if (id === 'harvest_bless') {
+    gs.activeEvents.strawRain = 60; showToast('🌾 2× straw drops for 60 seconds!', 2500);
+  } else if (id === 'free_cannon') {
+    if (gs.barnCannons < 3) { gs.barnCannons++; addBarnCannonMesh(gs.barnCannons); showToast('🔫 Free barn cannon added!', 2500); }
+    else { gs.straw += cost; showToast('🔫 Barn already maxed — refunded!', 2000); }
+  } else if (id === 'land_deed') {
+    if (gs.farmExpansions < 4) { gs.farmExpansions++; FARM_R += 8; rebuildFarmGeometry(); showToast('🗺️ Farm expanded for free!', 2500); }
+    else { gs.straw += cost; showToast('Farm already at max size — refunded!', 2000); }
+  } else if (id === 'straw_chest') {
+    const bonus = Math.max(30, gs.wave * 3); gs.straw += bonus;
+    floatText(gs.playerPos.clone().add(new THREE.Vector3(0,2,0)), '+'+bonus+emoji, 0xFFD700); showToast('📦 +' + bonus + ' straw!', 2000);
+  } else if (id === 'mystery') {
+    const pool = ['full_heal','power_surge','freeze_bomb','gold_rush','revive_plants','screen_nuke','harvest_bless'];
+    applyMerchantEffect(pool[Math.floor(Math.random() * pool.length)], 0);
+    showToast('🎁 Mystery revealed!', 1500);
+  }
+}
+function updateMerchant(dt) {
+  const hudEl = document.getElementById('merchant-hud');
+  const hudTxt = document.getElementById('merchant-hud-txt');
+  if (_merchantActive) {
+    _merchantDuration -= dt;
+    if (hudEl) hudEl.style.display = 'flex';
+    if (hudTxt) hudTxt.textContent = Math.ceil(_merchantDuration) + 's left!';
+    const cd = document.getElementById('merchant-countdown');
+    if (cd) cd.textContent = Math.ceil(_merchantDuration);
+    if (_merchantDuration <= 0) {
+      _merchantActive = false; _merchantTimer = 600;
+      closeMerchantShop();
+      if (hudEl) hudEl.style.display = 'none';
+      showToast('🧙 The Merchant has left! Returns in 10 minutes.', 3500);
+    }
+  } else {
+    _merchantTimer -= dt;
+    if (_merchantTimer <= 60) {
+      if (hudEl) { hudEl.style.display = 'flex'; if (hudTxt) hudTxt.textContent = 'in ' + Math.ceil(_merchantTimer) + 's…'; }
+    } else {
+      if (hudEl) hudEl.style.display = 'none';
+    }
+    if (_merchantTimer <= 0) {
+      _merchantActive = true; _merchantDuration = 120;
+      _merchantStock = pickMerchantStock();
+      if (hudEl) hudEl.style.display = 'flex';
+      if (hudTxt) hudTxt.textContent = 'HERE! Click to visit!';
+      showToast('🧙 The Traveling Merchant has arrived! 2 minutes only!', 5000);
+      spawnFX(new THREE.Vector3(0, 2, 0), 0xFFD700, 1.5, 4.0);
+    }
+  }
+}
 
 const ENEMY_TYPES = [
   { id:'basic',  name:'Basic Scarecrow',        hp:40,  spd:4.1, dmg:5,  straw:5,   sz:1,   color:0xd2b48c },
@@ -5988,6 +6117,9 @@ function resetGame() {
   gs.totalKills = 0; attackCd = 0;
   gs.playerSlowTimer = 0;
   gs.eventTimer = 90; gs.activeEvents = {}; gs._strawRainTick = 0;
+  _merchantTimer = 600; _merchantActive = false; _merchantDuration = 0; _merchantStock = [];
+  closeMerchantShop();
+  const _mhud = document.getElementById('merchant-hud'); if (_mhud) _mhud.style.display = 'none';
   gs.farmExpansions = 0; FARM_R = 42; rebuildFarmGeometry();
   _evCdEl.style.display = 'none';
   hideEventBanner();
@@ -6551,6 +6683,7 @@ function loop(ts) {
       spawnWildBird();
     }
     updateArmy(dt);
+    updateMerchant(dt);
     updateBiomeParticles(dt);
 
     // Camera follows player
