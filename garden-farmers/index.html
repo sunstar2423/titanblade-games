@@ -1068,7 +1068,7 @@ const MERCHANT_ITEMS = [
   { id:'straw_chest',  name:'Straw Chest',       emoji:'📦', desc:'Gain 3× current wave number in straw',        cost:50  },
   { id:'mystery',      name:'Mystery Crate',     emoji:'🎁', desc:'Unknown surprise — risky but very cheap!',    cost:35  },
 ];
-let _merchantTimer = 600, _merchantActive = false, _merchantDuration = 0, _merchantStock = [];
+let _merchantTimer = 420, _merchantActive = false, _merchantDuration = 0, _merchantStock = [];
 
 function pickMerchantStock() {
   return [...MERCHANT_ITEMS].sort(() => Math.random() - 0.5).slice(0, 4);
@@ -1161,12 +1161,12 @@ function updateMerchant(dt) {
     if (cornerTime) cornerTime.textContent = _fmtMerchantTime(_merchantDuration);
     if (cornerSub) { cornerSub.textContent = 'VISIT NOW! →'; cornerSub.style.color = '#FFD700'; }
     if (_merchantDuration <= 0) {
-      _merchantActive = false; _merchantTimer = 600;
+      _merchantActive = false; _merchantTimer = 420;
       closeMerchantShop();
       if (hudEl) hudEl.style.display = 'none';
       if (corner) { corner.style.border = '2px solid rgba(200,140,0,0.5)'; corner.style.cursor = 'default'; corner.onclick = null; }
       if (cornerSub) { cornerSub.textContent = 'until next visit'; cornerSub.style.color = '#cc9944'; }
-      showToast('🧙 The Merchant has left! Returns in 10 minutes.', 3500);
+      showToast('🧙 The Merchant has left! Returns in 7 minutes.', 3500);
     }
   } else {
     _merchantTimer -= dt;
@@ -6149,7 +6149,7 @@ function resetGame() {
   gs.totalKills = 0; attackCd = 0;
   gs.playerSlowTimer = 0;
   gs.eventTimer = 90; gs.activeEvents = {}; gs._strawRainTick = 0;
-  _merchantTimer = 600; _merchantActive = false; _merchantDuration = 0; _merchantStock = [];
+  _merchantTimer = 420; _merchantActive = false; _merchantDuration = 0; _merchantStock = [];
   closeMerchantShop();
   const _mhud = document.getElementById('merchant-hud'); if (_mhud) _mhud.style.display = 'none';
   const _mcReset = document.getElementById('merchant-corner'); if (_mcReset) { _mcReset.style.display = 'none'; _mcReset.onclick = null; }
