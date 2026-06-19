@@ -117,6 +117,15 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 .save-slot-biome { color:#fff; font-size:22px; font-weight:bold; margin-bottom:4px; }
 .save-slot-wave { color:#FFD700; font-size:14px; margin-bottom:4px; }
 .save-slot-date { color:#666; font-size:11px; margin-bottom:12px; }
+@keyframes merchant-pulse {
+  0%,100% { box-shadow:0 0 12px rgba(255,200,0,0.5), 0 4px 18px rgba(0,0,0,0.6); border-color:#FFD700; }
+  50%      { box-shadow:0 0 28px rgba(255,200,0,0.95), 0 4px 18px rgba(0,0,0,0.6); border-color:#fff5a0; }
+}
+#merchant-corner.merchant-active {
+  animation: merchant-pulse 1.2s ease-in-out infinite;
+  background: linear-gradient(160deg,#5a3200,#2e1800);
+  cursor: pointer !important;
+}
 </style>
 </head>
 <body>
@@ -176,10 +185,10 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   </div>
 
   <!-- Merchant corner timer -->
-  <div id="merchant-corner" onclick="openMerchantShop()" style="position:absolute;top:68px;right:12px;background:rgba(100,60,0,0.88);border:2px solid rgba(200,140,0,0.5);border-radius:12px;padding:7px 14px;color:#FFD700;font-size:13px;font-weight:bold;display:none;backdrop-filter:blur(4px);text-align:center;min-width:100px;box-shadow:0 2px 12px rgba(0,0,0,0.45);z-index:15;user-select:none">
-    <div style="font-size:10px;color:#cc9944;margin-bottom:3px">🧙 MERCHANT</div>
-    <div id="merchant-corner-time" style="font-size:18px;letter-spacing:1px">10:00</div>
-    <div id="merchant-corner-sub" style="font-size:10px;color:#cc9944;margin-top:2px">until next visit</div>
+  <div id="merchant-corner" onclick="openMerchantShop()" style="position:absolute;top:64px;right:12px;background:linear-gradient(160deg,#3a1e00,#1e0f00);border:3px solid rgba(200,140,0,0.55);border-radius:14px;padding:10px 18px;color:#FFD700;font-size:14px;font-weight:bold;display:none;backdrop-filter:blur(6px);text-align:center;min-width:120px;box-shadow:0 4px 18px rgba(0,0,0,0.6);z-index:15;user-select:none;transition:border-color 0.3s,box-shadow 0.3s">
+    <div style="font-size:11px;color:#e8b060;margin-bottom:4px;letter-spacing:1px">🧙 MERCHANT</div>
+    <div id="merchant-corner-time" style="font-size:22px;letter-spacing:2px;text-shadow:0 0 8px rgba(255,215,0,0.5)">7:00</div>
+    <div id="merchant-corner-sub" style="font-size:11px;color:#cc9944;margin-top:4px">until next visit</div>
   </div>
 
   <!-- Merchant -->
@@ -1157,14 +1166,14 @@ function updateMerchant(dt) {
     if (hudTxt) hudTxt.textContent = Math.ceil(_merchantDuration) + 's left!';
     const cd = document.getElementById('merchant-countdown');
     if (cd) cd.textContent = Math.ceil(_merchantDuration);
-    if (corner) { corner.style.border = '2px solid #FFD700'; corner.style.cursor = 'pointer'; }
+    if (corner) corner.classList.add('merchant-active');
     if (cornerTime) cornerTime.textContent = _fmtMerchantTime(_merchantDuration);
-    if (cornerSub) { cornerSub.textContent = 'VISIT NOW! →'; cornerSub.style.color = '#FFD700'; }
+    if (cornerSub) { cornerSub.textContent = '🛒 OPEN SHOP'; cornerSub.style.color = '#FFD700'; }
     if (_merchantDuration <= 0) {
       _merchantActive = false; _merchantTimer = 420;
       closeMerchantShop();
       if (hudEl) hudEl.style.display = 'none';
-      if (corner) { corner.style.border = '2px solid rgba(200,140,0,0.5)'; corner.style.cursor = 'default'; }
+      if (corner) corner.classList.remove('merchant-active');
       if (cornerSub) { cornerSub.textContent = 'until next visit'; cornerSub.style.color = '#cc9944'; }
       showToast('🧙 The Merchant has left! Returns in 7 minutes.', 3500);
     }
@@ -1175,7 +1184,7 @@ function updateMerchant(dt) {
     } else {
       if (hudEl) hudEl.style.display = 'none';
     }
-    if (corner) { corner.style.border = '2px solid rgba(200,140,0,0.5)'; corner.style.cursor = 'default'; }
+    if (corner) corner.classList.remove('merchant-active');
     if (cornerTime) cornerTime.textContent = _fmtMerchantTime(_merchantTimer);
     if (cornerSub) { cornerSub.textContent = 'until next visit'; cornerSub.style.color = '#cc9944'; }
     if (_merchantTimer <= 0) {
@@ -1183,8 +1192,8 @@ function updateMerchant(dt) {
       _merchantStock = pickMerchantStock();
       if (hudEl) hudEl.style.display = 'flex';
       if (hudTxt) hudTxt.textContent = 'HERE! Click to visit!';
-      if (corner) { corner.style.border = '2px solid #FFD700'; corner.style.cursor = 'pointer'; }
-      if (cornerSub) { cornerSub.textContent = 'VISIT NOW! →'; cornerSub.style.color = '#FFD700'; }
+      if (corner) corner.classList.add('merchant-active');
+      if (cornerSub) { cornerSub.textContent = '🛒 OPEN SHOP'; cornerSub.style.color = '#FFD700'; }
       showToast('🧙 The Traveling Merchant has arrived! 2 minutes only!', 5000);
       spawnFX(new THREE.Vector3(0, 2, 0), 0xFFD700, 1.5, 4.0);
     }
