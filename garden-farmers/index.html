@@ -714,6 +714,11 @@ const WEAPONS = [
   { id:'frost_seed',name:'Frost Seed',         emoji:'🔷', cost:30, desc:'Lobbed ice seed — HARD FREEZES enemies in AoE',          kind:'slow',    dmg:16, range:12,  cd:1.0,  aoe:2.5, slow:0.7, slowDur:3, color:0x88ccff, hardFreeze:true },
 ];
 
+// Weapons available in all biomes (e.g. merchant exclusives)
+const SPECIAL_WEAPONS = [
+  { id:'push_rod', name:'Force Staff', emoji:'🌀', cost:0, desc:'Blast ALL enemies far away — one use only!', kind:'push', dmg:0, range:0, cd:0.1, color:0x00ccff, oneUse:true },
+];
+
 const PLACEABLES = [
   { id:'flytrap',    name:'Carnivorous Plant',  emoji:'🪴', cost:40, desc:'⚔️ Grabs & chomps nearby foes',               kind:'turret', dmg:30, range:2.2, cd:2.0, hp:80,  color:0x006400 },
   { id:'cactus',     name:'Cactus Turret',      emoji:'🌵', cost:30, desc:'⚔️ Auto-fires thorns at enemies',             kind:'turret', dmg:12, range:5.5, cd:0.5, hp:60,  color:0x2e8b57 },
@@ -1081,6 +1086,7 @@ const MERCHANT_ITEMS = [
   { id:'land_deed',    name:'Land Deed',         emoji:'🗺️', desc:'Expand farm radius for free',                  cost:160 },
   { id:'straw_chest',  name:'Straw Chest',       emoji:'📦', desc:'Gain 3× current wave number in straw',        cost:50  },
   { id:'mystery',      name:'Mystery Crate',     emoji:'🎁', desc:'Unknown surprise — risky but very cheap!',    cost:35  },
+  { id:'push_rod',     name:'Force Staff',       emoji:'🌀', desc:'Equip a staff — use it to blast ALL enemies far away (one use!)', cost:90 },
 ];
 let _merchantTimer = 420, _merchantActive = false, _merchantDuration = 0, _merchantStock = [];
 let _testMode = false;
@@ -1145,6 +1151,13 @@ function applyMerchantEffect(id, cost) {
   } else if (id === 'straw_chest') {
     const bonus = Math.max(30, gs.wave * 3); gs.straw += bonus;
     floatText(gs.playerPos.clone().add(new THREE.Vector3(0,2,0)), '+'+bonus+emoji, 0xFFD700); showToast('📦 +' + bonus + ' straw!', 2000);
+  } else if (id === 'push_rod') {
+    gs.ownedWeapons.add('push_rod');
+    const emptySlot = gs.hotbar.findIndex(s => s === null);
+    if (emptySlot >= 0) { gs.hotbar[emptySlot] = 'push_rod'; }
+    else { gs.hotbar[gs.hotbar.length - 1] = 'push_rod'; }
+    buildHotbar();
+    showToast('🌀 Force Staff equipped! Click to blast ALL enemies away!', 3500);
   } else if (id === 'mystery') {
     const pool = ['full_heal','power_surge','freeze_bomb','gold_rush','revive_plants','screen_nuke','harvest_bless'];
     applyMerchantEffect(pool[Math.floor(Math.random() * pool.length)], 0);
@@ -2375,7 +2388,7 @@ function doAttack() {
   if (gs.wildBirds.length > 0 && catchWildBird()) { attackCd = 0.4; return; }
   const wid = gs.hotbar[gs.activeSlot];
   if (!wid) return;
-  const wd = getActiveData().weapons.find(w => w.id === wid);
+  const wd = getActiveData().weapons.find(w => w.id === wid) || SPECIAL_WEAPONS.find(w => w.id === wid);
   if (!wd) return;
   attackCd = wd.cd;
 
@@ -2387,7 +2400,7 @@ function doAttack() {
   }
   dir.normalize();
   // Attack sound
-  ({ melee:sfxSwing, heavy:sfxHeavySlam, beam:sfxBeamFire, slow:sfxSplat, bounce:sfxBounce, boomerang:sfxBoomerang, cloud:()=>sfxShoot(0.28), shotgun:()=>sfxShoot(0.5), throw:()=>sfxShoot(0.42) }[wd.kind] || sfxShoot)();
+  ({ melee:sfxSwing, heavy:sfxHeavySlam, beam:sfxBeamFire, slow:sfxSplat, bounce:sfxBounce, boomerang:sfxBoomerang, cloud:()=>sfxShoot(0.28), shotgun:()=>sfxShoot(0.5), throw:()=>sfxShoot(0.42), push:()=>sfxExplosion(0.5) }[wd.kind] || sfxShoot)();
 
   if (wd.kind === 'melee' || wd.kind === 'heavy') {
     spawnSlash(gs.playerPos.clone(), dir, wd.color, wd.range);
@@ -2450,6 +2463,23 @@ function doAttack() {
       const sp = (Math.random() - 0.5) * 0.8;
       const pd = new THREE.Vector3(dir.x + sp, 0, dir.z + sp * 0.5).normalize();
       spawnProj(gs.playerPos.clone().add(new THREE.Vector3(0, 0.1, 0)), pd, 13, wd, 'weapon', wd.range / 13);
+    }
+  } else if (wd.kind === 'push') {
+    spawnFX(gs.playerPos.clone().add(new THREE.Vector3(0, 1, 0)), 0x00ccff, 0.7, 7.0);
+    gs.enemies.forEach(e => {
+      const pushDir = e.pos.clone().sub(gs.playerPos).setY(0);
+      const dist = Math.max(0.5, pushDir.length());
+      pushDir.normalize();
+      const force = 22 + Math.max(0, 16 - dist) * 1.2;
+      e.vel.add(pushDir.multiplyScalar(force));
+      spawnFX(e.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), 0x00aaff, 0.45, 0.9);
+    });
+    if (wd.oneUse) {
+      const slot = gs.hotbar.indexOf(wid);
+      if (slot >= 0) gs.hotbar[slot] = null;
+      gs.ownedWeapons.delete(wid);
+      buildHotbar();
+      showToast('🌀 Force Staff shattered after use!', 2500);
     }
   } else {
     spawnProj(gs.playerPos.clone().add(new THREE.Vector3(0, 0.1, 0)), dir, 10, wd, 'weapon', wd.range / 10);
