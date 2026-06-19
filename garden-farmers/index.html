@@ -176,7 +176,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   </div>
 
   <!-- Merchant corner timer -->
-  <div id="merchant-corner" style="position:absolute;top:68px;right:12px;background:rgba(100,60,0,0.88);border:2px solid rgba(200,140,0,0.5);border-radius:12px;padding:7px 14px;color:#FFD700;font-size:13px;font-weight:bold;display:none;backdrop-filter:blur(4px);text-align:center;min-width:100px;box-shadow:0 2px 12px rgba(0,0,0,0.45)">
+  <div id="merchant-corner" onclick="openMerchantShop()" style="position:absolute;top:68px;right:12px;background:rgba(100,60,0,0.88);border:2px solid rgba(200,140,0,0.5);border-radius:12px;padding:7px 14px;color:#FFD700;font-size:13px;font-weight:bold;display:none;backdrop-filter:blur(4px);text-align:center;min-width:100px;box-shadow:0 2px 12px rgba(0,0,0,0.45);z-index:15;user-select:none">
     <div style="font-size:10px;color:#cc9944;margin-bottom:3px">🧙 MERCHANT</div>
     <div id="merchant-corner-time" style="font-size:18px;letter-spacing:1px">10:00</div>
     <div id="merchant-corner-sub" style="font-size:10px;color:#cc9944;margin-top:2px">until next visit</div>
@@ -1157,18 +1157,14 @@ function updateMerchant(dt) {
     if (hudTxt) hudTxt.textContent = Math.ceil(_merchantDuration) + 's left!';
     const cd = document.getElementById('merchant-countdown');
     if (cd) cd.textContent = Math.ceil(_merchantDuration);
-    if (corner) {
-      corner.style.border = '2px solid #FFD700';
-      corner.style.cursor = 'pointer';
-      corner.onclick = openMerchantShop;
-    }
+    if (corner) { corner.style.border = '2px solid #FFD700'; corner.style.cursor = 'pointer'; }
     if (cornerTime) cornerTime.textContent = _fmtMerchantTime(_merchantDuration);
     if (cornerSub) { cornerSub.textContent = 'VISIT NOW! →'; cornerSub.style.color = '#FFD700'; }
     if (_merchantDuration <= 0) {
       _merchantActive = false; _merchantTimer = 420;
       closeMerchantShop();
       if (hudEl) hudEl.style.display = 'none';
-      if (corner) { corner.style.border = '2px solid rgba(200,140,0,0.5)'; corner.style.cursor = 'default'; corner.onclick = null; }
+      if (corner) { corner.style.border = '2px solid rgba(200,140,0,0.5)'; corner.style.cursor = 'default'; }
       if (cornerSub) { cornerSub.textContent = 'until next visit'; cornerSub.style.color = '#cc9944'; }
       showToast('🧙 The Merchant has left! Returns in 7 minutes.', 3500);
     }
@@ -1179,7 +1175,7 @@ function updateMerchant(dt) {
     } else {
       if (hudEl) hudEl.style.display = 'none';
     }
-    if (corner) { corner.style.border = '2px solid rgba(200,140,0,0.5)'; corner.style.cursor = 'default'; corner.onclick = null; }
+    if (corner) { corner.style.border = '2px solid rgba(200,140,0,0.5)'; corner.style.cursor = 'default'; }
     if (cornerTime) cornerTime.textContent = _fmtMerchantTime(_merchantTimer);
     if (cornerSub) { cornerSub.textContent = 'until next visit'; cornerSub.style.color = '#cc9944'; }
     if (_merchantTimer <= 0) {
@@ -1187,7 +1183,7 @@ function updateMerchant(dt) {
       _merchantStock = pickMerchantStock();
       if (hudEl) hudEl.style.display = 'flex';
       if (hudTxt) hudTxt.textContent = 'HERE! Click to visit!';
-      if (corner) { corner.style.border = '2px solid #FFD700'; corner.style.cursor = 'pointer'; corner.onclick = openMerchantShop; }
+      if (corner) { corner.style.border = '2px solid #FFD700'; corner.style.cursor = 'pointer'; }
       if (cornerSub) { cornerSub.textContent = 'VISIT NOW! →'; cornerSub.style.color = '#FFD700'; }
       showToast('🧙 The Traveling Merchant has arrived! 2 minutes only!', 5000);
       spawnFX(new THREE.Vector3(0, 2, 0), 0xFFD700, 1.5, 4.0);
@@ -6156,7 +6152,7 @@ function resetGame() {
   _merchantTimer = 420; _merchantActive = false; _merchantDuration = 0; _merchantStock = [];
   closeMerchantShop();
   const _mhud = document.getElementById('merchant-hud'); if (_mhud) _mhud.style.display = 'none';
-  const _mcReset = document.getElementById('merchant-corner'); if (_mcReset) { _mcReset.style.display = 'none'; _mcReset.onclick = null; }
+  const _mcReset = document.getElementById('merchant-corner'); if (_mcReset) { _mcReset.style.display = 'none'; _mcReset.style.cursor = 'default'; }
   gs.farmExpansions = 0; FARM_R = 42; rebuildFarmGeometry();
   _evCdEl.style.display = 'none';
   hideEventBanner();
