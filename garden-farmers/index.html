@@ -133,6 +133,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
     <div class="hud-block"><span id="straw-emoji">🌾</span> <span id="straw-txt">0</span></div>
     <div class="hud-block" id="event-countdown" style="display:none">🎲 Next event: <span id="event-cd-txt">5:00</span></div>
     <div class="hud-block" id="merchant-hud" style="display:none;cursor:pointer;background:rgba(130,80,0,0.92);border-color:rgba(255,190,0,0.6)" onclick="openMerchantShop()">🧙 Merchant <span id="merchant-hud-txt">arriving…</span></div>
+    <div id="test-mode-badge" style="display:none;background:rgba(0,180,0,0.85);border:2px solid #0f0;border-radius:10px;padding:5px 12px;color:#0f0;font-size:13px;font-weight:bold;letter-spacing:1px">🧪 TEST MODE</div>
   </div>
   <div id="hotbar"></div>
   <div id="side-panel">
@@ -1078,6 +1079,7 @@ const MERCHANT_ITEMS = [
   { id:'mystery',      name:'Mystery Crate',     emoji:'🎁', desc:'Unknown surprise — risky but very cheap!',    cost:35  },
 ];
 let _merchantTimer = 420, _merchantActive = false, _merchantDuration = 0, _merchantStock = [];
+let _testMode = false;
 
 function pickMerchantStock() {
   return [...MERCHANT_ITEMS].sort(() => Math.random() - 0.5).slice(0, 4);
@@ -5677,7 +5679,8 @@ function showScreen(id) {
     inn.innerHTML = `<div class="stitle" style="font-size:42px">💾 Choose a Slot</div>
       <div class="ssub">Pick a save slot to play or start fresh!</div>
       <div class="save-slots-grid">${slots}</div>
-      <button class="bbtn gray" style="margin-top:8px" onclick="showScreen('menu')">◀ Back</button>`;
+      <button class="bbtn" style="margin-top:8px;background:rgba(0,120,0,0.85);border:2px solid #4f4;color:#4f4" onclick="startTestMode()">🧪 Test Mode — Infinite Straw &amp; Merchant</button>
+      <button class="bbtn gray" style="margin-top:4px" onclick="showScreen('menu')">◀ Back</button>`;
   }
 }
 
@@ -5780,10 +5783,12 @@ function loadAndPlay() {
 
 function endGame() {
   gameStarted = false;
+  _testMode = false;
   stopBattleTheme();
   _biomeParticles.forEach(p => scene.remove(p.mesh));
   _biomeParticles = [];
   const mcEnd = document.getElementById('merchant-corner'); if (mcEnd) mcEnd.style.display = 'none';
+  const tb = document.getElementById('test-mode-badge'); if (tb) tb.style.display = 'none';
   showScreen('gameover');
 }
 
@@ -5812,6 +5817,24 @@ function deleteSaveSlot(n) {
 function startNewGameInSlot(n) {
   _activeSaveSlot = n;
   showScreen('biome');
+}
+
+function startTestMode() {
+  _testMode = true;
+  _activeSaveSlot = 0;
+  gs.biome = 'garden';
+  resetGame();
+  applyBiomeTheme(gs.biome);
+  initBiomeParticles(gs.biome);
+  document.getElementById('screen').classList.add('hidden');
+  gameStarted = true;
+  buildPlayerMesh(); buildHotbar(); updateHUD();
+  gs.straw = 99999;
+  _merchantActive = true; _merchantDuration = 120; _merchantTimer = 0;
+  _merchantStock = pickMerchantStock();
+  const mc = document.getElementById('merchant-corner'); if (mc) mc.style.display = 'block';
+  const testBadge = document.getElementById('test-mode-badge'); if (testBadge) testBadge.style.display = 'block';
+  showToast('🧪 Test Mode — Infinite straw & merchant always open!', 4000);
 }
 
 function loadSlot(n) {
@@ -6722,6 +6745,10 @@ function loop(ts) {
     }
     updateArmy(dt);
     updateMerchant(dt);
+    if (_testMode) {
+      gs.straw = 99999;
+      if (!_merchantActive) { _merchantActive = true; _merchantDuration = 120; _merchantTimer = 0; if (!_merchantStock.length) _merchantStock = pickMerchantStock(); }
+    }
     updateBiomeParticles(dt);
 
     // Camera follows player
