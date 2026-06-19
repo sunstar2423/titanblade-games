@@ -133,7 +133,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
     <div class="hud-block"><span id="straw-emoji">🌾</span> <span id="straw-txt">0</span></div>
     <div class="hud-block" id="event-countdown" style="display:none">🎲 Next event: <span id="event-cd-txt">5:00</span></div>
     <div class="hud-block" id="merchant-hud" style="display:none;cursor:pointer;background:rgba(130,80,0,0.92);border-color:rgba(255,190,0,0.6)" onclick="openMerchantShop()">🧙 Merchant <span id="merchant-hud-txt">arriving…</span></div>
-    <div id="test-mode-badge" style="display:none;background:rgba(0,180,0,0.85);border:2px solid #0f0;border-radius:10px;padding:5px 12px;color:#0f0;font-size:13px;font-weight:bold;letter-spacing:1px">🧪 TEST MODE</div>
+    <div id="test-mode-badge" style="display:none;background:rgba(0,180,0,0.85);border:2px solid #0f0;border-radius:10px;padding:5px 12px;color:#0f0;font-size:13px;font-weight:bold;letter-spacing:1px;pointer-events:none">🧪 TEST MODE</div>
   </div>
   <div id="hotbar"></div>
   <div id="side-panel">
@@ -182,14 +182,14 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   </div>
 
   <!-- Merchant corner timer -->
-  <div id="merchant-corner" onclick="openMerchantShop()" style="position:absolute;top:64px;right:12px;background:linear-gradient(160deg,#3a1e00,#1e0f00);border:3px solid rgba(200,140,0,0.55);border-radius:14px;padding:10px 18px;color:#FFD700;font-size:14px;font-weight:bold;display:none;backdrop-filter:blur(6px);text-align:center;min-width:120px;box-shadow:0 4px 18px rgba(0,0,0,0.6);z-index:15;user-select:none;transition:border-color 0.3s,box-shadow 0.3s">
+  <div id="merchant-corner" onclick="openMerchantShop()" style="position:absolute;top:64px;right:12px;background:linear-gradient(160deg,#3a1e00,#1e0f00);border:3px solid rgba(200,140,0,0.55);border-radius:14px;padding:10px 18px;color:#FFD700;font-size:14px;font-weight:bold;display:none;backdrop-filter:blur(6px);text-align:center;min-width:120px;box-shadow:0 4px 18px rgba(0,0,0,0.6);z-index:15;user-select:none;transition:border-color 0.3s,box-shadow 0.3s;pointer-events:all">
     <div style="font-size:11px;color:#e8b060;margin-bottom:4px;letter-spacing:1px">🧙 MERCHANT</div>
     <div id="merchant-corner-time" style="font-size:22px;letter-spacing:2px;text-shadow:0 0 8px rgba(255,215,0,0.5)">7:00</div>
     <div id="merchant-corner-sub" style="font-size:11px;color:#cc9944;margin-top:4px">until next visit</div>
   </div>
 
   <!-- Merchant -->
-  <div id="merchant-overlay" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.88);z-index:25;backdrop-filter:blur(4px)">
+  <div id="merchant-overlay" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.88);z-index:25;backdrop-filter:blur(4px);pointer-events:all">
     <div style="background:linear-gradient(160deg,#2a1800,#1a1000);border:3px solid #c8900a;border-radius:20px;padding:26px 30px;max-width:520px;width:92%;color:#fff;box-shadow:0 0 50px rgba(200,140,0,0.4)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <h2 style="color:#FFD700;font-size:21px">🧙 Traveling Merchant</h2>
