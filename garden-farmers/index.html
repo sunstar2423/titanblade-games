@@ -2096,6 +2096,7 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Equal')  camZoom = Math.max(0.5, camZoom - 0.15);
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
+window.addEventListener('blur', () => { Object.keys(keys).forEach(k => { keys[k] = false; }); mouseHeld = false; });
 
 let mouseHeld = false;
 document.getElementById('c').addEventListener('mousedown', () => { mouseHeld = true; });
