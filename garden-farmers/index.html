@@ -2090,7 +2090,7 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Space' && gameStarted && !shopOpen) {
     e.preventDefault();
     if (gs.betweenWaves) { startNextWave(); }
-    else if (gs.playerOnGround) { gs.playerJumpVel = 9; gs.playerOnGround = false; }
+    else if (gs.playerOnGround) { gs.playerJumpVel = 14; gs.playerOnGround = false; }
   }
   if (e.code === 'KeyE' && gameStarted) {
     if (barnOpen) exitBarn();
@@ -2100,6 +2100,7 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Equal')  camZoom = Math.max(0.5, camZoom - 0.15);
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
+window.addEventListener('blur', () => { Object.keys(keys).forEach(k => { keys[k] = false; }); mouseHeld = false; });
 
 let mouseHeld = false;
 document.getElementById('c').addEventListener('mousedown', () => { mouseHeld = true; });
@@ -2188,7 +2189,7 @@ window.addEventListener('wheel', e => {
 
   document.getElementById('jump-btn').addEventListener('touchstart', e => {
     e.preventDefault();
-    if (gameStarted && !gs.betweenWaves && gs.playerOnGround) { gs.playerJumpVel = 9; gs.playerOnGround = false; }
+    if (gameStarted && !gs.betweenWaves && gs.playerOnGround) { gs.playerJumpVel = 14; gs.playerOnGround = false; }
   }, { passive: false });
 
   document.getElementById('wave-start-btn').addEventListener('touchstart', e => {
@@ -2244,7 +2245,7 @@ function updatePlayer(dt) {
   }
   // Jump / gravity
   if (!gs.playerOnGround) {
-    gs.playerJumpVel -= 22 * dt;
+    gs.playerJumpVel -= 18 * dt;
     gs.playerPos.y += gs.playerJumpVel * dt;
     if (gs.playerPos.y <= 0.75) {
       gs.playerPos.y = 0.75;
