@@ -1377,26 +1377,48 @@ function buildForest() {
   shuffled.forEach((itemData, idx) => {
     const angle = (idx / shuffled.length) * Math.PI * 2;
     const r = 14 + (idx % 3) * 9;
-    const pos = new THREE.Vector3(fc.x + Math.cos(angle) * r, 0.6, fc.z + Math.sin(angle) * r);
+    const orbY = 1.5;
+    const pos = new THREE.Vector3(fc.x + Math.cos(angle) * r, orbY, fc.z + Math.sin(angle) * r);
 
-    // Glowing orb
-    const orbMat = new THREE.MeshStandardMaterial({ color:itemData.color, emissive:itemData.color, emissiveIntensity:0.85, roughness:0.3 });
-    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.48, 10, 10), orbMat);
+    // Big bright glowing orb (lifted up so it's easy to spot)
+    const orbMat = new THREE.MeshStandardMaterial({ color:itemData.color, emissive:itemData.color, emissiveIntensity:1.6, roughness:0.25 });
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.85, 14, 14), orbMat);
     orb.position.copy(pos);
     scene.add(orb); _forestMeshes.push(orb);
 
+    // Translucent halo around the orb
+    const halo = new THREE.Mesh(
+      new THREE.SphereGeometry(1.25, 14, 14),
+      new THREE.MeshBasicMaterial({ color:itemData.color, transparent:true, opacity:0.22, side:THREE.BackSide, depthWrite:false })
+    );
+    halo.position.copy(pos);
+    scene.add(halo); _forestMeshes.push(halo);
+
+    // Per-orb point light so it lights up its surroundings
+    const orbLight = new THREE.PointLight(itemData.color, 2.2, 14, 1.6);
+    orbLight.position.copy(pos);
+    scene.add(orbLight); _forestMeshes.push(orbLight);
+
+    // Tall light beam — visible from across the whole forest
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.32, 0.55, 22, 12, 1, true),
+      new THREE.MeshBasicMaterial({ color:itemData.color, transparent:true, opacity:0.28, side:THREE.DoubleSide, depthWrite:false })
+    );
+    beam.position.set(pos.x, 11, pos.z);
+    scene.add(beam); _forestMeshes.push(beam);
+
     // Pedestal
-    const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 0.55, 8), new THREE.MeshStandardMaterial({ color:0x2a1a08, roughness:0.9 }));
-    ped.position.set(pos.x, 0.28, pos.z);
+    const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 0.7, 8), new THREE.MeshStandardMaterial({ color:0x2a1a08, roughness:0.9 }));
+    ped.position.set(pos.x, 0.35, pos.z);
     scene.add(ped); _forestMeshes.push(ped);
 
-    // Light glow ring
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.06, 6, 18), new THREE.MeshStandardMaterial({ color:itemData.color, emissive:itemData.color, emissiveIntensity:1.2, roughness:0.2 }));
+    // Bright spinning glow ring at the base
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.1, 8, 22), new THREE.MeshStandardMaterial({ color:itemData.color, emissive:itemData.color, emissiveIntensity:1.6, roughness:0.2 }));
     ring.rotation.x = Math.PI / 2;
-    ring.position.set(pos.x, 0.12, pos.z);
+    ring.position.set(pos.x, 0.14, pos.z);
     scene.add(ring); _forestMeshes.push(ring);
 
-    _forestItems.push({ ...itemData, mesh: orb, glowRing: ring, pos: pos.clone(), collected: false });
+    _forestItems.push({ ...itemData, mesh: orb, glowRing: ring, halo, beam, orbLight, baseY: orbY, phase: idx * 1.1, pos: pos.clone(), collected: false });
   });
 }
 
@@ -1454,6 +1476,9 @@ function collectForestItem(item) {
   item.collected = true;
   scene.remove(item.mesh);
   if (item.glowRing) scene.remove(item.glowRing);
+  if (item.halo) scene.remove(item.halo);
+  if (item.beam) scene.remove(item.beam);
+  if (item.orbLight) scene.remove(item.orbLight);
   if (item.type === 'weapon') {
     if (!gs.ownedWeapons.has(item.weaponId)) {
       gs.ownedWeapons.add(item.weaponId);
@@ -7136,13 +7161,22 @@ function loop(ts) {
         const fd = FOREST_ENEMY_DATA[Math.floor(Math.random() * FOREST_ENEMY_DATA.length)];
         spawnForestEnemy(fd);
       }
+      const _now = Date.now() * 0.003;
       _forestItems.forEach(item => {
-        if (!item.collected && item.mesh && gs.playerPos.distanceTo(item.pos) < 2.2) {
+        if (!item.collected && item.mesh && gs.playerPos.distanceTo(item.pos) < 2.6) {
           collectForestItem(item);
         }
         if (item.mesh && !item.collected) {
-          item.mesh.position.y = 0.6 + Math.sin(Date.now() * 0.002 + item.pos.x) * 0.18;
-          item.mesh.rotation.y += dt * 1.1;
+          const ph = item.phase || 0;
+          const bob = Math.sin(_now + ph) * 0.3;
+          const baseY = item.baseY || 1.5;
+          item.mesh.position.y = baseY + bob;
+          item.mesh.rotation.y += dt * 1.4;
+          const pulse = 0.5 + Math.sin(_now * 1.6 + ph) * 0.5; // 0..1
+          if (item.halo) { item.halo.position.y = baseY + bob; item.halo.material.opacity = 0.15 + pulse * 0.22; const hs = 1 + pulse * 0.12; item.halo.scale.set(hs, hs, hs); }
+          if (item.orbLight) item.orbLight.intensity = 1.8 + pulse * 1.6;
+          if (item.beam) { item.beam.material.opacity = 0.18 + pulse * 0.18; item.beam.rotation.y += dt * 0.5; }
+          if (item.glowRing) { const rs = 1 + pulse * 0.25; item.glowRing.scale.set(rs, rs, 1); }
         }
       });
     }
