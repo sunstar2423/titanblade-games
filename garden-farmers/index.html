@@ -1257,13 +1257,87 @@ let _savedWaveActive = false;
 let _savedPlayerPos = null;
 let _origFogColor = 0x0d1220;
 let _origFogDensity = 0.009;
+let _forestFireflies = null;
+// Saved farm ambiance so the forest can have its own distinct lighting
+let _savedLighting = null;
 
 function buildForest() {
   const fc = FOREST_CENTER;
+
+  // ── A whole different world: forest sky dome ─────────────────
+  // The farm sky dome lives at the origin (radius 90); the forest sits
+  // 600 units away, so it needs its OWN sky or it floats in black void.
+  (function() {
+    const c = document.createElement('canvas'); c.width = 2; c.height = 256;
+    const ctx = c.getContext('2d');
+    const g = ctx.createLinearGradient(0, 0, 0, 256);
+    g.addColorStop(0,    '#01100a');
+    g.addColorStop(0.32, '#042014');
+    g.addColorStop(0.62, '#0a3322');
+    g.addColorStop(0.84, '#14543a');
+    g.addColorStop(1,    '#1e6e4a');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
+    const tex = new THREE.CanvasTexture(c);
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(90, 32, 16),
+      new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide })
+    );
+    dome.position.copy(fc);
+    scene.add(dome); _forestMeshes.push(dome);
+  })();
+
+  // Pale forest moon
+  (function() {
+    const moon = new THREE.Mesh(
+      new THREE.SphereGeometry(5, 18, 18),
+      new THREE.MeshBasicMaterial({ color: 0xcfe8d8 })
+    );
+    moon.position.set(fc.x - 38, 46, fc.z - 55);
+    scene.add(moon); _forestMeshes.push(moon);
+    const moonGlow = new THREE.PointLight(0x88bbaa, 1.1, 220, 1.2);
+    moonGlow.position.copy(moon.position);
+    scene.add(moonGlow); _forestMeshes.push(moonGlow);
+  })();
+
+  // Large dark forest ground so there is no void edge around the clearing
+  (function() {
+    const gc = document.createElement('canvas'); gc.width = 256; gc.height = 256;
+    const gx = gc.getContext('2d');
+    gx.fillStyle = '#0a1c0e'; gx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 1600; i++) {
+      const v = Math.random();
+      gx.fillStyle = v < 0.3 ? '#06140a' : v < 0.6 ? '#102a14' : v < 0.85 ? '#143518' : '#1c4422';
+      gx.fillRect(Math.random()*256, Math.random()*256, Math.random()*3+1, Math.random()*3+1);
+    }
+    const gtex = new THREE.CanvasTexture(gc); gtex.wrapS = gtex.wrapT = THREE.RepeatWrapping; gtex.repeat.set(16, 16);
+    const big = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ map: gtex, roughness: 0.98, metalness: 0 }));
+    big.rotation.x = -Math.PI / 2; big.position.set(fc.x, -0.02, fc.z); big.receiveShadow = true;
+    scene.add(big); _forestMeshes.push(big);
+  })();
+
+  // Drifting fireflies for atmosphere
+  (function() {
+    const count = 90;
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * (FOREST_RADIUS + 6);
+      pos[i*3]   = fc.x + Math.cos(a) * r;
+      pos[i*3+1] = 0.5 + Math.random() * 4.5;
+      pos[i*3+2] = fc.z + Math.sin(a) * r;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color: 0xaaff66, size: 0.4, sizeAttenuation: true, transparent: true, opacity: 0.9 });
+    _forestFireflies = new THREE.Points(geo, mat);
+    scene.add(_forestFireflies); _forestMeshes.push(_forestFireflies);
+  })();
+
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x0c2010, roughness: 0.96 });
   const floor = new THREE.Mesh(new THREE.CircleGeometry(FOREST_RADIUS + 8, 48), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.position.copy(fc);
+  floor.position.y = 0.01;
   floor.receiveShadow = true;
   scene.add(floor);
   _forestMeshes.push(floor);
@@ -1420,7 +1494,22 @@ function enterForest() {
   buildForest();
   const spawnList = ['f_wolf','f_wolf','f_wolf','f_bear','f_goblin','f_goblin','f_spirit','f_spirit','f_troll'];
   spawnList.forEach(id => { const d = FOREST_ENEMY_DATA.find(x => x.id === id); if (d) spawnForestEnemy(d); });
-  scene.fog = new THREE.FogExp2(0x040d04, 0.038);
+  scene.fog = new THREE.FogExp2(0x040d04, 0.045);
+
+  // Swap the farm's daytime ambiance for a moody nocturnal forest mood,
+  // and hide the farm sky/stars so the forest reads as a separate world.
+  _savedLighting = {
+    hemiColor: hemiLight.color.getHex(), hemiGround: hemiLight.groundColor.getHex(), hemiInt: hemiLight.intensity,
+    sunColor: sun.color.getHex(), sunInt: sun.intensity,
+    fillInt: fill.intensity, rimInt: rimLight.intensity, topInt: topLight.intensity,
+    skyVisible: window._skyMesh ? window._skyMesh.visible : true,
+    starsVisible: window._starField ? window._starField.visible : true,
+  };
+  hemiLight.color.setHex(0x244d33); hemiLight.groundColor.setHex(0x06140a); hemiLight.intensity = 0.65;
+  sun.color.setHex(0x6fae8c); sun.intensity = 0.35;
+  fill.intensity = 0.18; rimLight.intensity = 0.55; topLight.intensity = 0.08;
+  if (window._skyMesh) window._skyMesh.visible = false;
+  if (window._starField) window._starField.visible = false;
   const rb = document.getElementById('forest-return-btn');
   if (rb) rb.style.display = 'flex';
   const fb = document.getElementById('forest-enter-btn');
@@ -1436,6 +1525,16 @@ function exitForest() {
   _forestMeshes = [];
   _forestItems.forEach(i => { if (!i.collected) { scene.remove(i.mesh); if (i.glowRing) scene.remove(i.glowRing); } });
   _forestItems = [];
+  _forestFireflies = null;
+  // Restore the farm's daytime ambiance and sky
+  if (_savedLighting) {
+    hemiLight.color.setHex(_savedLighting.hemiColor); hemiLight.groundColor.setHex(_savedLighting.hemiGround); hemiLight.intensity = _savedLighting.hemiInt;
+    sun.color.setHex(_savedLighting.sunColor); sun.intensity = _savedLighting.sunInt;
+    fill.intensity = _savedLighting.fillInt; rimLight.intensity = _savedLighting.rimInt; topLight.intensity = _savedLighting.topInt;
+    if (window._skyMesh) window._skyMesh.visible = _savedLighting.skyVisible;
+    if (window._starField) window._starField.visible = _savedLighting.starsVisible;
+    _savedLighting = null;
+  }
   gs.betweenWaves = _savedBetweenWaves;
   gs.waveActive = _savedWaveActive;
   if (_savedPlayerPos) gs.playerPos.copy(_savedPlayerPos);
@@ -6455,7 +6554,19 @@ function resetGame() {
   gs.playerSlowTimer = 0;
   gs.eventTimer = 90; gs.activeEvents = {}; gs._strawRainTick = 0;
   _merchantTimer = 420; _merchantActive = false; _merchantDuration = 0; _merchantStock = [];
-  if (_inForest) { gs.enemies.filter(e => e._forestEnemy).forEach(e => scene.remove(e.mesh)); gs.enemies = gs.enemies.filter(e => !e._forestEnemy); _forestMeshes.forEach(m => scene.remove(m)); _forestMeshes = []; _forestItems = []; _inForest = false; }
+  if (_inForest) {
+    gs.enemies.filter(e => e._forestEnemy).forEach(e => scene.remove(e.mesh)); gs.enemies = gs.enemies.filter(e => !e._forestEnemy);
+    _forestMeshes.forEach(m => scene.remove(m)); _forestMeshes = []; _forestItems = []; _forestFireflies = null; _inForest = false;
+    scene.fog = new THREE.FogExp2(0x0d1220, 0.009);
+    if (_savedLighting) {
+      hemiLight.color.setHex(_savedLighting.hemiColor); hemiLight.groundColor.setHex(_savedLighting.hemiGround); hemiLight.intensity = _savedLighting.hemiInt;
+      sun.color.setHex(_savedLighting.sunColor); sun.intensity = _savedLighting.sunInt;
+      fill.intensity = _savedLighting.fillInt; rimLight.intensity = _savedLighting.rimInt; topLight.intensity = _savedLighting.topInt;
+      if (window._skyMesh) window._skyMesh.visible = _savedLighting.skyVisible;
+      if (window._starField) window._starField.visible = _savedLighting.starsVisible;
+      _savedLighting = null;
+    }
+  }
   const _fbReset = document.getElementById('forest-enter-btn'); if (_fbReset) _fbReset.style.display = 'none';
   const _rbReset = document.getElementById('forest-return-btn'); if (_rbReset) _rbReset.style.display = 'none';
   closeMerchantShop();
@@ -7013,6 +7124,12 @@ function loop(ts) {
       }
     }
     if (_inForest) {
+      // Drift fireflies gently and make them twinkle
+      if (_forestFireflies) {
+        _forestFireflies.rotation.y += dt * 0.04;
+        const ft = Date.now() * 0.002;
+        _forestFireflies.material.opacity = 0.55 + Math.sin(ft) * 0.35;
+      }
       _forestEnemyTimer -= dt;
       if (_forestEnemyTimer <= 0) {
         _forestEnemyTimer = 22 + Math.random() * 12;
