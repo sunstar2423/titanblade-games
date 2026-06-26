@@ -81,3 +81,4 @@ saves/temp/
 CLAUDE.md
 **/CLAUDE.md
 .claude/settings.local.json
+.claude/worktrees/

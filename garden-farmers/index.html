@@ -143,6 +143,8 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div id="side-panel">
     <div class="side-btn" title="Shop (B)" onclick="toggleShop()">🛒</div>
     <div class="side-btn" title="Music" id="mute-btn" onclick="toggleMute()">🔊</div>
+    <div class="side-btn" id="forest-enter-btn" title="Explore Forest (between waves only)" onclick="enterForest()" style="color:#4dff88;display:none">🌲</div>
+    <div class="side-btn" id="forest-return-btn" title="Return to Farm" onclick="exitForest()" style="color:#FFD700;display:none">🔙</div>
   </div>
   <div id="hint">WASD — Move<br>Click — Attack<br>1-5 — Switch weapon<br>B — Shop<br>SPACE — Start Wave</div>
   <div id="toast"></div>
@@ -716,7 +718,12 @@ const WEAPONS = [
 
 // Weapons available in all biomes (e.g. merchant exclusives)
 const SPECIAL_WEAPONS = [
-  { id:'push_rod', name:'Force Staff', emoji:'🌀', cost:0, desc:'Blast ALL enemies far away — one use only!', kind:'push', dmg:0, range:0, cd:0.1, color:0x00ccff, oneUse:true },
+  { id:'push_rod',      name:'Force Staff',    emoji:'🌀', cost:0, desc:'Blast ALL enemies far away — one use only!', kind:'push',   dmg:0,   range:0,  cd:0.1,  color:0x00ccff, oneUse:true },
+  { id:'lumber_axe',    name:'Lumber Axe',     emoji:'🪓', cost:0, desc:'Giant axe — massive damage, slow swing',    kind:'heavy',  dmg:110, range:2.6, cd:2.0,  color:0x8B4513 },
+  { id:'hunters_bow',   name:"Hunter's Bow",   emoji:'🏹', cost:0, desc:'Precision long-range shot',                kind:'dart',   dmg:55,  range:24,  cd:0.28, color:0xa0522d },
+  { id:'forest_crystal',name:'Forest Crystal', emoji:'🔮', cost:0, desc:'Bounces through 6 enemies',               kind:'bounce', dmg:32,  range:16,  cd:0.65, bounces:6, color:0x44ff88 },
+  { id:'leaf_blade',    name:'Leaf Blade',     emoji:'🍃', cost:0, desc:'Ultra-rapid slashing blades',             kind:'needle', dmg:14,  range:10,  cd:0.15, color:0x22aa22 },
+  { id:'bone_club',     name:'Bone Club',      emoji:'🦴', cost:0, desc:'Heavy club — slows enemies on hit',       kind:'heavy',  dmg:80,  range:2.3, cd:1.6,  color:0xf0e68c, slow:0.85, slowDur:3 },
 ];
 
 const PLACEABLES = [
@@ -1213,6 +1220,235 @@ function updateMerchant(dt) {
       spawnFX(new THREE.Vector3(0, 2, 0), 0xFFD700, 1.5, 4.0);
     }
   }
+}
+
+// ═══════════════════════════════════════
+//  FOREST EXPLORATION
+// ═══════════════════════════════════════
+const FOREST_CENTER = new THREE.Vector3(600, 0, 0);
+const FOREST_RADIUS = 48;
+
+const FOREST_ENEMY_DATA = [
+  { id:'f_wolf',   name:'Forest Wolf',   hp:75,  spd:5.5, dmg:10, sz:0.85, color:0x778899, straw:18 },
+  { id:'f_bear',   name:'Brown Bear',    hp:300, spd:2.0, dmg:30, sz:1.9,  color:0x7B4A2C, straw:45 },
+  { id:'f_goblin', name:'Cave Goblin',   hp:55,  spd:4.2, dmg:8,  sz:0.75, color:0x4a9a4a, straw:20, ranged:true },
+  { id:'f_spirit', name:'Forest Spirit', hp:50,  spd:3.8, dmg:7,  sz:0.85, color:0xaaddff, straw:22 },
+  { id:'f_troll',  name:'Stone Troll',   hp:180, spd:2.8, dmg:20, sz:1.4,  color:0x888866, straw:35, armor:0.3 },
+];
+
+const FOREST_ITEM_POOL = [
+  { type:'weapon', weaponId:'lumber_axe',     emoji:'🪓', label:'Lumber Axe',     color:0xc8640a },
+  { type:'weapon', weaponId:'hunters_bow',    emoji:'🏹', label:"Hunter's Bow",   color:0xa0522d },
+  { type:'weapon', weaponId:'forest_crystal', emoji:'🔮', label:'Forest Crystal', color:0x44ff88 },
+  { type:'weapon', weaponId:'leaf_blade',     emoji:'🍃', label:'Leaf Blade',     color:0x22cc22 },
+  { type:'weapon', weaponId:'bone_club',      emoji:'🦴', label:'Bone Club',      color:0xf0e68c },
+  { type:'heal',   id:'f_tea',   emoji:'🍵', label:'Forest Tea',     color:0x88ff88, amount:60 },
+  { type:'heal',   id:'f_herbs', emoji:'🌿', label:'Healing Herbs',  color:0x44ff44, amount:40 },
+  { type:'straw',  id:'f_gold',  emoji:'💰', label:'Gold Cache',     color:0xFFD700, amount:250 },
+  { type:'straw',  id:'f_gems',  emoji:'💎', label:'Gem Hoard',      color:0x88ccff, amount:400 },
+];
+
+let _inForest = false;
+let _forestMeshes = [];
+let _forestItems = [];
+let _forestEnemyTimer = 0;
+let _savedBetweenWaves = true;
+let _savedWaveActive = false;
+let _savedPlayerPos = null;
+let _origFogColor = 0x0d1220;
+let _origFogDensity = 0.009;
+
+function buildForest() {
+  const fc = FOREST_CENTER;
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x0c2010, roughness: 0.96 });
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(FOREST_RADIUS + 8, 48), floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.copy(fc);
+  floor.receiveShadow = true;
+  scene.add(floor);
+  _forestMeshes.push(floor);
+
+  // Trees
+  for (let i = 0; i < 55; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = 8 + Math.random() * (FOREST_RADIUS - 8);
+    const x = fc.x + Math.cos(angle) * r;
+    const z = fc.z + Math.sin(angle) * r;
+    const h = 4 + Math.random() * 5;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.38, h, 7), new THREE.MeshStandardMaterial({ color:0x3d2210, roughness:0.9 }));
+    trunk.position.set(x, h/2, z); trunk.castShadow = true; scene.add(trunk); _forestMeshes.push(trunk);
+    const leafCol = [0x1a4d1a,0x163d16,0x1e5c1e,0x0f300f][Math.floor(Math.random()*4)];
+    const cH = 2.8 + Math.random() * 2;
+    const canopy = new THREE.Mesh(new THREE.ConeGeometry(1.4 + Math.random()*0.9, cH, 7), new THREE.MeshStandardMaterial({ color:leafCol, roughness:0.85 }));
+    canopy.position.set(x, h + cH/2 - 0.3, z); canopy.castShadow = true; scene.add(canopy); _forestMeshes.push(canopy);
+    if (Math.random() < 0.3) {
+      const canopy2 = new THREE.Mesh(new THREE.ConeGeometry(1.0 + Math.random()*0.6, cH * 0.75, 7), new THREE.MeshStandardMaterial({ color:leafCol, roughness:0.85 }));
+      canopy2.position.set(x, h + cH + 0.8, z); scene.add(canopy2); _forestMeshes.push(canopy2);
+    }
+  }
+
+  // Rock clusters
+  for (let i = 0; i < 18; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = 6 + Math.random() * (FOREST_RADIUS - 10);
+    const x = fc.x + Math.cos(angle) * r;
+    const z = fc.z + Math.sin(angle) * r;
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35 + Math.random() * 0.45, 0), new THREE.MeshStandardMaterial({ color:0x555555, roughness:0.95 }));
+    rock.position.set(x, 0.25, z); rock.rotation.set(Math.random(), Math.random(), Math.random()); rock.castShadow = true;
+    scene.add(rock); _forestMeshes.push(rock);
+  }
+
+  // Item pickups — place around forest at distinct angles
+  const shuffled = [...FOREST_ITEM_POOL].sort(() => Math.random() - 0.5).slice(0, 7);
+  shuffled.forEach((itemData, idx) => {
+    const angle = (idx / shuffled.length) * Math.PI * 2;
+    const r = 14 + (idx % 3) * 9;
+    const pos = new THREE.Vector3(fc.x + Math.cos(angle) * r, 0.6, fc.z + Math.sin(angle) * r);
+
+    // Glowing orb
+    const orbMat = new THREE.MeshStandardMaterial({ color:itemData.color, emissive:itemData.color, emissiveIntensity:0.85, roughness:0.3 });
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.48, 10, 10), orbMat);
+    orb.position.copy(pos);
+    scene.add(orb); _forestMeshes.push(orb);
+
+    // Pedestal
+    const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 0.55, 8), new THREE.MeshStandardMaterial({ color:0x2a1a08, roughness:0.9 }));
+    ped.position.set(pos.x, 0.28, pos.z);
+    scene.add(ped); _forestMeshes.push(ped);
+
+    // Light glow ring
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.06, 6, 18), new THREE.MeshStandardMaterial({ color:itemData.color, emissive:itemData.color, emissiveIntensity:1.2, roughness:0.2 }));
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(pos.x, 0.12, pos.z);
+    scene.add(ring); _forestMeshes.push(ring);
+
+    _forestItems.push({ ...itemData, mesh: orb, glowRing: ring, pos: pos.clone(), collected: false });
+  });
+}
+
+function buildForestEnemyMesh(data) {
+  const sz = data.sz || 1;
+  const g = new THREE.Group();
+  const mk = (geo, col, px=0, py=0, pz=0) => {
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color:col, roughness:0.8 }));
+    m.position.set(px, py, pz); m.castShadow = true; g.add(m); return m;
+  };
+  const eyeM = new THREE.MeshStandardMaterial({ color:0xff1100, emissive:0xff0000, emissiveIntensity:0.9 });
+
+  if (data.id === 'f_bear' || data.id === 'f_troll') {
+    mk(new THREE.BoxGeometry(0.75*sz, 0.85*sz, 0.55*sz), data.color, 0, 0.85*sz, 0);
+    mk(new THREE.SphereGeometry(0.3*sz, 8, 8), data.color, 0, 1.55*sz, 0);
+    mk(new THREE.BoxGeometry(0.25*sz, 0.6*sz, 0.22*sz), data.color, -0.52*sz, 0.75*sz, 0);
+    mk(new THREE.BoxGeometry(0.25*sz, 0.6*sz, 0.22*sz), data.color,  0.52*sz, 0.75*sz, 0);
+    mk(new THREE.BoxGeometry(0.28*sz, 0.6*sz, 0.28*sz), data.color, -0.22*sz, 0.25*sz, 0);
+    mk(new THREE.BoxGeometry(0.28*sz, 0.6*sz, 0.28*sz), data.color,  0.22*sz, 0.25*sz, 0);
+  } else {
+    mk(new THREE.BoxGeometry(0.48*sz, 0.6*sz, 0.35*sz), data.color, 0, 0.75*sz, 0);
+    mk(new THREE.SphereGeometry(0.22*sz, 8, 8), data.color, 0, 1.3*sz, 0);
+    mk(new THREE.BoxGeometry(0.16*sz, 0.45*sz, 0.16*sz), data.color, -0.35*sz, 0.62*sz, 0);
+    mk(new THREE.BoxGeometry(0.16*sz, 0.45*sz, 0.16*sz), data.color,  0.35*sz, 0.62*sz, 0);
+    mk(new THREE.BoxGeometry(0.18*sz, 0.5*sz, 0.18*sz), data.color, -0.14*sz, 0.22*sz, 0);
+    mk(new THREE.BoxGeometry(0.18*sz, 0.5*sz, 0.18*sz), data.color,  0.14*sz, 0.22*sz, 0);
+  }
+  [-0.08*sz, 0.08*sz].forEach(ex => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055*sz, 5, 5), eyeM);
+    eye.position.set(ex, 1.33*sz, 0.19*sz); g.add(eye);
+  });
+  if (data.id === 'f_spirit') {
+    g.children.forEach(c => { if (c.material && !c.material.emissive.equals(new THREE.Color(0xff0000))) { c.material.emissive = new THREE.Color(0x6688ff); c.material.emissiveIntensity = 0.5; } });
+  }
+  return g;
+}
+
+function spawnForestEnemy(data) {
+  const angle = Math.random() * Math.PI * 2;
+  const r = 16 + Math.random() * (FOREST_RADIUS - 20);
+  const pos = new THREE.Vector3(FOREST_CENTER.x + Math.cos(angle) * r, 0.75, FOREST_CENTER.z + Math.sin(angle) * r);
+  const mesh = buildForestEnemyMesh(data);
+  mesh.position.copy(pos);
+  scene.add(mesh);
+  gs.enemies.push({
+    data: { ...data }, pos, vel: new THREE.Vector3(),
+    hp: data.hp, maxHp: data.hp, mesh,
+    attackCd: Math.random() * 1.5,
+    slowTimer: 0, poisonTimer: 0, burnTimer: 0,
+    _forestEnemy: true,
+  });
+}
+
+function collectForestItem(item) {
+  item.collected = true;
+  scene.remove(item.mesh);
+  if (item.glowRing) scene.remove(item.glowRing);
+  if (item.type === 'weapon') {
+    if (!gs.ownedWeapons.has(item.weaponId)) {
+      gs.ownedWeapons.add(item.weaponId);
+      const slot = gs.hotbar.indexOf(null);
+      if (slot >= 0) gs.hotbar[slot] = item.weaponId;
+      buildHotbar();
+    }
+    showToast(item.emoji + ' Found ' + item.label + '! Equip from hotbar.', 3500);
+  } else if (item.type === 'heal') {
+    const heal = Math.min(gs.playerMaxHP - gs.playerHP, item.amount);
+    gs.playerHP += heal;
+    showToast(item.emoji + ' ' + item.label + ' — +' + heal + ' HP!', 2500);
+  } else if (item.type === 'straw') {
+    gs.straw += item.amount;
+    const emoji = getActiveData().resourceEmoji;
+    floatText(gs.playerPos.clone().add(new THREE.Vector3(0,2,0)), '+' + item.amount + emoji, 0xFFD700);
+    showToast(item.emoji + ' ' + item.label + ' — +' + item.amount + ' ' + emoji + '!', 2500);
+  }
+  spawnFX(item.pos.clone().add(new THREE.Vector3(0, 1, 0)), item.color, 0.8, 1.5);
+}
+
+function enterForest() {
+  if (!gs.betweenWaves) { showToast('⚔️ Finish the wave first before exploring!', 2500); return; }
+  _inForest = true;
+  _savedBetweenWaves = gs.betweenWaves;
+  _savedWaveActive = gs.waveActive;
+  _savedPlayerPos = gs.playerPos.clone();
+  _forestEnemyTimer = 25;
+  gs.betweenWaves = false;
+  gs.waveActive = true;
+  gs.spawnQueue = [];
+  gs.playerPos.set(FOREST_CENTER.x, 0.75, FOREST_CENTER.z);
+  gs.playerVel.set(0, 0, 0);
+  gs.playerJumpVel = 0; gs.playerOnGround = true;
+  if (playerMesh) playerMesh.position.copy(gs.playerPos);
+  _forestItems = [];
+  _forestMeshes = [];
+  buildForest();
+  const spawnList = ['f_wolf','f_wolf','f_wolf','f_bear','f_goblin','f_goblin','f_spirit','f_spirit','f_troll'];
+  spawnList.forEach(id => { const d = FOREST_ENEMY_DATA.find(x => x.id === id); if (d) spawnForestEnemy(d); });
+  scene.fog = new THREE.FogExp2(0x040d04, 0.038);
+  const rb = document.getElementById('forest-return-btn');
+  if (rb) rb.style.display = 'flex';
+  const fb = document.getElementById('forest-enter-btn');
+  if (fb) fb.style.display = 'none';
+  showToast('🌲 Entered the Dark Forest — find hidden weapons and defeat monsters!', 5000);
+}
+
+function exitForest() {
+  _inForest = false;
+  gs.enemies.filter(e => e._forestEnemy).forEach(e => scene.remove(e.mesh));
+  gs.enemies = gs.enemies.filter(e => !e._forestEnemy);
+  _forestMeshes.forEach(m => scene.remove(m));
+  _forestMeshes = [];
+  _forestItems.forEach(i => { if (!i.collected) { scene.remove(i.mesh); if (i.glowRing) scene.remove(i.glowRing); } });
+  _forestItems = [];
+  gs.betweenWaves = _savedBetweenWaves;
+  gs.waveActive = _savedWaveActive;
+  if (_savedPlayerPos) gs.playerPos.copy(_savedPlayerPos);
+  gs.playerVel.set(0, 0, 0);
+  gs.playerJumpVel = 0; gs.playerOnGround = true;
+  if (playerMesh) playerMesh.position.copy(gs.playerPos);
+  scene.fog = new THREE.FogExp2(0x0d1220, 0.009);
+  const rb = document.getElementById('forest-return-btn');
+  if (rb) rb.style.display = 'none';
+  const fb = document.getElementById('forest-enter-btn');
+  if (fb) fb.style.display = 'flex';
+  buildHotbar();
+  showToast('🌾 Back on the farm! Prepare for the next wave.', 3000);
 }
 
 const ENEMY_TYPES = [
@@ -3691,6 +3927,7 @@ function updateEventSystem(dt) {
 function startNextWave() {
   gs._barnRestedThisWave = false;
   gs.betweenWaves = false; gs.waveActive = true;
+  const fb = document.getElementById('forest-enter-btn'); if (fb) fb.style.display = 'none';
   gs.wave++;
   const waveData = getActiveData().waves[(gs.wave - 1) % getActiveData().waves.length];
   gs.spawnQueue = [];
@@ -3706,6 +3943,7 @@ function startNextWave() {
 }
 
 function checkWaveEnd() {
+  if (_inForest) return;
   if (!gs.waveActive || gs.spawnQueue.length > 0 || gs.enemies.length > 0) return;
   gs.waveActive = false; gs.betweenWaves = true;
   const bonus = gs.wave * 10;
@@ -3715,6 +3953,7 @@ function checkWaveEnd() {
   gs._barnRestedThisWave = false;
   showToast('Wave ' + gs.wave + ' cleared! +' + bonus + ' straw bonus! 🎉', 3000);
   if (gs.wave >= getActiveData().waves.length) setTimeout(() => { stopBattleTheme(); showScreen('victory'); }, 2000);
+  const fb = document.getElementById('forest-enter-btn'); if (fb) fb.style.display = 'flex';
   saveGame();
 }
 
@@ -5213,7 +5452,7 @@ function buildHotbar() {
   const hb = document.getElementById('hotbar');
   hb.innerHTML = '';
   gs.hotbar.forEach((id, i) => {
-    const wd = id ? getActiveData().weapons.find(w => w.id === id) : null;
+    const wd = id ? (getActiveData().weapons.find(w => w.id === id) || SPECIAL_WEAPONS.find(w => w.id === id)) : null;
     const d = document.createElement('div');
     d.className = 'hotslot' + (gs.activeSlot === i ? ' active' : '');
     d.innerHTML = `<span class="sk">${i + 1}</span>${wd ? `<span class="se">${wd.emoji}</span><span class="sn">${wd.name.split(' ')[0]}</span>` : '<span style="color:#444;font-size:20px">—</span>'}`;
@@ -5801,6 +6040,7 @@ function startGame() {
   const mc = document.getElementById('merchant-corner'); if (mc) mc.style.display = 'block';
   const biomeMsg = gs.biome === 'jungle' ? '🌿 Welcome to the Jungle! Watch out for monkeys!' : gs.biome === 'snow' ? '❄️ Brr! Defend against the snowmen!' : gs.biome === 'deepsea' ? '🌊 You descend into the Deep! Beware the sea creatures!' : '🌾 Welcome! Press SPACE to start Wave 1!';
   showToast(isMobile ? 'Tap ▶ START WAVE to begin!' : biomeMsg, 4000);
+  const fb2 = document.getElementById('forest-enter-btn'); if (fb2) fb2.style.display = 'flex';
 }
 
 function loadAndPlay() {
@@ -5814,11 +6054,13 @@ function loadAndPlay() {
   buildPlayerMesh(); buildHotbar(); updateHUD();
   const mc2 = document.getElementById('merchant-corner'); if (mc2) mc2.style.display = 'block';
   showToast(isMobile ? 'Game loaded! Tap ▶ START WAVE.' : 'Game loaded! Press SPACE to continue.', 3000);
+  const fb2 = document.getElementById('forest-enter-btn'); if (fb2) fb2.style.display = 'flex';
 }
 
 function endGame() {
   gameStarted = false;
   _testMode = false;
+  if (_inForest) { exitForest(); _inForest = false; }
   stopBattleTheme();
   _biomeParticles.forEach(p => scene.remove(p.mesh));
   _biomeParticles = [];
@@ -6213,6 +6455,9 @@ function resetGame() {
   gs.playerSlowTimer = 0;
   gs.eventTimer = 90; gs.activeEvents = {}; gs._strawRainTick = 0;
   _merchantTimer = 420; _merchantActive = false; _merchantDuration = 0; _merchantStock = [];
+  if (_inForest) { gs.enemies.filter(e => e._forestEnemy).forEach(e => scene.remove(e.mesh)); gs.enemies = gs.enemies.filter(e => !e._forestEnemy); _forestMeshes.forEach(m => scene.remove(m)); _forestMeshes = []; _forestItems = []; _inForest = false; }
+  const _fbReset = document.getElementById('forest-enter-btn'); if (_fbReset) _fbReset.style.display = 'none';
+  const _rbReset = document.getElementById('forest-return-btn'); if (_rbReset) _rbReset.style.display = 'none';
   closeMerchantShop();
   const _mhud = document.getElementById('merchant-hud'); if (_mhud) _mhud.style.display = 'none';
   const _mcReset = document.getElementById('merchant-corner'); if (_mcReset) { _mcReset.style.display = 'none'; _mcReset.style.cursor = 'default'; }
@@ -6766,6 +7011,23 @@ function loop(ts) {
           }
         }
       }
+    }
+    if (_inForest) {
+      _forestEnemyTimer -= dt;
+      if (_forestEnemyTimer <= 0) {
+        _forestEnemyTimer = 22 + Math.random() * 12;
+        const fd = FOREST_ENEMY_DATA[Math.floor(Math.random() * FOREST_ENEMY_DATA.length)];
+        spawnForestEnemy(fd);
+      }
+      _forestItems.forEach(item => {
+        if (!item.collected && item.mesh && gs.playerPos.distanceTo(item.pos) < 2.2) {
+          collectForestItem(item);
+        }
+        if (item.mesh && !item.collected) {
+          item.mesh.position.y = 0.6 + Math.sin(Date.now() * 0.002 + item.pos.x) * 0.18;
+          item.mesh.rotation.y += dt * 1.1;
+        }
+      });
     }
     updateProjectiles(dt);
     updatePlacedPlants(dt);
