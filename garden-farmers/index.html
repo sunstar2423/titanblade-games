@@ -1304,6 +1304,45 @@ function buildCavernScenery(area) {
     pool.rotation.x = -Math.PI / 2; pool.position.set(x, 0.04, z); scene.add(pool); _forestMeshes.push(pool);
     const glow = new THREE.PointLight(0xff4400, 1.5, 11, 1.5); glow.position.set(x, 1.4, z); scene.add(glow); _forestMeshes.push(glow);
   }
+
+  // ── Enclose it as a real underground cavern (a whole different place) ──
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x130a08, roughness: 1.0, metalness: 0, side: THREE.BackSide });
+
+  // Dark rock ceiling dome overhead — seals off the sky so it reads as a cave
+  const ceiling = new THREE.Mesh(
+    new THREE.SphereGeometry(R + 18, 36, 14, 0, Math.PI * 2, 0, Math.PI / 2.1),
+    rockMat
+  );
+  ceiling.position.set(fc.x, 0, fc.z);
+  scene.add(ceiling); _forestMeshes.push(ceiling);
+
+  // Encircling cave wall so you can't see out to the open world
+  const wall = new THREE.Mesh(
+    new THREE.CylinderGeometry(R + 12, R + 16, 30, 40, 1, true),
+    rockMat
+  );
+  wall.position.set(fc.x, 13, fc.z);
+  scene.add(wall); _forestMeshes.push(wall);
+
+  // Hanging stalactites dropping from the ceiling
+  const dripMat = new THREE.MeshStandardMaterial({ color: 0x241410, roughness: 0.96 });
+  for (let i = 0; i < 40; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = Math.random() * (R + 4);
+    const x = fc.x + Math.cos(angle) * r;
+    const z = fc.z + Math.sin(angle) * r;
+    const h = 2 + Math.random() * 6;
+    const yTop = 17 + Math.random() * 5;
+    const drip = new THREE.Mesh(new THREE.ConeGeometry(0.35 + Math.random() * 0.5, h, 6), dripMat);
+    drip.rotation.x = Math.PI;           // point downward
+    drip.position.set(x, yTop - h / 2, z);
+    scene.add(drip); _forestMeshes.push(drip);
+  }
+
+  // Dim red ambient glow up near the ceiling for depth
+  const ceilGlow = new THREE.PointLight(0xff3300, 0.7, R + 30, 1.4);
+  ceilGlow.position.set(fc.x, 16, fc.z);
+  scene.add(ceilGlow); _forestMeshes.push(ceilGlow);
 }
 
 // Generic builder shared by every explorable area
