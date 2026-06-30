@@ -143,7 +143,6 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div id="side-panel">
     <div class="side-btn" title="Shop (B)" onclick="toggleShop()">🛒</div>
     <div class="side-btn" title="Music" id="mute-btn" onclick="toggleMute()">🔊</div>
-    <div class="side-btn" id="forest-enter-btn" title="Explore Forest (between waves only)" onclick="enterForest()" style="color:#4dff88;display:none">🌲</div>
     <div class="side-btn" id="cavern-enter-btn" title="Explore Molten Cavern (between waves only)" onclick="enterCavern()" style="color:#ff7744;display:none">🌋</div>
     <div class="side-btn" id="forest-return-btn" title="Return to Farm" onclick="exitForest()" style="color:#FFD700;display:none">🔙</div>
   </div>
@@ -1233,21 +1232,11 @@ function updateMerchant(dt) {
 //  FOREST EXPLORATION
 // ═══════════════════════════════════════
 // ═══════════════════════════════════════
-//  EXPLORABLE AREAS (Forest, Cavern, …)
+//  EXPLORABLE AREAS (Cavern, …)
 //  Separate worlds reached between waves — each a whole different place
 //  with its own sky, ground, lighting, enemies and reward orbs.
 // ═══════════════════════════════════════
-const FOREST_CENTER = new THREE.Vector3(600, 0, 0);
 const CAVERN_CENTER = new THREE.Vector3(-600, 0, 0);
-const FOREST_RADIUS = 48;
-
-const FOREST_ENEMY_DATA = [
-  { id:'f_wolf',   name:'Forest Wolf',   hp:75,  spd:5.5, dmg:10, sz:0.85, color:0x778899, straw:18, shape:'small' },
-  { id:'f_bear',   name:'Brown Bear',    hp:300, spd:2.0, dmg:30, sz:1.9,  color:0x7B4A2C, straw:45, shape:'big' },
-  { id:'f_goblin', name:'Cave Goblin',   hp:55,  spd:4.2, dmg:8,  sz:0.75, color:0x4a9a4a, straw:20, ranged:true, shape:'small' },
-  { id:'f_spirit', name:'Forest Spirit', hp:50,  spd:3.8, dmg:7,  sz:0.85, color:0xaaddff, straw:22, shape:'small', glow:0x6688ff },
-  { id:'f_troll',  name:'Stone Troll',   hp:180, spd:2.8, dmg:20, sz:1.4,  color:0x888866, straw:35, armor:0.3, shape:'big' },
-];
 
 const CAVERN_ENEMY_DATA = [
   { id:'c_imp',   name:'Lava Imp',       hp:60,  spd:6.0, dmg:9,  sz:0.8, color:0xff4422, straw:20, ranged:true, shape:'small', glow:0xff3300 },
@@ -1255,18 +1244,6 @@ const CAVERN_ENEMY_DATA = [
   { id:'c_bat',   name:'Cave Bat',       hp:40,  spd:7.5, dmg:6,  sz:0.6, color:0x442233, straw:14, shape:'small' },
   { id:'c_sala',  name:'Salamander',     hp:120, spd:4.0, dmg:14, sz:1.1, color:0xcc3311, straw:28, shape:'small', glow:0xff6600 },
   { id:'c_brute', name:'Obsidian Brute', hp:240, spd:2.6, dmg:24, sz:1.5, color:0x222233, straw:44, armor:0.35, shape:'big', glow:0x884466 },
-];
-
-const FOREST_ITEM_POOL = [
-  { type:'weapon', weaponId:'lumber_axe',     emoji:'🪓', label:'Lumber Axe',     color:0xc8640a },
-  { type:'weapon', weaponId:'hunters_bow',    emoji:'🏹', label:"Hunter's Bow",   color:0xa0522d },
-  { type:'weapon', weaponId:'forest_crystal', emoji:'🔮', label:'Forest Crystal', color:0x44ff88 },
-  { type:'weapon', weaponId:'leaf_blade',     emoji:'🍃', label:'Leaf Blade',     color:0x22cc22 },
-  { type:'weapon', weaponId:'bone_club',      emoji:'🦴', label:'Bone Club',      color:0xf0e68c },
-  { type:'heal',   id:'f_tea',   emoji:'🍵', label:'Forest Tea',     color:0x88ff88, amount:60 },
-  { type:'heal',   id:'f_herbs', emoji:'🌿', label:'Healing Herbs',  color:0x44ff44, amount:40 },
-  { type:'straw',  id:'f_gold',  emoji:'💰', label:'Gold Cache',     color:0xFFD700, amount:250 },
-  { type:'straw',  id:'f_gems',  emoji:'💎', label:'Gem Hoard',      color:0x88ccff, amount:400 },
 ];
 
 const CAVERN_ITEM_POOL = [
@@ -1294,37 +1271,6 @@ let _origFogDensity = 0.009;
 let _forestFireflies = null;
 // Saved farm ambiance so each area can have its own distinct lighting
 let _savedLighting = null;
-
-// Forest scenery: trees + scattered rocks
-function buildForestScenery(area) {
-  const fc = area.center, R = area.radius;
-  for (let i = 0; i < 55; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const r = 8 + Math.random() * (R - 8);
-    const x = fc.x + Math.cos(angle) * r;
-    const z = fc.z + Math.sin(angle) * r;
-    const h = 4 + Math.random() * 5;
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.38, h, 7), new THREE.MeshStandardMaterial({ color:0x3d2210, roughness:0.9 }));
-    trunk.position.set(x, h/2, z); trunk.castShadow = true; scene.add(trunk); _forestMeshes.push(trunk);
-    const leafCol = [0x1a4d1a,0x163d16,0x1e5c1e,0x0f300f][Math.floor(Math.random()*4)];
-    const cH = 2.8 + Math.random() * 2;
-    const canopy = new THREE.Mesh(new THREE.ConeGeometry(1.4 + Math.random()*0.9, cH, 7), new THREE.MeshStandardMaterial({ color:leafCol, roughness:0.85 }));
-    canopy.position.set(x, h + cH/2 - 0.3, z); canopy.castShadow = true; scene.add(canopy); _forestMeshes.push(canopy);
-    if (Math.random() < 0.3) {
-      const canopy2 = new THREE.Mesh(new THREE.ConeGeometry(1.0 + Math.random()*0.6, cH * 0.75, 7), new THREE.MeshStandardMaterial({ color:leafCol, roughness:0.85 }));
-      canopy2.position.set(x, h + cH + 0.8, z); scene.add(canopy2); _forestMeshes.push(canopy2);
-    }
-  }
-  for (let i = 0; i < 18; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const r = 6 + Math.random() * (R - 10);
-    const x = fc.x + Math.cos(angle) * r;
-    const z = fc.z + Math.sin(angle) * r;
-    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35 + Math.random() * 0.45, 0), new THREE.MeshStandardMaterial({ color:0x555555, roughness:0.95 }));
-    rock.position.set(x, 0.25, z); rock.rotation.set(Math.random(), Math.random(), Math.random()); rock.castShadow = true;
-    scene.add(rock); _forestMeshes.push(rock);
-  }
-}
 
 // Cavern scenery: rocky stalagmites, dark boulders, glowing lava pools
 function buildCavernScenery(area) {
@@ -1466,21 +1412,6 @@ function buildArea(area) {
 }
 
 // Area config table
-const AREA_FOREST = {
-  id:'forest', center:FOREST_CENTER, radius:48,
-  enemyData:FOREST_ENEMY_DATA, itemPool:FOREST_ITEM_POOL,
-  spawnList:['f_wolf','f_wolf','f_wolf','f_bear','f_goblin','f_goblin','f_spirit','f_spirit','f_troll'],
-  scenery:buildForestScenery, enterBtn:'forest-enter-btn',
-  sky:['#01100a','#042014','#0a3322','#14543a','#1e6e4a'],
-  groundBase:'#0a1c0e', groundSpecks:['#06140a','#102a14','#143518','#1c4422'],
-  floorColor:0x0c2010,
-  beacon:{ color:0xcfe8d8, light:0x88bbaa },
-  particle:0xaaff66,
-  fog:{ color:0x040d04, density:0.045 },
-  lighting:{ hemi:0x244d33, hemiGround:0x06140a, hemiInt:0.65, sun:0x6fae8c, sunInt:0.35, fill:0.18, rim:0.55, top:0.08 },
-  enterToast:'🌲 Entered the Dark Forest — find hidden weapons and defeat monsters!',
-};
-
 const AREA_CAVERN = {
   id:'cavern', center:CAVERN_CENTER, radius:48,
   enemyData:CAVERN_ENEMY_DATA, itemPool:CAVERN_ITEM_POOL,
@@ -1576,10 +1507,10 @@ function collectForestItem(item) {
 }
 
 function showExploreButtons() {
-  ['forest-enter-btn','cavern-enter-btn'].forEach(id => { const b = document.getElementById(id); if (b) b.style.display = 'flex'; });
+  ['cavern-enter-btn'].forEach(id => { const b = document.getElementById(id); if (b) b.style.display = 'flex'; });
 }
 function hideExploreButtons() {
-  ['forest-enter-btn','cavern-enter-btn'].forEach(id => { const b = document.getElementById(id); if (b) b.style.display = 'none'; });
+  ['cavern-enter-btn'].forEach(id => { const b = document.getElementById(id); if (b) b.style.display = 'none'; });
 }
 
 function enterArea(area) {
@@ -1658,7 +1589,6 @@ function exitArea() {
 }
 
 // Button hooks
-function enterForest() { enterArea(AREA_FOREST); }
 function enterCavern() { enterArea(AREA_CAVERN); }
 function exitForest()  { exitArea(); }
 
