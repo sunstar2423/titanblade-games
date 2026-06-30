@@ -144,6 +144,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
     <div class="side-btn" title="Shop (B)" onclick="toggleShop()">🛒</div>
     <div class="side-btn" title="Music" id="mute-btn" onclick="toggleMute()">🔊</div>
     <div class="side-btn" id="forest-enter-btn" title="Explore Forest (between waves only)" onclick="enterForest()" style="color:#4dff88;display:none">🌲</div>
+    <div class="side-btn" id="cavern-enter-btn" title="Explore Molten Cavern (between waves only)" onclick="enterCavern()" style="color:#ff7744;display:none">🌋</div>
     <div class="side-btn" id="forest-return-btn" title="Return to Farm" onclick="exitForest()" style="color:#FFD700;display:none">🔙</div>
   </div>
   <div id="hint">WASD — Move<br>Click — Attack<br>1-5 — Switch weapon<br>B — Shop<br>SPACE — Start Wave</div>
@@ -724,6 +725,12 @@ const SPECIAL_WEAPONS = [
   { id:'forest_crystal',name:'Forest Crystal', emoji:'🔮', cost:0, desc:'Bounces through 6 enemies',               kind:'bounce', dmg:32,  range:16,  cd:0.65, bounces:6, color:0x44ff88 },
   { id:'leaf_blade',    name:'Leaf Blade',     emoji:'🍃', cost:0, desc:'Ultra-rapid slashing blades',             kind:'needle', dmg:14,  range:10,  cd:0.15, color:0x22aa22 },
   { id:'bone_club',     name:'Bone Club',      emoji:'🦴', cost:0, desc:'Heavy club — slows enemies on hit',       kind:'heavy',  dmg:80,  range:2.3, cd:1.6,  color:0xf0e68c, slow:0.85, slowDur:3 },
+  // Molten Cavern exclusives
+  { id:'magma_maul',    name:'Magma Maul',     emoji:'🔨', cost:0, desc:'Molten hammer — devastating slow slam',   kind:'heavy',  dmg:130, range:2.8, cd:1.9,  color:0xff4400 },
+  { id:'ember_bow',     name:'Ember Bow',      emoji:'🏹', cost:0, desc:'Rapid blazing arrows, very long range',   kind:'dart',   dmg:60,  range:22,  cd:0.3,  color:0xff6600 },
+  { id:'flame_orb',     name:'Magma Orb',      emoji:'🔥', cost:0, desc:'Lobbed orb that explodes in fire',        kind:'orb',    dmg:40,  range:13,  cd:1.0,  color:0xff3300, aoe:3.2 },
+  { id:'obsidian_star', name:'Obsidian Star',  emoji:'✴️', cost:0, desc:'Spinning shard star projectile',          kind:'star',   dmg:30,  range:12,  cd:0.4,  color:0x9966cc },
+  { id:'cinder_cloud',  name:'Cinder Cloud',   emoji:'☁️', cost:0, desc:'Lingering burning cinder cloud AoE',      kind:'cloud',  dmg:7,   range:4,   cd:1.2,  color:0xff7733, aoe:4.5, dur:5 },
 ];
 
 const PLACEABLES = [
@@ -1225,15 +1232,29 @@ function updateMerchant(dt) {
 // ═══════════════════════════════════════
 //  FOREST EXPLORATION
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+//  EXPLORABLE AREAS (Forest, Cavern, …)
+//  Separate worlds reached between waves — each a whole different place
+//  with its own sky, ground, lighting, enemies and reward orbs.
+// ═══════════════════════════════════════
 const FOREST_CENTER = new THREE.Vector3(600, 0, 0);
+const CAVERN_CENTER = new THREE.Vector3(-600, 0, 0);
 const FOREST_RADIUS = 48;
 
 const FOREST_ENEMY_DATA = [
-  { id:'f_wolf',   name:'Forest Wolf',   hp:75,  spd:5.5, dmg:10, sz:0.85, color:0x778899, straw:18 },
-  { id:'f_bear',   name:'Brown Bear',    hp:300, spd:2.0, dmg:30, sz:1.9,  color:0x7B4A2C, straw:45 },
-  { id:'f_goblin', name:'Cave Goblin',   hp:55,  spd:4.2, dmg:8,  sz:0.75, color:0x4a9a4a, straw:20, ranged:true },
-  { id:'f_spirit', name:'Forest Spirit', hp:50,  spd:3.8, dmg:7,  sz:0.85, color:0xaaddff, straw:22 },
-  { id:'f_troll',  name:'Stone Troll',   hp:180, spd:2.8, dmg:20, sz:1.4,  color:0x888866, straw:35, armor:0.3 },
+  { id:'f_wolf',   name:'Forest Wolf',   hp:75,  spd:5.5, dmg:10, sz:0.85, color:0x778899, straw:18, shape:'small' },
+  { id:'f_bear',   name:'Brown Bear',    hp:300, spd:2.0, dmg:30, sz:1.9,  color:0x7B4A2C, straw:45, shape:'big' },
+  { id:'f_goblin', name:'Cave Goblin',   hp:55,  spd:4.2, dmg:8,  sz:0.75, color:0x4a9a4a, straw:20, ranged:true, shape:'small' },
+  { id:'f_spirit', name:'Forest Spirit', hp:50,  spd:3.8, dmg:7,  sz:0.85, color:0xaaddff, straw:22, shape:'small', glow:0x6688ff },
+  { id:'f_troll',  name:'Stone Troll',   hp:180, spd:2.8, dmg:20, sz:1.4,  color:0x888866, straw:35, armor:0.3, shape:'big' },
+];
+
+const CAVERN_ENEMY_DATA = [
+  { id:'c_imp',   name:'Lava Imp',       hp:60,  spd:6.0, dmg:9,  sz:0.8, color:0xff4422, straw:20, ranged:true, shape:'small', glow:0xff3300 },
+  { id:'c_golem', name:'Magma Golem',    hp:340, spd:1.8, dmg:32, sz:2.0, color:0x662211, straw:52, shape:'big', glow:0xff5500 },
+  { id:'c_bat',   name:'Cave Bat',       hp:40,  spd:7.5, dmg:6,  sz:0.6, color:0x442233, straw:14, shape:'small' },
+  { id:'c_sala',  name:'Salamander',     hp:120, spd:4.0, dmg:14, sz:1.1, color:0xcc3311, straw:28, shape:'small', glow:0xff6600 },
+  { id:'c_brute', name:'Obsidian Brute', hp:240, spd:2.6, dmg:24, sz:1.5, color:0x222233, straw:44, armor:0.35, shape:'big', glow:0x884466 },
 ];
 
 const FOREST_ITEM_POOL = [
@@ -1248,7 +1269,20 @@ const FOREST_ITEM_POOL = [
   { type:'straw',  id:'f_gems',  emoji:'💎', label:'Gem Hoard',      color:0x88ccff, amount:400 },
 ];
 
-let _inForest = false;
+const CAVERN_ITEM_POOL = [
+  { type:'weapon', weaponId:'magma_maul',    emoji:'🔨', label:'Magma Maul',    color:0xff4400 },
+  { type:'weapon', weaponId:'ember_bow',     emoji:'🏹', label:'Ember Bow',     color:0xff6600 },
+  { type:'weapon', weaponId:'flame_orb',     emoji:'🔥', label:'Magma Orb',     color:0xff3300 },
+  { type:'weapon', weaponId:'obsidian_star', emoji:'✴️', label:'Obsidian Star', color:0x9966cc },
+  { type:'weapon', weaponId:'cinder_cloud',  emoji:'☁️', label:'Cinder Cloud',  color:0xff7733 },
+  { type:'heal',   id:'c_spring',   emoji:'💧', label:'Hot Spring',    color:0x66ddff, amount:60 },
+  { type:'heal',   id:'c_moss',     emoji:'🌱', label:'Cave Moss',     color:0x66ff88, amount:40 },
+  { type:'straw',  id:'c_gold',     emoji:'💰', label:'Buried Gold',   color:0xFFD700, amount:280 },
+  { type:'straw',  id:'c_crystals', emoji:'💎', label:'Fire Crystals', color:0xff5522, amount:420 },
+];
+
+let _inForest = false;          // true whenever the player is in ANY explore area
+let _currentArea = null;        // the active area config
 let _forestMeshes = [];
 let _forestItems = [];
 let _forestEnemyTimer = 0;
@@ -1258,94 +1292,15 @@ let _savedPlayerPos = null;
 let _origFogColor = 0x0d1220;
 let _origFogDensity = 0.009;
 let _forestFireflies = null;
-// Saved farm ambiance so the forest can have its own distinct lighting
+// Saved farm ambiance so each area can have its own distinct lighting
 let _savedLighting = null;
 
-function buildForest() {
-  const fc = FOREST_CENTER;
-
-  // ── A whole different world: forest sky dome ─────────────────
-  // The farm sky dome lives at the origin (radius 90); the forest sits
-  // 600 units away, so it needs its OWN sky or it floats in black void.
-  (function() {
-    const c = document.createElement('canvas'); c.width = 2; c.height = 256;
-    const ctx = c.getContext('2d');
-    const g = ctx.createLinearGradient(0, 0, 0, 256);
-    g.addColorStop(0,    '#01100a');
-    g.addColorStop(0.32, '#042014');
-    g.addColorStop(0.62, '#0a3322');
-    g.addColorStop(0.84, '#14543a');
-    g.addColorStop(1,    '#1e6e4a');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
-    const tex = new THREE.CanvasTexture(c);
-    const dome = new THREE.Mesh(
-      new THREE.SphereGeometry(90, 32, 16),
-      new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide })
-    );
-    dome.position.copy(fc);
-    scene.add(dome); _forestMeshes.push(dome);
-  })();
-
-  // Pale forest moon
-  (function() {
-    const moon = new THREE.Mesh(
-      new THREE.SphereGeometry(5, 18, 18),
-      new THREE.MeshBasicMaterial({ color: 0xcfe8d8 })
-    );
-    moon.position.set(fc.x - 38, 46, fc.z - 55);
-    scene.add(moon); _forestMeshes.push(moon);
-    const moonGlow = new THREE.PointLight(0x88bbaa, 1.1, 220, 1.2);
-    moonGlow.position.copy(moon.position);
-    scene.add(moonGlow); _forestMeshes.push(moonGlow);
-  })();
-
-  // Large dark forest ground so there is no void edge around the clearing
-  (function() {
-    const gc = document.createElement('canvas'); gc.width = 256; gc.height = 256;
-    const gx = gc.getContext('2d');
-    gx.fillStyle = '#0a1c0e'; gx.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 1600; i++) {
-      const v = Math.random();
-      gx.fillStyle = v < 0.3 ? '#06140a' : v < 0.6 ? '#102a14' : v < 0.85 ? '#143518' : '#1c4422';
-      gx.fillRect(Math.random()*256, Math.random()*256, Math.random()*3+1, Math.random()*3+1);
-    }
-    const gtex = new THREE.CanvasTexture(gc); gtex.wrapS = gtex.wrapT = THREE.RepeatWrapping; gtex.repeat.set(16, 16);
-    const big = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ map: gtex, roughness: 0.98, metalness: 0 }));
-    big.rotation.x = -Math.PI / 2; big.position.set(fc.x, -0.02, fc.z); big.receiveShadow = true;
-    scene.add(big); _forestMeshes.push(big);
-  })();
-
-  // Drifting fireflies for atmosphere
-  (function() {
-    const count = 90;
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const r = Math.random() * (FOREST_RADIUS + 6);
-      pos[i*3]   = fc.x + Math.cos(a) * r;
-      pos[i*3+1] = 0.5 + Math.random() * 4.5;
-      pos[i*3+2] = fc.z + Math.sin(a) * r;
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const mat = new THREE.PointsMaterial({ color: 0xaaff66, size: 0.4, sizeAttenuation: true, transparent: true, opacity: 0.9 });
-    _forestFireflies = new THREE.Points(geo, mat);
-    scene.add(_forestFireflies); _forestMeshes.push(_forestFireflies);
-  })();
-
-  const floorMat = new THREE.MeshStandardMaterial({ color: 0x0c2010, roughness: 0.96 });
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(FOREST_RADIUS + 8, 48), floorMat);
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.copy(fc);
-  floor.position.y = 0.01;
-  floor.receiveShadow = true;
-  scene.add(floor);
-  _forestMeshes.push(floor);
-
-  // Trees
+// Forest scenery: trees + scattered rocks
+function buildForestScenery(area) {
+  const fc = area.center, R = area.radius;
   for (let i = 0; i < 55; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const r = 8 + Math.random() * (FOREST_RADIUS - 8);
+    const r = 8 + Math.random() * (R - 8);
     const x = fc.x + Math.cos(angle) * r;
     const z = fc.z + Math.sin(angle) * r;
     const h = 4 + Math.random() * 5;
@@ -1360,69 +1315,188 @@ function buildForest() {
       canopy2.position.set(x, h + cH + 0.8, z); scene.add(canopy2); _forestMeshes.push(canopy2);
     }
   }
-
-  // Rock clusters
   for (let i = 0; i < 18; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const r = 6 + Math.random() * (FOREST_RADIUS - 10);
+    const r = 6 + Math.random() * (R - 10);
     const x = fc.x + Math.cos(angle) * r;
     const z = fc.z + Math.sin(angle) * r;
     const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35 + Math.random() * 0.45, 0), new THREE.MeshStandardMaterial({ color:0x555555, roughness:0.95 }));
     rock.position.set(x, 0.25, z); rock.rotation.set(Math.random(), Math.random(), Math.random()); rock.castShadow = true;
     scene.add(rock); _forestMeshes.push(rock);
   }
+}
 
-  // Item pickups — place around forest at distinct angles
-  const shuffled = [...FOREST_ITEM_POOL].sort(() => Math.random() - 0.5).slice(0, 7);
+// Cavern scenery: rocky stalagmites, dark boulders, glowing lava pools
+function buildCavernScenery(area) {
+  const fc = area.center, R = area.radius;
+  for (let i = 0; i < 52; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = 7 + Math.random() * (R - 7);
+    const x = fc.x + Math.cos(angle) * r;
+    const z = fc.z + Math.sin(angle) * r;
+    const h = 2 + Math.random() * 6;
+    const col = [0x2a1815,0x1f1210,0x33201a,0x241410][Math.floor(Math.random()*4)];
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.4 + Math.random()*0.6, h, 6), new THREE.MeshStandardMaterial({ color:col, roughness:0.96 }));
+    spike.position.set(x, h/2, z); spike.castShadow = true; scene.add(spike); _forestMeshes.push(spike);
+  }
+  for (let i = 0; i < 14; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = 6 + Math.random() * (R - 10);
+    const x = fc.x + Math.cos(angle) * r;
+    const z = fc.z + Math.sin(angle) * r;
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.45 + Math.random() * 0.6, 0), new THREE.MeshStandardMaterial({ color:0x1a1418, roughness:0.95 }));
+    rock.position.set(x, 0.3, z); rock.rotation.set(Math.random(), Math.random(), Math.random()); rock.castShadow = true;
+    scene.add(rock); _forestMeshes.push(rock);
+  }
+  // Glowing lava pools that light their surroundings
+  for (let i = 0; i < 7; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = 10 + Math.random() * (R - 12);
+    const x = fc.x + Math.cos(angle) * r;
+    const z = fc.z + Math.sin(angle) * r;
+    const pool = new THREE.Mesh(new THREE.CircleGeometry(1.2 + Math.random()*1.8, 18), new THREE.MeshStandardMaterial({ color:0xff3300, emissive:0xff3300, emissiveIntensity:1.1, roughness:0.5 }));
+    pool.rotation.x = -Math.PI / 2; pool.position.set(x, 0.04, z); scene.add(pool); _forestMeshes.push(pool);
+    const glow = new THREE.PointLight(0xff4400, 1.5, 11, 1.5); glow.position.set(x, 1.4, z); scene.add(glow); _forestMeshes.push(glow);
+  }
+}
+
+// Generic builder shared by every explorable area
+function buildArea(area) {
+  const fc = area.center, R = area.radius;
+
+  // Own sky dome (the farm dome is at the origin; areas sit far away)
+  (function() {
+    const c = document.createElement('canvas'); c.width = 2; c.height = 256;
+    const ctx = c.getContext('2d');
+    const g = ctx.createLinearGradient(0, 0, 0, 256);
+    const s = area.sky;
+    g.addColorStop(0, s[0]); g.addColorStop(0.32, s[1]); g.addColorStop(0.62, s[2]); g.addColorStop(0.84, s[3]); g.addColorStop(1, s[4]);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
+    const tex = new THREE.CanvasTexture(c);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(90, 32, 16), new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide }));
+    dome.position.copy(fc); scene.add(dome); _forestMeshes.push(dome);
+  })();
+
+  // Beacon — a moon (forest) or molten sun (cavern)
+  (function() {
+    const beacon = new THREE.Mesh(new THREE.SphereGeometry(5, 18, 18), new THREE.MeshBasicMaterial({ color: area.beacon.color }));
+    beacon.position.set(fc.x - 38, 46, fc.z - 55); scene.add(beacon); _forestMeshes.push(beacon);
+    const bl = new THREE.PointLight(area.beacon.light, 1.1, 220, 1.2); bl.position.copy(beacon.position); scene.add(bl); _forestMeshes.push(bl);
+  })();
+
+  // Large textured ground so there is no void edge around the clearing
+  (function() {
+    const gc = document.createElement('canvas'); gc.width = 256; gc.height = 256;
+    const gx = gc.getContext('2d');
+    gx.fillStyle = area.groundBase; gx.fillRect(0, 0, 256, 256);
+    const sp = area.groundSpecks;
+    for (let i = 0; i < 1600; i++) {
+      const v = Math.random();
+      gx.fillStyle = v < 0.3 ? sp[0] : v < 0.6 ? sp[1] : v < 0.85 ? sp[2] : sp[3];
+      gx.fillRect(Math.random()*256, Math.random()*256, Math.random()*3+1, Math.random()*3+1);
+    }
+    const gtex = new THREE.CanvasTexture(gc); gtex.wrapS = gtex.wrapT = THREE.RepeatWrapping; gtex.repeat.set(16, 16);
+    const big = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ map: gtex, roughness: 0.98, metalness: 0 }));
+    big.rotation.x = -Math.PI / 2; big.position.set(fc.x, -0.02, fc.z); big.receiveShadow = true;
+    scene.add(big); _forestMeshes.push(big);
+  })();
+
+  // Drifting atmosphere particles (fireflies / embers)
+  (function() {
+    const count = 90;
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * (R + 6);
+      pos[i*3]   = fc.x + Math.cos(a) * r;
+      pos[i*3+1] = 0.5 + Math.random() * 4.5;
+      pos[i*3+2] = fc.z + Math.sin(a) * r;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color: area.particle, size: 0.4, sizeAttenuation: true, transparent: true, opacity: 0.9 });
+    _forestFireflies = new THREE.Points(geo, mat);
+    scene.add(_forestFireflies); _forestMeshes.push(_forestFireflies);
+  })();
+
+  // Clearing floor
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(R + 8, 48), new THREE.MeshStandardMaterial({ color: area.floorColor, roughness: 0.96 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.copy(fc); floor.position.y = 0.01; floor.receiveShadow = true;
+  scene.add(floor); _forestMeshes.push(floor);
+
+  // Area-specific scenery
+  area.scenery(area);
+
+  // Reward orb pickups — placed around the clearing at distinct angles
+  const shuffled = [...area.itemPool].sort(() => Math.random() - 0.5).slice(0, 7);
   shuffled.forEach((itemData, idx) => {
     const angle = (idx / shuffled.length) * Math.PI * 2;
     const r = 14 + (idx % 3) * 9;
     const orbY = 1.5;
     const pos = new THREE.Vector3(fc.x + Math.cos(angle) * r, orbY, fc.z + Math.sin(angle) * r);
 
-    // Big bright glowing orb (lifted up so it's easy to spot)
     const orbMat = new THREE.MeshStandardMaterial({ color:itemData.color, emissive:itemData.color, emissiveIntensity:1.6, roughness:0.25 });
     const orb = new THREE.Mesh(new THREE.SphereGeometry(0.85, 14, 14), orbMat);
-    orb.position.copy(pos);
-    scene.add(orb); _forestMeshes.push(orb);
+    orb.position.copy(pos); scene.add(orb); _forestMeshes.push(orb);
 
-    // Translucent halo around the orb
     const halo = new THREE.Mesh(
       new THREE.SphereGeometry(1.25, 14, 14),
       new THREE.MeshBasicMaterial({ color:itemData.color, transparent:true, opacity:0.22, side:THREE.BackSide, depthWrite:false })
     );
-    halo.position.copy(pos);
-    scene.add(halo); _forestMeshes.push(halo);
+    halo.position.copy(pos); scene.add(halo); _forestMeshes.push(halo);
 
-    // Per-orb point light so it lights up its surroundings
     const orbLight = new THREE.PointLight(itemData.color, 2.2, 14, 1.6);
-    orbLight.position.copy(pos);
-    scene.add(orbLight); _forestMeshes.push(orbLight);
+    orbLight.position.copy(pos); scene.add(orbLight); _forestMeshes.push(orbLight);
 
-    // Tall light beam — visible from across the whole forest
     const beam = new THREE.Mesh(
       new THREE.CylinderGeometry(0.32, 0.55, 22, 12, 1, true),
       new THREE.MeshBasicMaterial({ color:itemData.color, transparent:true, opacity:0.28, side:THREE.DoubleSide, depthWrite:false })
     );
-    beam.position.set(pos.x, 11, pos.z);
-    scene.add(beam); _forestMeshes.push(beam);
+    beam.position.set(pos.x, 11, pos.z); scene.add(beam); _forestMeshes.push(beam);
 
-    // Pedestal
     const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 0.7, 8), new THREE.MeshStandardMaterial({ color:0x2a1a08, roughness:0.9 }));
-    ped.position.set(pos.x, 0.35, pos.z);
-    scene.add(ped); _forestMeshes.push(ped);
+    ped.position.set(pos.x, 0.35, pos.z); scene.add(ped); _forestMeshes.push(ped);
 
-    // Bright spinning glow ring at the base
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.1, 8, 22), new THREE.MeshStandardMaterial({ color:itemData.color, emissive:itemData.color, emissiveIntensity:1.6, roughness:0.2 }));
-    ring.rotation.x = Math.PI / 2;
-    ring.position.set(pos.x, 0.14, pos.z);
+    ring.rotation.x = Math.PI / 2; ring.position.set(pos.x, 0.14, pos.z);
     scene.add(ring); _forestMeshes.push(ring);
 
     _forestItems.push({ ...itemData, mesh: orb, glowRing: ring, halo, beam, orbLight, baseY: orbY, phase: idx * 1.1, pos: pos.clone(), collected: false });
   });
 }
 
-function buildForestEnemyMesh(data) {
+// Area config table
+const AREA_FOREST = {
+  id:'forest', center:FOREST_CENTER, radius:48,
+  enemyData:FOREST_ENEMY_DATA, itemPool:FOREST_ITEM_POOL,
+  spawnList:['f_wolf','f_wolf','f_wolf','f_bear','f_goblin','f_goblin','f_spirit','f_spirit','f_troll'],
+  scenery:buildForestScenery, enterBtn:'forest-enter-btn',
+  sky:['#01100a','#042014','#0a3322','#14543a','#1e6e4a'],
+  groundBase:'#0a1c0e', groundSpecks:['#06140a','#102a14','#143518','#1c4422'],
+  floorColor:0x0c2010,
+  beacon:{ color:0xcfe8d8, light:0x88bbaa },
+  particle:0xaaff66,
+  fog:{ color:0x040d04, density:0.045 },
+  lighting:{ hemi:0x244d33, hemiGround:0x06140a, hemiInt:0.65, sun:0x6fae8c, sunInt:0.35, fill:0.18, rim:0.55, top:0.08 },
+  enterToast:'🌲 Entered the Dark Forest — find hidden weapons and defeat monsters!',
+};
+
+const AREA_CAVERN = {
+  id:'cavern', center:CAVERN_CENTER, radius:48,
+  enemyData:CAVERN_ENEMY_DATA, itemPool:CAVERN_ITEM_POOL,
+  spawnList:['c_bat','c_bat','c_imp','c_imp','c_sala','c_golem','c_brute','c_imp','c_bat'],
+  scenery:buildCavernScenery, enterBtn:'cavern-enter-btn',
+  sky:['#0a0202','#1a0604','#2e0a04','#5a1606','#8a2a08'],
+  groundBase:'#150805', groundSpecks:['#0d0402','#2a0d06','#551a08','#ff5512'],
+  floorColor:0x1a0a06,
+  beacon:{ color:0xff7733, light:0xff5522 },
+  particle:0xff8844,
+  fog:{ color:0x1a0402, density:0.05 },
+  lighting:{ hemi:0x552211, hemiGround:0x1a0603, hemiInt:0.7, sun:0xff6633, sunInt:0.45, fill:0.2, rim:0.5, top:0.1 },
+  enterToast:'🌋 Entered the Molten Cavern — grab fiery weapons and survive the magma beasts!',
+};
+
+function buildAreaEnemyMesh(data) {
   const sz = data.sz || 1;
   const g = new THREE.Group();
   const mk = (geo, col, px=0, py=0, pz=0) => {
@@ -1431,7 +1505,7 @@ function buildForestEnemyMesh(data) {
   };
   const eyeM = new THREE.MeshStandardMaterial({ color:0xff1100, emissive:0xff0000, emissiveIntensity:0.9 });
 
-  if (data.id === 'f_bear' || data.id === 'f_troll') {
+  if (data.shape === 'big') {
     mk(new THREE.BoxGeometry(0.75*sz, 0.85*sz, 0.55*sz), data.color, 0, 0.85*sz, 0);
     mk(new THREE.SphereGeometry(0.3*sz, 8, 8), data.color, 0, 1.55*sz, 0);
     mk(new THREE.BoxGeometry(0.25*sz, 0.6*sz, 0.22*sz), data.color, -0.52*sz, 0.75*sz, 0);
@@ -1450,17 +1524,18 @@ function buildForestEnemyMesh(data) {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055*sz, 5, 5), eyeM);
     eye.position.set(ex, 1.33*sz, 0.19*sz); g.add(eye);
   });
-  if (data.id === 'f_spirit') {
-    g.children.forEach(c => { if (c.material && !c.material.emissive.equals(new THREE.Color(0xff0000))) { c.material.emissive = new THREE.Color(0x6688ff); c.material.emissiveIntensity = 0.5; } });
+  if (data.glow) {
+    const gc = new THREE.Color(data.glow);
+    g.children.forEach(c => { if (c.material && !c.material.emissive.equals(new THREE.Color(0xff0000))) { c.material.emissive = gc; c.material.emissiveIntensity = 0.5; } });
   }
   return g;
 }
 
-function spawnForestEnemy(data) {
+function spawnAreaEnemy(area, data) {
   const angle = Math.random() * Math.PI * 2;
-  const r = 16 + Math.random() * (FOREST_RADIUS - 20);
-  const pos = new THREE.Vector3(FOREST_CENTER.x + Math.cos(angle) * r, 0.75, FOREST_CENTER.z + Math.sin(angle) * r);
-  const mesh = buildForestEnemyMesh(data);
+  const r = 16 + Math.random() * (area.radius - 20);
+  const pos = new THREE.Vector3(area.center.x + Math.cos(angle) * r, 0.75, area.center.z + Math.sin(angle) * r);
+  const mesh = buildAreaEnemyMesh(data);
   mesh.position.copy(pos);
   scene.add(mesh);
   gs.enemies.push({
@@ -1500,9 +1575,17 @@ function collectForestItem(item) {
   spawnFX(item.pos.clone().add(new THREE.Vector3(0, 1, 0)), item.color, 0.8, 1.5);
 }
 
-function enterForest() {
+function showExploreButtons() {
+  ['forest-enter-btn','cavern-enter-btn'].forEach(id => { const b = document.getElementById(id); if (b) b.style.display = 'flex'; });
+}
+function hideExploreButtons() {
+  ['forest-enter-btn','cavern-enter-btn'].forEach(id => { const b = document.getElementById(id); if (b) b.style.display = 'none'; });
+}
+
+function enterArea(area) {
   if (!gs.betweenWaves) { showToast('⚔️ Finish the wave first before exploring!', 2500); return; }
   _inForest = true;
+  _currentArea = area;
   _savedBetweenWaves = gs.betweenWaves;
   _savedWaveActive = gs.waveActive;
   _savedPlayerPos = gs.playerPos.clone();
@@ -1510,19 +1593,18 @@ function enterForest() {
   gs.betweenWaves = false;
   gs.waveActive = true;
   gs.spawnQueue = [];
-  gs.playerPos.set(FOREST_CENTER.x, 0.75, FOREST_CENTER.z);
+  gs.playerPos.set(area.center.x, 0.75, area.center.z);
   gs.playerVel.set(0, 0, 0);
   gs.playerJumpVel = 0; gs.playerOnGround = true;
   if (playerMesh) playerMesh.position.copy(gs.playerPos);
   _forestItems = [];
   _forestMeshes = [];
-  buildForest();
-  const spawnList = ['f_wolf','f_wolf','f_wolf','f_bear','f_goblin','f_goblin','f_spirit','f_spirit','f_troll'];
-  spawnList.forEach(id => { const d = FOREST_ENEMY_DATA.find(x => x.id === id); if (d) spawnForestEnemy(d); });
-  scene.fog = new THREE.FogExp2(0x040d04, 0.045);
+  buildArea(area);
+  area.spawnList.forEach(id => { const d = area.enemyData.find(x => x.id === id); if (d) spawnAreaEnemy(area, d); });
+  scene.fog = new THREE.FogExp2(area.fog.color, area.fog.density);
 
-  // Swap the farm's daytime ambiance for a moody nocturnal forest mood,
-  // and hide the farm sky/stars so the forest reads as a separate world.
+  // Swap the farm's daytime ambiance for the area's mood, and hide the
+  // farm sky/stars so the area reads as a completely separate world.
   _savedLighting = {
     hemiColor: hemiLight.color.getHex(), hemiGround: hemiLight.groundColor.getHex(), hemiInt: hemiLight.intensity,
     sunColor: sun.color.getHex(), sunInt: sun.intensity,
@@ -1530,25 +1612,26 @@ function enterForest() {
     skyVisible: window._skyMesh ? window._skyMesh.visible : true,
     starsVisible: window._starField ? window._starField.visible : true,
   };
-  hemiLight.color.setHex(0x244d33); hemiLight.groundColor.setHex(0x06140a); hemiLight.intensity = 0.65;
-  sun.color.setHex(0x6fae8c); sun.intensity = 0.35;
-  fill.intensity = 0.18; rimLight.intensity = 0.55; topLight.intensity = 0.08;
+  const L = area.lighting;
+  hemiLight.color.setHex(L.hemi); hemiLight.groundColor.setHex(L.hemiGround); hemiLight.intensity = L.hemiInt;
+  sun.color.setHex(L.sun); sun.intensity = L.sunInt;
+  fill.intensity = L.fill; rimLight.intensity = L.rim; topLight.intensity = L.top;
   if (window._skyMesh) window._skyMesh.visible = false;
   if (window._starField) window._starField.visible = false;
   const rb = document.getElementById('forest-return-btn');
   if (rb) rb.style.display = 'flex';
-  const fb = document.getElementById('forest-enter-btn');
-  if (fb) fb.style.display = 'none';
-  showToast('🌲 Entered the Dark Forest — find hidden weapons and defeat monsters!', 5000);
+  hideExploreButtons();
+  showToast(area.enterToast, 5000);
 }
 
-function exitForest() {
+function exitArea() {
   _inForest = false;
+  _currentArea = null;
   gs.enemies.filter(e => e._forestEnemy).forEach(e => scene.remove(e.mesh));
   gs.enemies = gs.enemies.filter(e => !e._forestEnemy);
   _forestMeshes.forEach(m => scene.remove(m));
   _forestMeshes = [];
-  _forestItems.forEach(i => { if (!i.collected) { scene.remove(i.mesh); if (i.glowRing) scene.remove(i.glowRing); } });
+  _forestItems.forEach(i => { if (!i.collected) { scene.remove(i.mesh); if (i.glowRing) scene.remove(i.glowRing); if (i.halo) scene.remove(i.halo); if (i.beam) scene.remove(i.beam); if (i.orbLight) scene.remove(i.orbLight); } });
   _forestItems = [];
   _forestFireflies = null;
   // Restore the farm's daytime ambiance and sky
@@ -1569,11 +1652,15 @@ function exitForest() {
   scene.fog = new THREE.FogExp2(0x0d1220, 0.009);
   const rb = document.getElementById('forest-return-btn');
   if (rb) rb.style.display = 'none';
-  const fb = document.getElementById('forest-enter-btn');
-  if (fb) fb.style.display = 'flex';
+  showExploreButtons();
   buildHotbar();
   showToast('🌾 Back on the farm! Prepare for the next wave.', 3000);
 }
+
+// Button hooks
+function enterForest() { enterArea(AREA_FOREST); }
+function enterCavern() { enterArea(AREA_CAVERN); }
+function exitForest()  { exitArea(); }
 
 const ENEMY_TYPES = [
   { id:'basic',  name:'Basic Scarecrow',        hp:40,  spd:4.1, dmg:5,  straw:5,   sz:1,   color:0xd2b48c },
@@ -2426,7 +2513,7 @@ function buildPlayerMesh() {
   // Weapon
   const wid = gs.hotbar[gs.activeSlot];
   if (wid) {
-    const wd = getActiveData().weapons.find(w => w.id === wid);
+    const wd = getActiveData().weapons.find(w => w.id === wid) || SPECIAL_WEAPONS.find(w => w.id === wid);
     if (wd) { const wm = buildWeaponMesh(wd); wm.position.set(0.52,0.68,0.32); wm.scale.setScalar(0.72); g.add(wm); }
   }
   g._legL = legL; g._legR = legR; g._armL = armL; g._armR = armR;
@@ -4051,7 +4138,7 @@ function updateEventSystem(dt) {
 function startNextWave() {
   gs._barnRestedThisWave = false;
   gs.betweenWaves = false; gs.waveActive = true;
-  const fb = document.getElementById('forest-enter-btn'); if (fb) fb.style.display = 'none';
+  hideExploreButtons();
   gs.wave++;
   const waveData = getActiveData().waves[(gs.wave - 1) % getActiveData().waves.length];
   gs.spawnQueue = [];
@@ -4077,7 +4164,7 @@ function checkWaveEnd() {
   gs._barnRestedThisWave = false;
   showToast('Wave ' + gs.wave + ' cleared! +' + bonus + ' straw bonus! 🎉', 3000);
   if (gs.wave >= getActiveData().waves.length) setTimeout(() => { stopBattleTheme(); showScreen('victory'); }, 2000);
-  const fb = document.getElementById('forest-enter-btn'); if (fb) fb.style.display = 'flex';
+  showExploreButtons();
   saveGame();
 }
 
@@ -6164,7 +6251,7 @@ function startGame() {
   const mc = document.getElementById('merchant-corner'); if (mc) mc.style.display = 'block';
   const biomeMsg = gs.biome === 'jungle' ? '🌿 Welcome to the Jungle! Watch out for monkeys!' : gs.biome === 'snow' ? '❄️ Brr! Defend against the snowmen!' : gs.biome === 'deepsea' ? '🌊 You descend into the Deep! Beware the sea creatures!' : '🌾 Welcome! Press SPACE to start Wave 1!';
   showToast(isMobile ? 'Tap ▶ START WAVE to begin!' : biomeMsg, 4000);
-  const fb2 = document.getElementById('forest-enter-btn'); if (fb2) fb2.style.display = 'flex';
+  showExploreButtons();
 }
 
 function loadAndPlay() {
@@ -6178,7 +6265,7 @@ function loadAndPlay() {
   buildPlayerMesh(); buildHotbar(); updateHUD();
   const mc2 = document.getElementById('merchant-corner'); if (mc2) mc2.style.display = 'block';
   showToast(isMobile ? 'Game loaded! Tap ▶ START WAVE.' : 'Game loaded! Press SPACE to continue.', 3000);
-  const fb2 = document.getElementById('forest-enter-btn'); if (fb2) fb2.style.display = 'flex';
+  showExploreButtons();
 }
 
 function endGame() {
@@ -6581,7 +6668,7 @@ function resetGame() {
   _merchantTimer = 420; _merchantActive = false; _merchantDuration = 0; _merchantStock = [];
   if (_inForest) {
     gs.enemies.filter(e => e._forestEnemy).forEach(e => scene.remove(e.mesh)); gs.enemies = gs.enemies.filter(e => !e._forestEnemy);
-    _forestMeshes.forEach(m => scene.remove(m)); _forestMeshes = []; _forestItems = []; _forestFireflies = null; _inForest = false;
+    _forestMeshes.forEach(m => scene.remove(m)); _forestMeshes = []; _forestItems = []; _forestFireflies = null; _inForest = false; _currentArea = null;
     scene.fog = new THREE.FogExp2(0x0d1220, 0.009);
     if (_savedLighting) {
       hemiLight.color.setHex(_savedLighting.hemiColor); hemiLight.groundColor.setHex(_savedLighting.hemiGround); hemiLight.intensity = _savedLighting.hemiInt;
@@ -6592,7 +6679,7 @@ function resetGame() {
       _savedLighting = null;
     }
   }
-  const _fbReset = document.getElementById('forest-enter-btn'); if (_fbReset) _fbReset.style.display = 'none';
+  hideExploreButtons();
   const _rbReset = document.getElementById('forest-return-btn'); if (_rbReset) _rbReset.style.display = 'none';
   closeMerchantShop();
   const _mhud = document.getElementById('merchant-hud'); if (_mhud) _mhud.style.display = 'none';
@@ -7156,10 +7243,11 @@ function loop(ts) {
         _forestFireflies.material.opacity = 0.55 + Math.sin(ft) * 0.35;
       }
       _forestEnemyTimer -= dt;
-      if (_forestEnemyTimer <= 0) {
+      if (_forestEnemyTimer <= 0 && _currentArea) {
         _forestEnemyTimer = 22 + Math.random() * 12;
-        const fd = FOREST_ENEMY_DATA[Math.floor(Math.random() * FOREST_ENEMY_DATA.length)];
-        spawnForestEnemy(fd);
+        const ed = _currentArea.enemyData;
+        const fd = ed[Math.floor(Math.random() * ed.length)];
+        spawnAreaEnemy(_currentArea, fd);
       }
       const _now = Date.now() * 0.003;
       _forestItems.forEach(item => {
