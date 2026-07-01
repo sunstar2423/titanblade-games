@@ -1,183 +1,79 @@
 /*
- * Battle of the Druids - Web Edition
+ * Isle of Adventure - Web Edition
  * TreasureScene.js
- * 
+ *
  * Copyright (c) 2025 TitanBlade Games
- * 
+ *
  * This file is part of Battle of the Druids, licensed under the MIT License.
  * See LICENSE file in the project root for full license information.
- * 
+ *
  * https://github.com/sunstar2423/titanblade-games
  */
 
 import { SCREEN_WIDTH, SCREEN_HEIGHT, SCENES, ITEMS } from '../GameData.js';
+import BaseScene from '../BaseScene.js';
 
-export default class TreasureScene extends Phaser.Scene {
+export default class TreasureScene extends BaseScene {
     constructor() {
         super({ key: SCENES.TREASURE });
     }
 
     create() {
-        this.gameState = this.registry.get('gameState');
+        this.setupScene();
         this.gameState.visitLocation('Treasure Room');
-        
-        // Continue existing music from previous scene (don't start new music)
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'treasure_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title with better visibility
-        this.add.text(SCREEN_WIDTH/2, 50, 'Treasure Chamber', {
-            fontSize: '32px',
-            fill: '#FFD700',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0.5);
+        this.startGameMusic('serene_journey');
+        this.setBackground('treasure_bg');
+        this.addAmbient('sparkles');
 
-        // Description with better visibility
-        this.add.text(SCREEN_WIDTH/2, 120, 'A room filled with glittering gold and precious artifacts!\nThe Golden Goblet is yours!', {
-            fontSize: '16px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
+        this.addTitle('The Treasure Chamber', '#FFD700');
+
+        this.addText(SCREEN_WIDTH/2, 135,
+            'Mountains of gold glitter in the torchlight. A note on the biggest pile reads:\n' +
+            '"Inventory by Grognak. If counting wrong, is because Grognak count to two."', 15);
 
         // Gold piles
-        this.add.text(200, 250, '🪙', { fontSize: '48px' }).setOrigin(0.5);
-        this.add.text(350, 280, '🪙', { fontSize: '48px' }).setOrigin(0.5);
-        this.add.text(600, 270, '🪙', { fontSize: '48px' }).setOrigin(0.5);
-        this.add.text(500, 320, '🪙', { fontSize: '48px' }).setOrigin(0.5);
-
-        // Auto-collect the Golden Goblet
-        this.autoCollectGoblet();
-
-        // Return button
-        this.createButton(SCREEN_WIDTH/2, 520, 'Leave Treasure Room', () => {
-            this.scene.start(SCENES.CAVE);
-        });
-    }
-
-    autoCollectGoblet() {
-        const gobletName = ITEMS.GOBLET.name;
-        
-        if (this.gameState.hasItem(gobletName)) {
-            // Goblet already taken
-            this.add.text(SCREEN_WIDTH/2, 350, '✓', { fontSize: '48px', fill: '#4ecdc4' }).setOrigin(0.5);
-            this.add.text(SCREEN_WIDTH/2, 400, 'Goblet Already Collected', { 
-                fontSize: '16px', 
-                fill: '#4ecdc4',
-                fontFamily: 'Arial',
-                stroke: '#000000',
-                strokeThickness: 2
-            }).setOrigin(0.5);
-        } else {
-            // Auto-collect the goblet
-            this.gameState.addItem(ITEMS.GOBLET.name);
-            
-            // Play special pickup sound
-            this.sound.play('special_sound', { volume: 0.6 });
-            
-            this.game.events.emit('inventory-updated');
-            
-            // Show goblet and prominent collection message
-            this.add.text(SCREEN_WIDTH/2, 350, '🏆', { fontSize: '64px' }).setOrigin(0.5);
-            
-            const message = this.add.text(SCREEN_WIDTH/2, 280, '✨ GOLDEN GOBLET OBTAINED! ✨', {
-                fontSize: '28px',
-                fill: '#FFD700',
-                fontFamily: 'Arial',
-                stroke: '#000000',
-                strokeThickness: 4,
-                fontWeight: 'bold'
-            }).setOrigin(0.5);
-
-            this.add.text(SCREEN_WIDTH/2, 420, 'PRECIOUS TREASURE ACQUIRED!', { 
-                fontSize: '20px', 
-                fill: '#4ecdc4',
-                fontFamily: 'Arial',
-                stroke: '#000000',
-                strokeThickness: 3,
-                fontWeight: 'bold'
-            }).setOrigin(0.5);
-
-            // Make message flash for emphasis
+        [[240, 330], [400, 370], [630, 350], [790, 320]].forEach(([x, y]) => {
+            const coin = this.addText(x, y, '🪙', 48);
             this.tweens.add({
-                targets: message,
-                alpha: 0.3,
-                duration: 800,
-                yoyo: true,
-                repeat: 2
+                targets: coin, y: y - 5, duration: 1600 + x % 700,
+                yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
             });
-        }
-    }
+        });
 
-    collectGoblet(sprite) {
-        this.gameState.addItem(ITEMS.GOBLET.name);
-        
-        // Update inventory display
-        this.game.events.emit('inventory-updated');
-        
-        // Show collection message
-        const message = this.add.text(SCREEN_WIDTH/2, 300, 'You obtained the Golden Goblet!', {
-            fontSize: '18px',
-            fill: '#4ecdc4',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        this.collectGoblet();
 
-        // Replace sprite with checkmark
-        sprite.destroy();
-        this.add.text(SCREEN_WIDTH/2, 350, '✓', { fontSize: '48px', fill: '#4ecdc4' }).setOrigin(0.5);
-        this.add.text(SCREEN_WIDTH/2, 400, 'Goblet Taken', { 
-            fontSize: '16px', 
-            fill: '#4ecdc4',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        // Remove message after 3 seconds
-        this.time.delayedCall(3000, () => {
-            if (message) message.destroy();
+        this.createButton(150, 700, '← Back to the Cave', () => this.goTo(SCENES.CAVE), {
+            width: 200, color: 0x8B4513, hover: 0xA0522D
+        });
+        this.createButton(874, 700, 'Return to the Fork →', () => this.goTo(SCENES.FORK), {
+            width: 220, color: 0x8B4513, hover: 0xA0522D
         });
     }
 
-    createButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 200, 40, 0x8B4513)
-            .setInteractive()
-            .on('pointerdown', () => {
-                this.sound.play('click_sound', { volume: 0.5 });
-                callback();
-            })
-            .on('pointerover', () => button.setFillStyle(0xA0522D))
-            .on('pointerout', () => button.setFillStyle(0x8B4513));
+    collectGoblet() {
+        const gobletName = ITEMS.GOBLET.name;
 
-        this.add.text(x, y, text, {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        if (this.gameState.hasItem(gobletName)) {
+            this.addText(SCREEN_WIDTH/2, 460, '✓', 48, '#4ecdc4');
+            this.addText(SCREEN_WIDTH/2, 530,
+                'You already claimed the Golden Goblet.\nThe rest of the gold is, sadly, glued down. (Grognak\'s idea.)',
+                15, '#4ecdc4');
+        } else {
+            this.gameState.addItem(gobletName);
+            this.sound.play('special_sound', { volume: 0.6 });
+            this.game.events.emit('inventory-updated');
 
-        return button;
-    }
+            const goblet = this.addText(SCREEN_WIDTH/2, 470, '🏆', 72);
+            this.tweens.add({
+                targets: goblet, y: 455, duration: 1300,
+                yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+            });
 
-    startGameMusic(musicKey) {
-        // Don't restart the same track when moving between scenes that share it
-        const currentMusic = this.registry.get('currentMusic');
-        const currentKey = this.registry.get('currentMusicKey');
-        if (currentKey === musicKey && currentMusic && currentMusic.isPlaying) {
-            return;
+            const msg = this.addText(SCREEN_WIDTH/2, 380, '✨ GOLDEN GOBLET OBTAINED! ✨', 28, '#FFD700', { fontStyle: 'bold' });
+            this.tweens.add({ targets: msg, alpha: 0.35, duration: 800, yoyo: true, repeat: 3 });
+
+            this.addText(SCREEN_WIDTH/2, 560,
+                'One of the sorcerer\'s three sacred items!\n(It\'s also dishwasher safe, according to the base.)', 15, '#4ecdc4');
         }
-        if (currentMusic) {
-            currentMusic.stop();
-        }
-        const newMusic = this.sound.add(musicKey, { loop: true, volume: 0.2 });
-        newMusic.play();
-        this.registry.set('currentMusic', newMusic);
-        this.registry.set('currentMusicKey', musicKey);
     }
 }

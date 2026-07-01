@@ -28,6 +28,14 @@ class GameState {
         }
     }
 
+    removeItem(itemName) {
+        const idx = this.inventory.indexOf(itemName);
+        if (idx !== -1) {
+            this.inventory.splice(idx, 1);
+            this.save();
+        }
+    }
+
     hasItem(itemName) {
         return this.inventory.includes(itemName);
     }

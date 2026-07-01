@@ -1,379 +1,153 @@
 /*
- * Battle of the Druids - Web Edition
+ * Isle of Adventure - Web Edition
  * SquidBattleScene.js
- * 
+ *
  * Copyright (c) 2025 TitanBlade Games
- * 
+ *
  * This file is part of Battle of the Druids, licensed under the MIT License.
  * See LICENSE file in the project root for full license information.
- * 
+ *
  * https://github.com/sunstar2423/titanblade-games
  */
 
 import { SCREEN_WIDTH, SCREEN_HEIGHT, SCENES, ENEMIES, ITEMS } from '../GameData.js';
+import BaseScene from '../BaseScene.js';
 
-export default class SquidBattleScene extends Phaser.Scene {
+export default class SquidBattleScene extends BaseScene {
     constructor() {
         super({ key: SCENES.SQUID_BATTLE });
     }
 
     create() {
-        this.gameState = this.registry.get('gameState');
+        this.setupScene();
         this.gameState.visitLocation('Squid Battle');
-        
-        // Start serene journey music
         this.startGameMusic('serene_journey');
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'squid_battle_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title
-        this.add.text(SCREEN_WIDTH/2, 50, 'Giant Squid Battle!', {
-            fontSize: '32px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0.5);
+        this.setBackground('squid_battle_bg');
+        this.addAmbient('bubbles');
 
-        // Check if squid is already defeated
+        this.addTitle('The Giant Squid');
+
         if (this.gameState.hasDefeatedEnemy('Giant Squid')) {
             this.showVictoryState();
         } else {
-            this.showBattleState();
-        }
-
-        // Return button
-        this.createButton(150, 520, 'Retreat to Shore', () => {
-            this.scene.start(SCENES.SHORE);
-        });
-    }
-
-    showBattleState() {
-        // Description
-        this.add.text(SCREEN_WIDTH/2, 120, 'The massive squid wraps its tentacles around the boat!\nYou must defend yourself!', {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            align: 'center'
-        }).setOrigin(0.5);
-
-        this.add.text(SCREEN_WIDTH/2, 300, 'Giant Squid', {
-            fontSize: '32px',
-            fill: '#ff6b6b',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
-
-        // Player dialogue options before battle
-        this.add.text(SCREEN_WIDTH/2, 350, 'What do you shout at the giant squid?', {
-            fontSize: '14px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
-
-        this.createSquidDialogueButton(200, 400, '"Hey! I didn\'t order\ncalamari today!"', () => {
-            this.showSquidDialogue('"Hey! I didn\'t order calamari today! Take your tentacles elsewhere!"');
-        });
-
-        this.createSquidDialogueButton(400, 400, '"Eight arms and you still\ncan\'t give a proper hug?"', () => {
-            this.showSquidDialogue('"Eight arms and you still can\'t give a proper hug? What\'s the point of all those tentacles?"');
-        });
-
-        this.createSquidDialogueButton(600, 400, '"I\'ve seen bigger squids\nin my bathtub!"', () => {
-            this.showSquidDialogue('"I\'ve seen bigger squids in my bathtub! You\'re more like a medium-sized squid at best!"');
-        });
-    }
-
-    showVictoryState() {
-        // Description
-        this.add.text(SCREEN_WIDTH/2, 120, 'You have defeated the giant squid!\nIts magical eye floats to the surface.', {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            align: 'center'
-        }).setOrigin(0.5);
-
-        // Auto-collect squid eye
-        this.autoCollectSquidEye();
-
-        // Continue button
-        this.createButton(650, 520, 'Continue Journey', () => {
-            this.scene.start(SCENES.PIRATE_ISLAND);
-        });
-    }
-
-    autoCollectSquidEye() {
-        const eyeName = ITEMS.SQUID_EYE.name;
-        
-        if (this.gameState.hasItem(eyeName)) {
-            // Eye already taken
-            this.add.text(SCREEN_WIDTH/2, 300, '✓', { fontSize: '64px', fill: '#4ecdc4' }).setOrigin(0.5);
-            this.add.text(SCREEN_WIDTH/2, 380, 'Squid Eye Already Collected', { 
-                fontSize: '16px', 
-                fill: '#4ecdc4',
-                fontFamily: 'Arial',
-                stroke: '#000000',
-                strokeThickness: 2
-            }).setOrigin(0.5);
-        } else {
-            // Auto-collect the squid eye
-            this.gameState.addItem(ITEMS.SQUID_EYE.name);
-            
-            // Play special pickup sound
-            this.sound.play('special_sound', { volume: 0.6 });
-            
-            this.game.events.emit('inventory-updated');
-            
-            // Show squid eye and collection message
-            this.add.text(SCREEN_WIDTH/2, 300, '👁️', { fontSize: '64px' }).setOrigin(0.5);
-            
-            const message = this.add.text(SCREEN_WIDTH/2, 250, 'You obtained the Magical Squid Eye!', {
-                fontSize: '20px',
-                fill: '#4ECDC4',
-                fontFamily: 'Arial',
-                stroke: '#000000',
-                strokeThickness: 3
-            }).setOrigin(0.5);
-
-            this.add.text(SCREEN_WIDTH/2, 380, 'Squid Eye Collected!', { 
-                fontSize: '16px', 
-                fill: '#4ecdc4',
-                fontFamily: 'Arial',
-                stroke: '#000000',
-                strokeThickness: 2
-            }).setOrigin(0.5);
-
-            // Make message flash for emphasis
-            this.tweens.add({
-                targets: message,
-                alpha: 0.3,
-                duration: 800,
-                yoyo: true,
-                repeat: 2
-            });
+            this.showEncounter();
         }
     }
 
-    collectSquidEye(sprite) {
-        this.gameState.addItem(ITEMS.SQUID_EYE.name);
-        
-        // Play special pickup sound
-        this.sound.play('special_sound', { volume: 0.6 });
-        
-        // Update inventory display
-        this.game.events.emit('inventory-updated');
-        
-        // Show collection message
-        const message = this.add.text(SCREEN_WIDTH/2, 250, 'You obtained the Squid Eye!', {
-            fontSize: '18px',
-            fill: '#4ecdc4',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+    showEncounter() {
+        this.addText(SCREEN_WIDTH/2, 135,
+            'The squid wraps a tentacle around the mast and glares at you\nwith an eye the size of a cartwheel.', 16);
 
-        // Replace sprite with checkmark
-        sprite.destroy();
-        this.add.text(SCREEN_WIDTH/2, 300, '✓', { fontSize: '64px', fill: '#4ecdc4' }).setOrigin(0.5);
-        this.add.text(SCREEN_WIDTH/2, 380, 'Squid Eye Collected', { 
-            fontSize: '18px', 
-            fill: '#4ecdc4',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        this.addText(SCREEN_WIDTH/2, 330, 'The Giant Squid', 30, '#ff6b6b', { fontStyle: 'bold' });
+        this.addSpeech(SCREEN_WIDTH/2, 380,
+            '*It cannot speak, but its glare says "I have eight arms\nand a grudge, and I intend to use both."*', '#B8E2F2', 13);
 
-        // Remove message after 3 seconds
-        this.time.delayedCall(3000, () => {
-            if (message) message.destroy();
-        });
+        this.addText(SCREEN_WIDTH/2, 500, 'What do you shout at the giant squid?', 15);
+
+        this.createChoiceButton(210, 570, '"Hey! I didn\'t order\ncalamari today!"', () => {
+            this.showExchange(
+                '"Hey! I didn\'t order calamari today!\nTake your tentacles elsewhere!"',
+                '*deeply offended squid noises*\n*points a tentacle at YOU, then at its mouth,\nas if to say: YOU\'RE the menu today*'
+            );
+        }, 0x1B4F72, 0x2E86C1);
+
+        this.createChoiceButton(512, 570, '"Eight arms and you still\ncan\'t give a proper hug?"', () => {
+            this.showExchange(
+                '"Eight arms and you still can\'t give a proper hug?\nWhat\'s the point of all those tentacles?"',
+                '*the squid pauses*\n*looks at its tentacles... all eight of them*\n*seems genuinely hurt*\n*angry splashing resumes, but noticeably sadder*'
+            );
+        }, 0x1B4F72, 0x2E86C1);
+
+        this.createChoiceButton(814, 570, '"I\'ve seen bigger squids\nin my bathtub!"', () => {
+            this.showExchange(
+                '"I\'ve seen bigger squids in my bathtub!\nYou\'re a medium squid at best!"',
+                '*the squid rears up to its FULL height*\n*it is very much not a medium squid*\n*that was clearly the wrong thing to say*'
+            );
+        }, 0x1B4F72, 0x2E86C1);
+
+        this.createButton(150, 700, '← Retreat to Shore', () => this.goTo(SCENES.SHORE), { width: 200 });
+    }
+
+    showExchange(playerLine, squidReply) {
+        this.clearScene();
+        this.setBackground('squid_battle_bg');
+        this.addAmbient('bubbles');
+        this.addTitle('The Giant Squid');
+
+        this.addSpeech(SCREEN_WIDTH/2, 140, playerLine, '#4ECDC4');
+        this.addSpeech(SCREEN_WIDTH/2, 240, squidReply, '#FF9E9E');
+
+        this.addText(SCREEN_WIDTH/2, 400, '🐙', 96);
+
+        this.createButton(SCREEN_WIDTH/2, 590, '⚔️ ATTACK!', () => this.attemptBattle(), { width: 220 });
+        this.createButton(150, 700, '← Retreat to Shore', () => this.goTo(SCENES.SHORE), { width: 200 });
     }
 
     attemptBattle() {
-        const enemy = ENEMIES.GIANT_SQUID;
-        const hasRequiredItems = this.gameState.hasAllItems(enemy.requiredItems);
+        const victory = this.gameState.hasAllItems(ENEMIES.GIANT_SQUID.requiredItems);
+        this.clearScene();
+        this.setBackground('squid_battle_bg');
 
-        if (hasRequiredItems) {
-            this.showBattleResult(true);
-        } else {
-            this.showBattleResult(false);
-        }
-    }
-
-    showBattleResult(victory) {
-        // Clear existing content
-        this.children.removeAll();
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'squid_battle_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
         if (victory) {
             this.gameState.defeatEnemy('Giant Squid');
-            
-            // Play victory heal sound
             this.sound.play('heal_sound', { volume: 0.7 });
-            
-            this.add.text(SCREEN_WIDTH/2, 200, 'VICTORY!', {
-                fontSize: '48px',
-                fill: '#4ecdc4',
-                fontFamily: 'Arial'
-            }).setOrigin(0.5);
 
-            this.add.text(SCREEN_WIDTH/2, 280, 'Your weapons prove effective against the beast!\nThe squid retreats to the depths!', {
-                fontSize: '18px',
-                fill: '#ffffff',
-                fontFamily: 'Arial',
-                align: 'center'
-            }).setOrigin(0.5);
+            this.addText(SCREEN_WIDTH/2, 190, 'VICTORY!', 52, '#4ecdc4', { fontStyle: 'bold' });
+            this.addText(SCREEN_WIDTH/2, 300,
+                'Your arrows find their mark! With a final dramatic splash\n' +
+                '(and what sounds like a huffy sigh), the squid retreats\nto the depths to reconsider its life choices.', 17);
+            this.addText(SCREEN_WIDTH/2, 400, '🏆', 64);
 
-            this.add.text(SCREEN_WIDTH/2, 350, '🏆', { fontSize: '64px' }).setOrigin(0.5);
-
-            this.createButton(SCREEN_WIDTH/2, 450, 'Continue', () => {
+            this.createButton(SCREEN_WIDTH/2, 600, 'Continue →', () => {
+                this.clearScene();
+                this.setBackground('squid_battle_bg');
+                this.addAmbient('bubbles');
+                this.addTitle('The Giant Squid');
                 this.showVictoryState();
-            });
+            }, { width: 200 });
         } else {
-            this.add.text(SCREEN_WIDTH/2, 200, 'DEFEAT!', {
-                fontSize: '48px',
-                fill: '#ff6b6b',
-                fontFamily: 'Arial'
-            }).setOrigin(0.5);
+            this.addText(SCREEN_WIDTH/2, 190, 'DEFEAT!', 52, '#ff6b6b', { fontStyle: 'bold' });
+            this.addText(SCREEN_WIDTH/2, 300,
+                'You wave your empty hands menacingly. The squid is not impressed.\n' +
+                'It flicks the boat back to shore like a paper toy.\nYou need a Bow, Arrows and Leather Armor!', 17);
+            this.addText(SCREEN_WIDTH/2, 400, '💨', 64);
 
-            this.add.text(SCREEN_WIDTH/2, 280, 'The squid is too powerful!\nYou need weapons to fight it!', {
-                fontSize: '18px',
-                fill: '#ffffff',
-                fontFamily: 'Arial',
-                align: 'center'
-            }).setOrigin(0.5);
+            this.createButton(SCREEN_WIDTH/2, 600, 'Wash ashore', () => this.goTo(SCENES.SHORE), { width: 200 });
+        }
+    }
 
-            this.add.text(SCREEN_WIDTH/2, 350, '💨', { fontSize: '64px' }).setOrigin(0.5);
+    showVictoryState() {
+        this.addText(SCREEN_WIDTH/2, 135,
+            'The defeated squid left something behind:\na magical eye, bobbing politely on the surface.', 16);
 
-            this.createButton(SCREEN_WIDTH/2, 450, 'Retreat', () => {
-                this.scene.start(SCENES.SHORE);
+        this.collectSquidEye();
+
+        this.createButton(874, 700, 'Onward to Pirate Island →', () => this.goTo(SCENES.PIRATE_ISLAND), { width: 260 });
+        this.createButton(150, 700, '← Back to Shore', () => this.goTo(SCENES.SHORE), { width: 190 });
+    }
+
+    collectSquidEye() {
+        const eyeName = ITEMS.SQUID_EYE.name;
+
+        if (this.gameState.hasItem(eyeName)) {
+            this.addText(SCREEN_WIDTH/2, 340, '✓', 64, '#4ecdc4');
+            this.addText(SCREEN_WIDTH/2, 440, 'Squid Eye already collected.\n(It occasionally winks. You try not to think about it.)', 15, '#4ecdc4');
+        } else {
+            this.gameState.addItem(eyeName);
+            this.sound.play('special_sound', { volume: 0.6 });
+            this.game.events.emit('inventory-updated');
+
+            const eye = this.addText(SCREEN_WIDTH/2, 350, '👁️', 72);
+            this.tweens.add({
+                targets: eye, y: 335, duration: 1400,
+                yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
             });
+
+            const msg = this.addText(SCREEN_WIDTH/2, 260, '✨ MAGICAL SQUID EYE OBTAINED! ✨', 26, '#4ECDC4', { fontStyle: 'bold' });
+            this.tweens.add({ targets: msg, alpha: 0.35, duration: 800, yoyo: true, repeat: 3 });
+
+            this.addText(SCREEN_WIDTH/2, 450,
+                'One of the sorcerer\'s three sacred items!\n(The squid grew a new one immediately. It\'s fine. Probably.)', 15, '#4ecdc4');
         }
-    }
-
-    createButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 180, 40, 0x34495e)
-            .setInteractive()
-            .on('pointerdown', () => {
-                this.sound.play('click_sound', { volume: 0.5 });
-                callback();
-            })
-            .on('pointerover', () => button.setFillStyle(0x5d6d7e))
-            .on('pointerout', () => button.setFillStyle(0x34495e));
-
-        this.add.text(x, y, text, {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        return button;
-    }
-
-    startGameMusic(musicKey) {
-        // Don't restart the same track when moving between scenes that share it
-        const currentMusic = this.registry.get('currentMusic');
-        const currentKey = this.registry.get('currentMusicKey');
-        if (currentKey === musicKey && currentMusic && currentMusic.isPlaying) {
-            return;
-        }
-        if (currentMusic) {
-            currentMusic.stop();
-        }
-        const newMusic = this.sound.add(musicKey, { loop: true, volume: 0.2 });
-        newMusic.play();
-        this.registry.set('currentMusic', newMusic);
-        this.registry.set('currentMusicKey', musicKey);
-    }
-
-    createSquidDialogueButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 180, 35, 0x1B4F72)
-            .setInteractive()
-            .on('pointerdown', () => {
-                this.sound.play('click_sound', { volume: 0.5 });
-                callback();
-            })
-            .on('pointerover', () => button.setFillStyle(0x2E86C1))
-            .on('pointerout', () => button.setFillStyle(0x1B4F72));
-
-        this.add.text(x, y, text, {
-            fontSize: '12px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            align: 'center'
-        }).setOrigin(0.5);
-
-        return button;
-    }
-
-    showSquidDialogue(dialogue) {
-        // Clear existing content and show player's chosen dialogue
-        this.children.removeAll();
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'squid_battle_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title
-        this.add.text(SCREEN_WIDTH/2, 50, 'Giant Squid Battle!', {
-            fontSize: '32px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0.5);
-
-        // Player dialogue
-        this.add.text(SCREEN_WIDTH/2, 130, dialogue, {
-            fontSize: '16px',
-            fill: '#4ECDC4',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3,
-            fontStyle: 'italic'
-        }).setOrigin(0.5);
-
-        // Squid response
-        this.add.text(SCREEN_WIDTH/2, 200, '*Angry squid noises intensify*\n*Splashes water aggressively*\n*Waves tentacles menacingly*', {
-            fontSize: '14px',
-            fill: '#FF6B6B',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3,
-            fontStyle: 'italic'
-        }).setOrigin(0.5);
-
-        this.add.text(SCREEN_WIDTH/2, 300, 'Giant Squid', {
-            fontSize: '24px',
-            fill: '#ff6b6b',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
-
-        // Battle button
-        this.createButton(SCREEN_WIDTH/2, 400, 'Attack!', () => {
-            this.attemptBattle();
-        });
-
-        // Return button
-        this.createButton(150, 520, 'Retreat to Shore', () => {
-            this.scene.start(SCENES.SHORE);
-        });
     }
 }

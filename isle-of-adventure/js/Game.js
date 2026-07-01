@@ -23,9 +23,11 @@ import MountainsScene from './scenes/MountainsScene.js';
 import CaveScene from './scenes/CaveScene.js';
 import TreasureScene from './scenes/TreasureScene.js';
 import ShoreScene from './scenes/ShoreScene.js';
+import BeachScene from './scenes/BeachScene.js';
 import BoatScene from './scenes/BoatScene.js';
 import SquidBattleScene from './scenes/SquidBattleScene.js';
 import PirateIslandScene from './scenes/PirateIslandScene.js';
+import PirateBaseScene from './scenes/PirateBaseScene.js';
 import SorcererScene from './scenes/SorcererScene.js';
 import PortalScene from './scenes/PortalScene.js';
 import CreditsScene from './scenes/CreditsScene.js';
@@ -69,9 +71,11 @@ class Game {
                 CaveScene,
                 TreasureScene,
                 ShoreScene,
+                BeachScene,
                 BoatScene,
                 SquidBattleScene,
                 PirateIslandScene,
+                PirateBaseScene,
                 SorcererScene,
                 PortalScene,
                 CreditsScene

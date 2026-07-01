@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Isle of Adventure - Story Expansion & Overhaul
+
+#### Added
+- **The Beach Cove** — a new optional location off the Rocky Shore, home of Gary the professional castaway (rescued 14 times, keeps coming back). Gary dispenses quest hints, comedy, and emergency bread if you missed the loaf in the house
+- **The Secret Pirate Base** — a new location where the Bottle of Rum must now be *earned* by beating Cap'n Barnacles in a three-round Duel of Wits (choose the right comeback; wrong answers are funny and let you retry)
+- The two new scenes use `images/beachscene.png` and `images/piratebase.png` automatically once those files are added, and gracefully fall back to existing art until then
+- Alternate troll solution: toss your bread at the Troll Brothers and stroll past while they brawl over the crusty end (consumes the previously useless Food item)
+- Every dialogue choice now gets its own unique NPC response (trolls, ogre, squid, pirates, sorcerer, Gary) instead of one canned reply for all three options
+- Quest guidance: village shows sacred-item progress (0/3), house shows a gear checklist, fork gives contextual hints, and the sorcerer names where each missing item can be found
+- Victory screen now shows an adventure report (locations explored, foes bested, items pocketed, and whether baked goods were deployed diplomatically)
+- Ambient atmosphere: fireflies in the forest/village, embers in the cave and pirate camps, bubbles at sea, sparkles in magical rooms, sea spray on the shore
+- Cinematic polish: fade transitions between scenes, slow Ken Burns drift on backgrounds, floating collectible items, character idle animations, loading percentage readout
+
+#### Fixed
+- A failed video load could crash the whole preloader and leave players on a black screen in browsers without the right codec support; the intro video is now optional everywhere it is used
+- Sentry initialization crashed the page for players using adblockers (Sentry CDN blocked → `Sentry is not defined`); it is now guarded
+- Scene layouts previously squeezed everything into the top 550px of the 768px canvas; all scenes now use the full play area with a consistent layout grid
+
+#### Changed
+- All 16 scenes refactored onto a shared `BaseScene` (backgrounds with fallback support, buttons, dialogue choices, transitions, music, particles), removing ~600 lines of duplicated code
+- Buttons polished: gold borders, drop shadows, hover growth, hand cursor, larger touch targets
+- Writing pass across the whole game for wittier, more immersive storytelling
+
 ### Isle of Adventure - Review & Improvements
 
 #### Added

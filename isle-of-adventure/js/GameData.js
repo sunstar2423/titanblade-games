@@ -22,9 +22,11 @@ const SCENES = {
     CAVE: 'CaveScene',
     TREASURE: 'TreasureScene',
     SHORE: 'ShoreScene',
+    BEACH: 'BeachScene',
     BOAT: 'BoatScene',
     SQUID_BATTLE: 'SquidBattleScene',
     PIRATE_ISLAND: 'PirateIslandScene',
+    PIRATE_BASE: 'PirateBaseScene',
     SORCERER: 'SorcererScene',
     PORTAL: 'PortalScene',
     CREDITS: 'CreditsScene'

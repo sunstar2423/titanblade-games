@@ -30,48 +30,50 @@ export default class CreditsScene extends Phaser.Scene {
             strokeThickness: 2
         }).setOrigin(0.5);
 
-        // Create and play the video
-        this.video = this.add.video(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 20, 'welcome_video');
-        
-        // Scale the video to fit nicely within the screen
-        const videoScale = Math.min(
-            (SCREEN_WIDTH - 100) / this.video.width,
-            (SCREEN_HEIGHT - 150) / this.video.height
-        );
-        this.video.setScale(videoScale);
-        
-        // Play the video
-        this.video.play();
+        // Create and play the video (if this browser could load it)
+        if (this.cache.video && this.cache.video.exists('welcome_video')) {
+            this.video = this.add.video(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 20, 'welcome_video');
+
+            // Scale the video to fit nicely within the screen
+            const videoScale = Math.min(
+                (SCREEN_WIDTH - 100) / this.video.width,
+                (SCREEN_HEIGHT - 150) / this.video.height
+            );
+            this.video.setScale(videoScale);
+
+            // Play the video
+            this.video.play();
+
+            // Add video controls text
+            this.add.text(SCREEN_WIDTH/2, SCREEN_HEIGHT - 120, 'Click video to play/pause', {
+                fontSize: '14px',
+                fill: '#CCCCCC',
+                fontFamily: 'Arial'
+            }).setOrigin(0.5);
+
+            // Make video interactive for play/pause
+            this.video.setInteractive()
+                .on('pointerdown', () => {
+                    if (this.video.isPlaying()) {
+                        this.video.pause();
+                    } else {
+                        this.video.play();
+                    }
+                });
+        }
 
         // Add text overlays on top of the video
         this.createTextOverlays();
-        
-        // Add video controls text
-        this.add.text(SCREEN_WIDTH/2, SCREEN_HEIGHT - 120, 'Click video to play/pause', {
-            fontSize: '14px',
-            fill: '#CCCCCC',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        // Make video interactive for play/pause
-        this.video.setInteractive()
-            .on('pointerdown', () => {
-                if (this.video.isPlaying()) {
-                    this.video.pause();
-                } else {
-                    this.video.play();
-                }
-            });
 
         // Back to menu button
         this.createButton(SCREEN_WIDTH/2, SCREEN_HEIGHT - 50, 'BACK TO MENU', () => {
-            this.video.stop();
+            if (this.video) this.video.stop();
             this.scene.start('MainMenuScene');
         });
 
         // Skip button
         this.createButton(SCREEN_WIDTH/2, SCREEN_HEIGHT - 80, 'SKIP', () => {
-            this.video.stop();
+            if (this.video) this.video.stop();
             this.scene.start('MainMenuScene');
         });
     }

@@ -160,6 +160,8 @@
     <!-- Sentry SDK -->
     <script src="https://browser.sentry-cdn.com/8.42.0/bundle.min.js" integrity="sha384-ojBBhiQvhkfZfAhojXYPuIYW8dxzV1I8R7YJlq9Tz7T4YOZQcTuUoCgGbCz5lWAE" crossorigin="anonymous"></script>
     <script>
+        // Guard: Sentry's CDN may be blocked (adblockers, offline) — don't crash the page.
+        if (typeof Sentry !== 'undefined') {
         Sentry.init({
             dsn: "https://5752f76100bc0ed5d17444652339d50f@o4509524111523840.ingest.us.sentry.io/4509524122075136",
             integrations: [
@@ -184,6 +186,7 @@
             engine: "phaser3",
             genre: "point-and-click-adventure"
         });
+        } // end Sentry guard
         
         // Game event tracking utilities
         window.trackGameEvent = function(eventName, data = {}) {

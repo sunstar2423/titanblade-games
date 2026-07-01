@@ -1,385 +1,192 @@
 /*
- * Battle of the Druids - Web Edition
+ * Isle of Adventure - Web Edition
  * ForestScene.js
- * 
+ *
  * Copyright (c) 2025 TitanBlade Games
- * 
+ *
  * This file is part of Battle of the Druids, licensed under the MIT License.
  * See LICENSE file in the project root for full license information.
- * 
+ *
  * https://github.com/sunstar2423/titanblade-games
  */
 
-import { SCREEN_WIDTH, SCREEN_HEIGHT, SCENES, ENEMIES } from '../GameData.js';
+import { SCREEN_WIDTH, SCREEN_HEIGHT, SCENES, ENEMIES, ITEMS } from '../GameData.js';
+import BaseScene from '../BaseScene.js';
 
-export default class ForestScene extends Phaser.Scene {
+export default class ForestScene extends BaseScene {
     constructor() {
         super({ key: SCENES.FOREST });
     }
 
     create() {
-        this.gameState = this.registry.get('gameState');
+        this.setupScene();
         this.gameState.visitLocation('Forest');
-        
-        // Start serene journey music
         this.startGameMusic('serene_journey');
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'forest_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title with better visibility
-        this.add.text(SCREEN_WIDTH/2, 50, 'Dark Forest', {
-            fontSize: '32px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0.5);
+        this.setBackground('forest_bg');
+        this.addAmbient('fireflies');
 
-        // Check if trolls are already defeated
+        this.addTitle('The Dark Forest');
+
         if (this.gameState.hasDefeatedEnemy('Forest Trolls')) {
             this.showVictoryState();
         } else {
-            this.showBattleState();
+            this.showEncounter();
         }
 
-        // Return to village button
-        this.createButton(150, 520, 'Return to Village', () => {
-            this.scene.start(SCENES.VILLAGE);
+        this.createButton(150, 700, '← Back to Village', () => this.goTo(SCENES.VILLAGE), { width: 190 });
+    }
+
+    // ------------------------------------------------------------------
+    // The troll stand-off
+    // ------------------------------------------------------------------
+    showEncounter() {
+        this.addText(SCREEN_WIDTH/2, 130, 'Three enormous trolls block the path, arms crossed.', 16);
+
+        this.addSpeech(SCREEN_WIDTH/2, 185,
+            '"HALT, tiny human! We are the legendary Troll Brothers:\nBrute, Brute Jr., and... uh... Steve."');
+
+        this.addSpeech(SCREEN_WIDTH/2, 230,
+            '"Steve forgot to bring his intimidating name today," Brute sighs.', '#FFDD88', 13);
+
+        this.spawnTrolls(400);
+
+        this.addText(SCREEN_WIDTH/2, 545, 'What do you say to the trolls?', 15);
+
+        this.createChoiceButton(210, 610, '"Wait — Steve? That\'s your\nintimidating troll name?"', () => {
+            this.showExchange(
+                '"Wait — Steve? That\'s your intimidating troll name?\nDid you forget to renew your scary-name license?"',
+                '"STEVE ANGRY NOW! Steve picked it himself\nfrom a baby name book! It means \'crowned one\'!"\nThe other two nod supportively.'
+            );
+        });
+
+        this.createChoiceButton(512, 610, '"Three against one?\nSeems fair... for you."', () => {
+            this.showExchange(
+                '"Three against one? That seems fair... for you.\nI like those odds!"',
+                '"THREE?!" Brute counts his brothers, twice, using fingers.\n"Brute only count to two! You take that back!"'
+            );
+        });
+
+        this.createChoiceButton(814, 610, '"I\'ve heard scarier names\nat a knitting circle."', () => {
+            this.showExchange(
+                '"I\'ve heard scarier names at a knitting circle.\nSeriously, Steve? What\'s next — Bob the Terrible?"',
+                '"Knitting is VERY manly!" Steve roars, offended.\n"Steve knitted these battle scarves HIMSELF!"\nThe trolls are indeed wearing matching scarves.'
+            );
         });
     }
 
-    showBattleState() {
-        // Description with better visibility
-        this.add.text(SCREEN_WIDTH/2, 120, 'Three menacing forest trolls block your path!', {
-            fontSize: '16px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
+    // Player line, then the trolls' unique comeback, then battle options
+    showExchange(playerLine, trollReply) {
+        this.clearScene();
+        this.setBackground('forest_bg');
+        this.addAmbient('fireflies');
+        this.addTitle('The Dark Forest');
 
-        // Troll dialogue with improved readability
-        this.add.text(SCREEN_WIDTH/2, 160, '"Halt, tiny human! We are the legendary Troll Brothers:\nBrute, Brute Jr., and... uh... Steve."', {
-            fontSize: '15px',
-            fill: '#FFFF99',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3,
-            fontStyle: 'italic',
-            fontWeight: 'bold'
-        }).setOrigin(0.5);
+        this.addSpeech(SCREEN_WIDTH/2, 140, playerLine, '#4ECDC4');
+        this.addSpeech(SCREEN_WIDTH/2, 215, trollReply);
 
-        this.add.text(SCREEN_WIDTH/2, 200, '"Steve here forgot to bring his intimidating name today!"', {
-            fontSize: '13px',
-            fill: '#FFFF99',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3,
-            fontStyle: 'italic',
-            fontWeight: 'bold'
-        }).setOrigin(0.5);
+        this.spawnTrolls(400);
 
-        // Troll representations using actual character images with animations
-        const troll1 = this.add.image(250, 300, 'troll1');
-        troll1.setDisplaySize(80, 100); // Scale to appropriate size
-        this.add.text(250, 360, 'Brute', { fontSize: '12px', fill: '#FFFFFF', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5);
-        
-        const troll2 = this.add.image(400, 300, 'troll2');
-        troll2.setDisplaySize(80, 100); // Scale to appropriate size
-        this.add.text(400, 360, 'Brute Jr.', { fontSize: '12px', fill: '#FFFFFF', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5);
-        
-        const troll3 = this.add.image(550, 300, 'troll3');
-        troll3.setDisplaySize(80, 100); // Scale to appropriate size
-        this.add.text(550, 360, 'Steve', { fontSize: '12px', fill: '#FFFFFF', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5);
+        // --- Ways past the trolls ---
+        const hasGear = this.gameState.hasAllItems(ENEMIES.FOREST_TROLLS.requiredItems);
+        const hasBread = this.gameState.hasItem(ITEMS.FOOD.name);
 
-        // Add subtle breathing/swaying animations to trolls
-        this.animateTroll(troll1, 2000, 3); // Slow, menacing sway
-        this.animateTroll(troll2, 1800, 2); // Slightly faster, smaller movement
-        this.animateTroll(troll3, 2200, 2.5); // Different timing for variety
+        this.addText(SCREEN_WIDTH/2, 545, 'The trolls advance. Choose wisely:', 15);
 
-        this.add.text(SCREEN_WIDTH/2, 390, 'The Troll Brothers (& Steve)', {
-            fontSize: '18px',
-            fill: '#ff6b6b',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
+        this.createButton(340, 610, hasGear ? '⚔️ Fight the Trolls!' : '⚔️ Fight (no gear...)',
+            () => this.attemptBattle(), { width: 240 });
 
-        // Player dialogue options before battle
-        this.add.text(SCREEN_WIDTH/2, 440, 'What do you say to the trolls?', {
-            fontSize: '14px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
-
-        this.createDialogueButton(200, 470, '"Wait, Steve? That\'s your\nintimidating troll name?"', () => {
-            this.showPlayerDialogue('"Wait, Steve? That\'s your intimidating troll name? Did you forget to renew your scary name license?"');
-        });
-
-        this.createDialogueButton(400, 470, '"Three against one?\nThat seems fair... for you."', () => {
-            this.showPlayerDialogue('"Three against one? That seems fair... for you. I like those odds!"');
-        });
-
-        this.createDialogueButton(600, 470, '"I\'ve heard scarier names\nat a knitting circle."', () => {
-            this.showPlayerDialogue('"I\'ve heard scarier names at a knitting circle. Seriously, Steve? What\'s next, Bob the Terrible?"');
-        });
-    }
-
-    showVictoryState() {
-        // Description with better visibility
-        this.add.text(SCREEN_WIDTH/2, 120, 'You have defeated the forest trolls!\nThe path ahead is now clear.', {
-            fontSize: '16px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
-
-        // Defeated trolls
-        this.add.text(250, 300, '💀', { fontSize: '48px' }).setOrigin(0.5);
-        this.add.text(400, 300, '💀', { fontSize: '48px' }).setOrigin(0.5);
-        this.add.text(550, 300, '💀', { fontSize: '48px' }).setOrigin(0.5);
-
-        this.add.text(SCREEN_WIDTH/2, 380, 'Defeated Trolls', {
-            fontSize: '20px',
-            fill: '#4ecdc4',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        // Continue button
-        this.createButton(650, 500, 'Continue Path', () => {
-            this.scene.start(SCENES.FORK);
-        });
-    }
-
-    attemptBattle() {
-        const enemy = ENEMIES.FOREST_TROLLS;
-        const hasRequiredItems = this.gameState.hasAllItems(enemy.requiredItems);
-
-        if (hasRequiredItems) {
-            this.showBattleResult(true);
+        if (hasBread) {
+            this.createButton(680, 610, '🍞 Toss them your bread', () => this.breadGambit(), {
+                width: 240, color: 0x7a5c1e, hover: 0x9c7a2e
+            });
         } else {
-            this.showBattleResult(false);
+            this.addText(680, 610, '(You sense these trolls\nwould do anything for carbs)', 12, '#BBBBBB');
         }
+
+        this.createButton(150, 700, '← Retreat to Village', () => this.goTo(SCENES.VILLAGE), { width: 190 });
     }
 
-    showBattleResult(victory) {
-        // Clear existing content
-        this.children.removeAll();
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'forest_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
+    // ------------------------------------------------------------------
+    // Solution 1: violence (requires gear)
+    // ------------------------------------------------------------------
+    attemptBattle() {
+        const victory = this.gameState.hasAllItems(ENEMIES.FOREST_TROLLS.requiredItems);
+        this.clearScene();
+        this.setBackground('forest_bg');
+
         if (victory) {
             this.gameState.defeatEnemy('Forest Trolls');
-            
-            // Play victory heal sound
             this.sound.play('heal_sound', { volume: 0.7 });
-            
-            this.add.text(SCREEN_WIDTH/2, 200, 'VICTORY!', {
-                fontSize: '48px',
-                fill: '#4ecdc4',
-                fontFamily: 'Arial'
-            }).setOrigin(0.5);
 
-            this.add.text(SCREEN_WIDTH/2, 280, 'Your bow, arrows, and armor proved effective!\nThe forest trolls have been defeated!', {
-                fontSize: '18px',
-                fill: '#ffffff',
-                fontFamily: 'Arial',
-                align: 'center'
-            }).setOrigin(0.5);
+            this.addText(SCREEN_WIDTH/2, 200, 'VICTORY!', 52, '#4ecdc4', { fontStyle: 'bold' });
+            this.addText(SCREEN_WIDTH/2, 300,
+                'Your arrows fly true and your armor holds!\n' +
+                'The trolls flee, dramatically clutching their scarves.\n' +
+                '"THIS ISN\'T OVER!" yells Steve. It is, though.', 17);
+            this.addText(SCREEN_WIDTH/2, 420, '🏆', 64);
 
-            this.add.text(SCREEN_WIDTH/2, 350, '🏆', { fontSize: '64px' }).setOrigin(0.5);
-
-            this.createButton(SCREEN_WIDTH/2, 450, 'Continue', () => {
-                this.scene.start(SCENES.FORK);
-            });
+            this.createButton(SCREEN_WIDTH/2, 610, 'Continue Deeper →', () => this.goTo(SCENES.FORK), { width: 240 });
         } else {
-            this.add.text(SCREEN_WIDTH/2, 200, 'DEFEAT!', {
-                fontSize: '48px',
-                fill: '#ff6b6b',
-                fontFamily: 'Arial'
-            }).setOrigin(0.5);
+            this.addText(SCREEN_WIDTH/2, 200, 'DEFEAT!', 52, '#ff6b6b', { fontStyle: 'bold' });
+            this.addText(SCREEN_WIDTH/2, 300,
+                'You charge in armed with nothing but confidence.\n' +
+                'The trolls politely but firmly bounce you back down the path.\n' +
+                'You need a Bow, Arrows and Leather Armor. (Try the house!)', 17);
+            this.addText(SCREEN_WIDTH/2, 420, '💫', 64);
 
-            this.add.text(SCREEN_WIDTH/2, 280, 'You are not prepared for this battle!\nYou need: Bow, Arrows, and Leather Armor', {
-                fontSize: '18px',
-                fill: '#ffffff',
-                fontFamily: 'Arial',
-                align: 'center'
-            }).setOrigin(0.5);
-
-            this.add.text(SCREEN_WIDTH/2, 350, '💀', { fontSize: '64px' }).setOrigin(0.5);
-
-            this.createButton(SCREEN_WIDTH/2, 450, 'Retreat to Village', () => {
-                this.scene.start(SCENES.VILLAGE);
-            });
+            this.createButton(SCREEN_WIDTH/2, 610, 'Limp back to the Village', () => this.goTo(SCENES.VILLAGE), { width: 260 });
         }
     }
 
-    createButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 200, 40, 0x34495e)
-            .setInteractive()
-            .on('pointerdown', () => {
-                this.sound.play('click_sound', { volume: 0.5 });
-                callback();
-            })
-            .on('pointerover', () => button.setFillStyle(0x5d6d7e))
-            .on('pointerout', () => button.setFillStyle(0x34495e));
+    // ------------------------------------------------------------------
+    // Solution 2: carbohydrates (consumes the Food item)
+    // ------------------------------------------------------------------
+    breadGambit() {
+        this.gameState.removeItem(ITEMS.FOOD.name);
+        this.gameState.defeatEnemy('Forest Trolls');
+        this.gameState.visitLocation('Bread Gambit');
+        this.game.events.emit('inventory-updated');
+        this.sound.play('special_sound', { volume: 0.7 });
 
-        this.add.text(x, y, text, {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        this.clearScene();
+        this.setBackground('forest_bg');
+        this.addAmbient('fireflies');
 
-        return button;
+        this.addText(SCREEN_WIDTH/2, 180, 'THE BREAD GAMBIT!', 44, '#FFD700', { fontStyle: 'bold' });
+        this.addText(SCREEN_WIDTH/2, 290,
+            'You hurl the loaf into the bushes. The trolls FREEZE.\n\n' +
+            '"BREAD!" they bellow in unison, diving after it.\n' +
+            '"STEVE GOT THE CRUSTY END LAST TIME!" — "STEVE EARNED IT!"\n\n' +
+            'You stroll past the brawl, unnoticed. A flawless victory.\nZero violence. One delicious casualty.', 16);
+        this.addText(SCREEN_WIDTH/2, 460, '🍞💨', 56);
+
+        this.createButton(SCREEN_WIDTH/2, 610, 'Continue Deeper →', () => this.goTo(SCENES.FORK), { width: 240 });
+        this.createButton(150, 700, '← Back to Village', () => this.goTo(SCENES.VILLAGE), { width: 190 });
     }
 
-    animateTroll(troll, duration, distance) {
-        // Create subtle swaying animation
-        this.tweens.add({
-            targets: troll,
-            x: troll.x + distance,
-            duration: duration,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
+    // ------------------------------------------------------------------
+    showVictoryState() {
+        this.addText(SCREEN_WIDTH/2, 140,
+            'The path is clear. Somewhere in the distance you hear\ntrolls arguing about bread etiquette.', 16);
 
-        // Add slight vertical breathing motion
-        this.tweens.add({
-            targets: troll,
-            y: troll.y + 1,
-            duration: duration * 0.7,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
+        this.addText(SCREEN_WIDTH/2, 330, '🌲   🕊️   🌲', 48);
+        this.addText(SCREEN_WIDTH/2, 420, 'The forest is peaceful now', 20, '#4ecdc4');
 
-        // Add subtle rotation for more realism
-        this.tweens.add({
-            targets: troll,
-            rotation: 0.02,
-            duration: duration * 1.2,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
+        this.createButton(874, 700, 'Continue Deeper →', () => this.goTo(SCENES.FORK), { width: 220 });
     }
 
-    createDialogueButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 180, 35, 0x2C5F2D)
-            .setInteractive()
-            .on('pointerdown', () => {
-                this.sound.play('click_sound', { volume: 0.5 });
-                callback();
-            })
-            .on('pointerover', () => button.setFillStyle(0x4A7C59))
-            .on('pointerout', () => button.setFillStyle(0x2C5F2D));
-
-        this.add.text(x, y, text, {
-            fontSize: '12px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            align: 'center'
-        }).setOrigin(0.5);
-
-        return button;
-    }
-
-    showPlayerDialogue(dialogue) {
-        // Clear existing content and show player's chosen dialogue
-        this.children.removeAll();
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'forest_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title
-        this.add.text(SCREEN_WIDTH/2, 50, 'Dark Forest', {
-            fontSize: '32px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0.5);
-
-        // Player dialogue
-        this.add.text(SCREEN_WIDTH/2, 150, dialogue, {
-            fontSize: '16px',
-            fill: '#4ECDC4',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3,
-            fontStyle: 'italic'
-        }).setOrigin(0.5);
-
-        // Troll response
-        this.add.text(SCREEN_WIDTH/2, 220, '"Grrrr! Steve angry now! No make fun of Steve\'s name!\nSteve picked it himself from baby name book!"', {
-            fontSize: '14px',
-            fill: '#FFFF99',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3,
-            fontStyle: 'italic'
-        }).setOrigin(0.5);
-
-        // Show animated trolls
-        const troll1 = this.add.image(250, 320, 'troll1');
-        troll1.setDisplaySize(80, 100);
-        const troll2 = this.add.image(400, 320, 'troll2');
-        troll2.setDisplaySize(80, 100);
-        const troll3 = this.add.image(550, 320, 'troll3');
-        troll3.setDisplaySize(80, 100);
-
-        this.animateTroll(troll1, 2000, 3);
-        this.animateTroll(troll2, 1800, 2);
-        this.animateTroll(troll3, 2200, 2.5);
-
-        // Battle button
-        this.createButton(SCREEN_WIDTH/2, 450, 'Fight Trolls', () => {
-            this.attemptBattle();
+    spawnTrolls(y) {
+        const trollData = [
+            { key: 'troll1', x: 330, name: 'Brute', dur: 2000, sway: 3 },
+            { key: 'troll2', x: 512, name: 'Brute Jr.', dur: 1800, sway: 2 },
+            { key: 'troll3', x: 694, name: 'Steve', dur: 2200, sway: 2.5 }
+        ];
+        trollData.forEach(t => {
+            const img = this.add.image(t.x, y, t.key);
+            img.setDisplaySize(110, 138);
+            this.animateCharacter(img, t.dur, t.sway);
+            this.addText(t.x, y + 88, t.name, 14);
         });
-
-        // Return button
-        this.createButton(150, 520, 'Return to Village', () => {
-            this.scene.start(SCENES.VILLAGE);
-        });
-    }
-
-    startGameMusic(musicKey) {
-        // Don't restart the same track when moving between scenes that share it
-        const currentMusic = this.registry.get('currentMusic');
-        const currentKey = this.registry.get('currentMusicKey');
-        if (currentKey === musicKey && currentMusic && currentMusic.isPlaying) {
-            return;
-        }
-        if (currentMusic) {
-            currentMusic.stop();
-        }
-        const newMusic = this.sound.add(musicKey, { loop: true, volume: 0.2 });
-        newMusic.play();
-        this.registry.set('currentMusic', newMusic);
-        this.registry.set('currentMusicKey', musicKey);
+        this.addText(SCREEN_WIDTH/2, 510, 'The Troll Brothers (& Steve)', 18, '#ff6b6b');
     }
 }

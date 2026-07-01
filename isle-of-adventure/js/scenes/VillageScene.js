@@ -1,145 +1,79 @@
 /*
- * Battle of the Druids - Web Edition
+ * Isle of Adventure - Web Edition
  * VillageScene.js
- * 
+ *
  * Copyright (c) 2025 TitanBlade Games
- * 
+ *
  * This file is part of Battle of the Druids, licensed under the MIT License.
  * See LICENSE file in the project root for full license information.
- * 
+ *
  * https://github.com/sunstar2423/titanblade-games
  */
 
 import { SCREEN_WIDTH, SCREEN_HEIGHT, SCENES } from '../GameData.js';
+import BaseScene from '../BaseScene.js';
 
-export default class VillageScene extends Phaser.Scene {
+export default class VillageScene extends BaseScene {
     constructor() {
         super({ key: SCENES.VILLAGE });
     }
 
     create() {
-        this.gameState = this.registry.get('gameState');
-        
-        // Start serene journey music for village scene
+        this.setupScene();
+        this.gameState.visitLocation('Village');
         this.startGameMusic('serene_journey');
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'village_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title with better visibility
-        this.add.text(SCREEN_WIDTH/2, 50, 'Village Portal', {
-            fontSize: '32px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
+        this.setBackground('village_bg');
+        this.addAmbient('fireflies');
 
-        // Description with better visibility
-        this.add.text(SCREEN_WIDTH/2, 120, 'You have appeared through a portal in a peaceful village.\nThree paths await your choice.', {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
+        this.addTitle('Village Portal');
 
-        // Create interactive buttons
-        this.createButton(200, 250, 'Enter House', () => {
-            this.scene.start(SCENES.HOUSE);
-        });
+        this.addText(SCREEN_WIDTH/2, 135,
+            'You tumble out of a shimmering portal into a peaceful village.\n' +
+            'Nobody seems surprised. Apparently this happens a lot here.', 16);
 
-        this.createButton(400, 250, 'Go to Forest', () => {
-            this.scene.start(SCENES.FOREST);
-        });
+        // --- The three destinations, laid out across the village ---
 
-        this.createButton(600, 250, 'Approach Sign', () => {
-            this.checkSignAccess();
-        });
+        // House
+        this.addText(240, 300, '🏠', 44);
+        this.addText(240, 355, 'A cozy house.\nThe door is suspiciously unlocked.', 13, '#DDDDDD');
+        this.createButton(240, 420, 'Enter the House', () => this.goTo(SCENES.HOUSE));
 
-        // Add visual elements for the three options
-        // House - no preview needed since button appears next to house in background
-        this.add.text(200, 320, '🏠', { fontSize: '32px' }).setOrigin(0.5);
+        // Forest
+        this.addText(512, 300, '🌲', 44);
+        this.addText(512, 355, 'A dark forest path.\nOminous, yet strangely inviting.', 13, '#DDDDDD');
+        this.createButton(512, 420, 'Take the Forest Path', () => this.goTo(SCENES.FOREST));
 
-        // Forest - small preview of forest background
-        const forestPreview = this.add.image(400, 300, 'forest_bg');
-        forestPreview.setDisplaySize(120, 80);
-        forestPreview.setAlpha(0.8);
-        
-        // Sign - simple visual indicator
-        this.add.rectangle(600, 300, 120, 80, 0x8B4513, 0.7);
-        this.add.text(600, 300, '📋', { fontSize: '32px' }).setOrigin(0.5);
-        this.add.text(600, 330, 'Ancient Sign', { 
-            fontSize: '10px', 
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 1
-        }).setOrigin(0.5);
+        // Ancient sign
+        this.addText(784, 300, '📜', 44);
+        this.addText(784, 355, 'An ancient sign hums\nwith magical energy.', 13, '#DDDDDD');
+        this.createButton(784, 420, 'Approach the Sign', () => this.checkSignAccess());
 
-        // Main Menu button
-        this.createButton(SCREEN_WIDTH/2, 480, 'Main Menu', () => {
-            this.scene.start('MainMenuScene');
-        });
-    }
+        // Progress hint — tells the player what the sign wants
+        const collected = ['Squid Eye', 'Bottle of Rum', 'Golden Goblet']
+            .filter(i => this.gameState.hasItem(i));
+        this.addText(SCREEN_WIDTH/2, 560,
+            `Sacred items found: ${collected.length} / 3` +
+            (collected.length ? `  (${collected.join(', ')})` : ''),
+            14, collected.length === 3 ? '#7CFC90' : '#FFD97a');
 
-    createButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 150, 40, 0x34495e)
-            .setInteractive()
-            .on('pointerdown', callback)
-            .on('pointerover', () => button.setFillStyle(0x5d6d7e))
-            .on('pointerout', () => button.setFillStyle(0x34495e));
-
-        this.add.text(x, y, text, {
-            fontSize: '14px',
-            fill: '#ffffff',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        return button;
+        this.createButton(SCREEN_WIDTH/2, 700, 'Main Menu', () => this.goTo('MainMenuScene'), { width: 180 });
     }
 
     checkSignAccess() {
         this.gameState.checkSorcererAccess();
-        
-        if (this.gameState.canEnterSorcerer) {
-            this.scene.start(SCENES.SORCERER);
-        } else {
-            // Show force field message with better visibility
-            const message = this.add.text(SCREEN_WIDTH/2, 450, 'Only the worthy shall pass!\nA magical force field blocks your way.', {
-                fontSize: '20px',
-                fill: '#FF6B6B',
-                fontFamily: 'Arial',
-                align: 'center',
-                stroke: '#000000',
-                strokeThickness: 4
-            }).setOrigin(0.5);
 
-            // Remove message after 3 seconds
-            this.time.delayedCall(3000, () => {
-                if (message) message.destroy();
+        if (this.gameState.canEnterSorcerer) {
+            this.goTo(SCENES.SORCERER);
+        } else {
+            if (this._signMsg) this._signMsg.destroy();
+            this._signMsg = this.addText(SCREEN_WIDTH/2, 630,
+                '"ONLY THE WORTHY SHALL PASS!" booms the sign.\n' +
+                'A force field zaps your nose. Worthiness apparently requires three sacred items.',
+                16, '#FF6B6B');
+
+            this.time.delayedCall(3500, () => {
+                if (this._signMsg) { this._signMsg.destroy(); this._signMsg = null; }
             });
         }
-    }
-
-    startGameMusic(musicKey) {
-        // Don't restart the same track when moving between scenes that share it
-        const currentMusic = this.registry.get('currentMusic');
-        const currentKey = this.registry.get('currentMusicKey');
-        if (currentKey === musicKey && currentMusic && currentMusic.isPlaying) {
-            return;
-        }
-        if (currentMusic) {
-            currentMusic.stop();
-        }
-        const newMusic = this.sound.add(musicKey, { loop: true, volume: 0.2 });
-        newMusic.play();
-        this.registry.set('currentMusic', newMusic);
-        this.registry.set('currentMusicKey', musicKey);
     }
 }
