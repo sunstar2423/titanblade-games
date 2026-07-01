@@ -1,95 +1,46 @@
 /*
- * Battle of the Druids - Web Edition
+ * Isle of Adventure - Web Edition
  * MountainsScene.js
- * 
+ *
  * Copyright (c) 2025 TitanBlade Games
- * 
+ *
  * This file is part of Battle of the Druids, licensed under the MIT License.
  * See LICENSE file in the project root for full license information.
- * 
+ *
  * https://github.com/sunstar2423/titanblade-games
  */
 
 import { SCREEN_WIDTH, SCREEN_HEIGHT, SCENES } from '../GameData.js';
+import BaseScene from '../BaseScene.js';
 
-export default class MountainsScene extends Phaser.Scene {
+export default class MountainsScene extends BaseScene {
     constructor() {
         super({ key: SCENES.MOUNTAINS });
     }
 
     create() {
-        this.gameState = this.registry.get('gameState');
+        this.setupScene();
         this.gameState.visitLocation('Mountains');
-        
-        // Start serene journey music
         this.startGameMusic('serene_journey');
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'mountains_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title
-        this.add.text(SCREEN_WIDTH/2, 50, 'Rocky Mountains', {
-            fontSize: '32px',
-            fill: '#ffffff',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        this.setBackground('mountains_bg');
 
-        // Description
-        this.add.text(SCREEN_WIDTH/2, 120, 'Towering peaks stretch before you.\nA dark cave entrance beckons ahead.', {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            align: 'center'
-        }).setOrigin(0.5);
+        this.addTitle('The Rocky Mountains');
 
-        // Mountain scenery
-        this.add.text(SCREEN_WIDTH/2, 280, '⛰️🕳️⛰️', { fontSize: '64px' }).setOrigin(0.5);
-        
-        this.add.text(SCREEN_WIDTH/2, 380, 'A mysterious cave entrance\nawaits your exploration', {
-            fontSize: '18px',
-            fill: '#cccccc',
-            fontFamily: 'Arial',
-            align: 'center'
-        }).setOrigin(0.5);
+        this.addText(SCREEN_WIDTH/2, 135,
+            'The wind howls between towering peaks. Ahead, a cave mouth\n' +
+            'exhales cold air and what sounds suspiciously like snoring.', 16);
 
-        // Action buttons
-        this.createButton(SCREEN_WIDTH/2, 450, 'Enter the Cave', () => {
-            this.scene.start(SCENES.CAVE);
-        });
+        this.addText(SCREEN_WIDTH/2, 330, '⛰️  🕳️  ⛰️', 64);
 
-        this.createButton(SCREEN_WIDTH/2, 520, 'Return to Fork', () => {
-            this.scene.start(SCENES.FORK);
-        });
-    }
+        const ogreDone = this.gameState.hasDefeatedEnemy('Cave Ogre');
+        this.addText(SCREEN_WIDTH/2, 440,
+            ogreDone
+                ? 'The snoring has stopped. The cave feels almost welcoming now.\n(Almost.)'
+                : 'A hand-painted sign by the entrance reads:\n"GO AWAY. — Management"', 15, '#DDDDDD');
 
-    createButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 180, 40, 0x34495e)
-            .setInteractive()
-            .on('pointerdown', callback)
-            .on('pointerover', () => button.setFillStyle(0x5d6d7e))
-            .on('pointerout', () => button.setFillStyle(0x34495e));
+        this.createButton(SCREEN_WIDTH/2, 560, ogreDone ? 'Enter the Cave' : 'Enter the Cave (ignore sign)',
+            () => this.goTo(SCENES.CAVE), { width: 260 });
 
-        this.add.text(x, y, text, {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        return button;
-    }
-
-    startGameMusic(musicKey) {
-        // Stop any existing global music and start new music
-        const currentMusic = this.registry.get('currentMusic');
-        if (currentMusic) {
-            currentMusic.stop();
-        }
-        const newMusic = this.sound.add(musicKey, { loop: true, volume: 0.2 });
-        newMusic.play();
-        this.registry.set('currentMusic', newMusic);
+        this.createButton(150, 700, '← Back to the Fork', () => this.goTo(SCENES.FORK), { width: 190 });
     }
 }

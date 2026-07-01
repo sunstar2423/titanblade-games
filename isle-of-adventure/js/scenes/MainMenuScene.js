@@ -11,6 +11,7 @@
  */
 
 import { SCREEN_WIDTH, SCREEN_HEIGHT, SCENES } from '../GameData.js';
+import GameState from '../GameState.js';
 
 export default class MainMenuScene extends Phaser.Scene {
     constructor() {
@@ -28,6 +29,7 @@ export default class MainMenuScene extends Phaser.Scene {
         this.menuMusic = this.sound.add('menumusic', { loop: true, volume: 0.3 });
         this.menuMusic.play();
         this.registry.set('currentMusic', this.menuMusic);
+        this.registry.set('currentMusicKey', 'menumusic');
         
         // Add background image
         const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'mainmenu');
@@ -52,25 +54,36 @@ export default class MainMenuScene extends Phaser.Scene {
             strokeThickness: 2
         }).setOrigin(0.5);
 
+        const hasSave = GameState.hasSave();
+
         // Menu buttons (positioned lower to avoid overlapping title in background)
-        this.createMenuButton(SCREEN_WIDTH/2, 320, 'START ADVENTURE', () => {
+        this.createMenuButton(SCREEN_WIDTH/2, 300, 'START ADVENTURE', () => {
             this.stopMenuMusic();
             this.gameState.reset();
             this.game.events.emit('inventory-updated');
             this.scene.start(SCENES.VILLAGE);
         });
 
-        this.createMenuButton(SCREEN_WIDTH/2, 380, 'CONTINUE GAME', () => {
+        this.createMenuButton(SCREEN_WIDTH/2, 355, 'CONTINUE GAME', () => {
+            if (!hasSave) return; // Nothing saved yet
             this.stopMenuMusic();
+            this.gameState.load();
+            this.game.events.emit('inventory-updated');
             this.scene.start(SCENES.VILLAGE);
+        }, !hasSave);
+
+        // Opening credits button
+        this.createMenuButton(SCREEN_WIDTH/2, 410, 'OPENING CREDITS', () => {
+            this.stopMenuMusic();
+            this.scene.start(SCENES.CREDITS);
         });
 
-        this.createMenuButton(SCREEN_WIDTH/2, 440, 'RESET PROGRESS', () => {
+        this.createMenuButton(SCREEN_WIDTH/2, 465, 'RESET PROGRESS', () => {
             this.gameState.reset();
             this.game.events.emit('inventory-updated');
-            
+
             // Show confirmation message
-            const message = this.add.text(SCREEN_WIDTH/2, 500, 'Progress Reset!', {
+            const message = this.add.text(SCREEN_WIDTH/2, 510, 'Progress Reset!', {
                 fontSize: '16px',
                 fill: '#4ecdc4',
                 fontFamily: 'Arial',
@@ -84,7 +97,7 @@ export default class MainMenuScene extends Phaser.Scene {
         });
 
         // Instructions
-        this.add.text(SCREEN_WIDTH/2, 540, 'Collect items, defeat enemies, and find your way home!', {
+        this.add.text(SCREEN_WIDTH/2, 560, 'Collect items, defeat enemies, and find your way home!', {
             fontSize: '14px',
             fill: '#CCCCCC',
             fontFamily: 'Arial',
@@ -100,43 +113,44 @@ export default class MainMenuScene extends Phaser.Scene {
             fontFamily: 'Arial'
         });
 
-        // Opening credits button
-        this.createMenuButton(SCREEN_WIDTH/2, 500, 'OPENING CREDITS', () => {
-            this.stopMenuMusic();
-            this.scene.start(SCENES.CREDITS);
-        });
-
         // Music credits button (smaller, positioned at bottom right)
         this.createSmallButton(SCREEN_WIDTH - 120, SCREEN_HEIGHT - 30, 'MUSIC CREDITS', () => {
             this.showMusicCredits();
         });
     }
 
-    createMenuButton(x, y, text, callback) {
+    createMenuButton(x, y, text, callback, disabled = false) {
+        const baseColor = disabled ? 0x2b2b2b : 0x34495e;
+        const borderColor = disabled ? 0x666666 : 0xFFD700;
+        const textColor = disabled ? '#888888' : '#FFFFFF';
+
         // Create button background
-        const button = this.add.rectangle(x, y, 300, 45, 0x34495e, 0.8)
-            .setInteractive()
-            .on('pointerdown', () => {
-                this.sound.play('click_sound', { volume: 0.5 });
-                callback();
-            })
-            .on('pointerover', () => {
-                button.setFillStyle(0x5d6d7e, 0.9);
-                buttonText.setScale(1.05);
-            })
-            .on('pointerout', () => {
-                button.setFillStyle(0x34495e, 0.8);
-                buttonText.setScale(1.0);
-            });
+        const button = this.add.rectangle(x, y, 300, 45, baseColor, 0.8);
+
+        if (!disabled) {
+            button.setInteractive()
+                .on('pointerdown', () => {
+                    this.sound.play('click_sound', { volume: 0.5 });
+                    callback();
+                })
+                .on('pointerover', () => {
+                    button.setFillStyle(0x5d6d7e, 0.9);
+                    buttonText.setScale(1.05);
+                })
+                .on('pointerout', () => {
+                    button.setFillStyle(baseColor, 0.8);
+                    buttonText.setScale(1.0);
+                });
+        }
 
         // Add button border
         const border = this.add.rectangle(x, y, 300, 45, 0x2c3e50, 0);
-        border.setStrokeStyle(2, 0xFFD700);
+        border.setStrokeStyle(2, borderColor);
 
         // Add button text
         const buttonText = this.add.text(x, y, text, {
             fontSize: '18px',
-            fill: '#FFFFFF',
+            fill: textColor,
             fontFamily: 'Arial',
             stroke: '#000000',
             strokeThickness: 1

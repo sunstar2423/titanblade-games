@@ -31,12 +31,25 @@ export default class PreloadScene extends Phaser.Scene {
         const progressFill = this.add.rectangle(SCREEN_WIDTH/2 - 200, SCREEN_HEIGHT/2, 0, 20, 0x4ecdc4);
         progressFill.setOrigin(0, 0.5); // Set origin to left-center so it grows from left
 
+        const percentText = this.add.text(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 30, '0%', {
+            fontSize: '16px',
+            fill: '#4ecdc4',
+            fontFamily: 'Arial'
+        }).setOrigin(0.5);
+
         // Update progress bar
         this.load.on('progress', (progress) => {
             const fillWidth = 400 * progress;
             progressFill.width = fillWidth;
             // Keep the fill starting from the left edge of the container
             progressFill.x = SCREEN_WIDTH/2 - 200;
+            percentText.setText(`${Math.round(progress * 100)}%`);
+        });
+
+        // Optional artwork: these may not exist yet. If a file is missing the
+        // load fails quietly and scenes fall back to existing backgrounds.
+        this.load.on('loaderror', (file) => {
+            console.warn(`Optional asset not found (using fallback): ${file.key}`);
         });
 
         // Load all background images
@@ -54,6 +67,10 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('pirate_island_bg', 'images/pirate_island_background.png');
         this.load.image('sorcerer_bg', 'images/sorcerer_background.png');
         this.load.image('portal_bg', 'images/portal_background.png');
+
+        // New expansion artwork (optional — falls back if not present yet)
+        this.load.image('beach_bg', 'images/beachscene.png');
+        this.load.image('pirate_base_bg', 'images/piratebase.png');
         
         // Load character images with transparent backgrounds
         this.load.image('troll1', 'images/troll1.png');
@@ -62,8 +79,13 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('ogre', 'images/orge1.png');
         this.load.image('sorcerer_char', 'images/sorceror.png');
         
-        // Load video files
-        this.load.video('welcome_video', 'images/welcomevideo.mp4');
+        // Load video files — some browsers/webviews can throw here (codec support);
+        // never let the intro video take the whole game down with it.
+        try {
+            this.load.video('welcome_video', 'images/welcomevideo.mp4');
+        } catch (e) {
+            console.warn('Video not supported in this browser, skipping intro video:', e);
+        }
         
         // Load music files
         this.load.audio('menumusic', 'sounds/menumusic.mp3');
@@ -79,6 +101,13 @@ export default class PreloadScene extends Phaser.Scene {
     }
 
     create() {
+        // Tiny soft dot used by ambient particle effects (fireflies, embers, ...)
+        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        g.fillStyle(0xffffff, 1);
+        g.fillCircle(4, 4, 4);
+        g.generateTexture('particle_dot', 8, 8);
+        g.destroy();
+
         // Once loading is complete, go to main menu
         this.scene.start('MainMenuScene');
     }

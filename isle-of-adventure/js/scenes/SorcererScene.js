@@ -1,44 +1,32 @@
 /*
- * Battle of the Druids - Web Edition
+ * Isle of Adventure - Web Edition
  * SorcererScene.js
- * 
+ *
  * Copyright (c) 2025 TitanBlade Games
- * 
+ *
  * This file is part of Battle of the Druids, licensed under the MIT License.
  * See LICENSE file in the project root for full license information.
- * 
+ *
  * https://github.com/sunstar2423/titanblade-games
  */
 
 import { SCREEN_WIDTH, SCREEN_HEIGHT, SCENES, ITEMS } from '../GameData.js';
+import BaseScene from '../BaseScene.js';
 
-export default class SorcererScene extends Phaser.Scene {
+export default class SorcererScene extends BaseScene {
     constructor() {
         super({ key: SCENES.SORCERER });
     }
 
     create() {
-        this.gameState = this.registry.get('gameState');
+        this.setupScene();
         this.gameState.visitLocation('Sorcerer House');
-        
-        // Start Run to the Dream music for sorcerer scene
         this.startGameMusic('run_to_dream');
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'sorcerer_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title
-        this.add.text(SCREEN_WIDTH/2, 50, 'Sorcerer\'s House', {
-            fontSize: '32px',
-            fill: '#FFD700',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        this.setBackground('sorcerer_bg');
+        this.addAmbient('sparkles');
 
-        // Check if items have been given
+        this.addTitle("The Sorcerer's House", '#FFD700');
+
         if (this.gameState.hasVisitedLocation('Portal')) {
             this.showCompletionState();
         } else {
@@ -47,276 +35,134 @@ export default class SorcererScene extends Phaser.Scene {
     }
 
     showWelcomeState() {
-        // Description with better visibility
-        this.add.text(SCREEN_WIDTH/2, 120, 'A wise sorcerer greets you in his mystical dwelling.', {
-            fontSize: '16px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
+        this.addText(SCREEN_WIDTH/2, 130,
+            'Floating crystals light a room crammed with books, orbs,\nand at least one cauldron labelled "SOUP (probably)".', 15);
 
-        // Sorcerer greeting
-        this.add.text(SCREEN_WIDTH/2, 150, '"Welcome, brave adventurer! I am Merlin the Moderately Impressive.\nI used to be \'the Great\' but... budget cuts, you know?"', {
-            fontSize: '13px',
-            fill: '#DDA0DD',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 2,
-            fontStyle: 'italic'
-        }).setOrigin(0.5);
+        this.addSpeech(SCREEN_WIDTH/2, 195,
+            '"Welcome, brave adventurer! I am Merlin the Moderately Impressive.\n' +
+            'I used to be \'the Great\', but... budget cuts. You understand."', '#DDA0DD', 14);
 
-        // Sorcerer character image
-        const sorcererChar = this.add.image(SCREEN_WIDTH/2, 250, 'sorcerer_char');
-        sorcererChar.setDisplaySize(180, 220); // Scale to larger size
+        const sorcerer = this.add.image(SCREEN_WIDTH/2, 370, 'sorcerer_char');
+        sorcerer.setDisplaySize(200, 245);
+        this.animateCharacter(sorcerer, 2600, 3);
 
-        // Player dialogue options when meeting sorcerer
-        this.add.text(SCREEN_WIDTH/2, 320, 'How do you greet the sorcerer?', {
-            fontSize: '14px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
+        this.addText(SCREEN_WIDTH/2, 540, 'How do you greet the sorcerer?', 15);
 
-        this.createSorcererDialogueButton(200, 360, '"Merlin the Moderately\nImpressive? Modest!"', () => {
-            this.showSorcererDialogue('"Merlin the Moderately Impressive? I appreciate the modest branding! Very refreshing."');
-        });
+        this.createChoiceButton(210, 605, '"Moderately Impressive?\nRefreshingly honest!"', () => {
+            this.showExchange(
+                '"Merlin the Moderately Impressive?\nI appreciate the honest branding. Very refreshing."',
+                '"Honesty in advertising, my friend! The Wizard Council\nfined me TWICE for using \'the Great\' without a permit.\nMy cousin holds the trademark. Family dinners are tense."'
+            );
+        }, 0x6A0DAD, 0x8B32CC);
 
-        this.createSorcererDialogueButton(400, 360, '"Budget cuts in the\nmagic business?"', () => {
-            this.showSorcererDialogue('"Budget cuts in the magic business? I knew the economy was tough, but even wizards?"');
-        });
+        this.createChoiceButton(512, 605, '"Budget cuts? In the\nmagic business?"', () => {
+            this.showExchange(
+                '"Budget cuts in the magic business?\nI knew the economy was rough, but even wizards?"',
+                '"Even wizards! My crystal ball is on a payment plan.\nThe newt market has gone MAD. And don\'t get me started\non dragon insurance premiums after The Incident."'
+            );
+        }, 0x6A0DAD, 0x8B32CC);
 
-        this.createSorcererDialogueButton(600, 360, '"Can you still do\nimpressive magic tricks?"', () => {
-            this.showSorcererDialogue('"Can you still do impressive magic tricks? Or are we limited to moderately impressive ones?"');
-        });
+        this.createChoiceButton(814, 605, '"Can you still do\nimpressive magic?"', () => {
+            this.showExchange(
+                '"Can you still do impressive magic tricks?\nOr only moderately impressive ones?"',
+                '"I once turned a dragon into a slightly smaller dragon!"\nHe pauses, expectantly. "...That\'s harder than it sounds.\nThe dragon was VERY smug about it."'
+            );
+        }, 0x6A0DAD, 0x8B32CC);
 
-        // Check if player has the required items
-        const hasSquidEye = this.gameState.hasItem(ITEMS.SQUID_EYE.name);
-        const hasRum = this.gameState.hasItem(ITEMS.RUM.name);
-        const hasGoblet = this.gameState.hasItem(ITEMS.GOBLET.name);
-
-        // Initially skip the item check - player must choose dialogue first
+        this.createButton(150, 700, '← Back to Village', () => this.goTo(SCENES.VILLAGE), { width: 190 });
     }
 
-    showCompletionState() {
-        this.add.text(SCREEN_WIDTH/2, 200, 'The ritual is complete!', {
-            fontSize: '24px',
-            fill: '#FFD700',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+    showExchange(playerLine, merlinReply) {
+        this.clearScene();
+        this.setBackground('sorcerer_bg');
+        this.addAmbient('sparkles');
+        this.addTitle("The Sorcerer's House", '#FFD700');
 
-        this.add.text(SCREEN_WIDTH/2, 250, 'The portal to your home awaits beyond that door.', {
-            fontSize: '16px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        this.addSpeech(SCREEN_WIDTH/2, 130, playerLine, '#4ECDC4');
+        this.addSpeech(SCREEN_WIDTH/2, 220, merlinReply, '#DDA0DD');
 
-        this.createButton(SCREEN_WIDTH/2, 350, 'Enter Portal Room', () => {
-            this.scene.start(SCENES.PORTAL);
-        });
-    }
+        const sorcerer = this.add.image(SCREEN_WIDTH/2, 400, 'sorcerer_char');
+        sorcerer.setDisplaySize(180, 220);
+        this.animateCharacter(sorcerer, 2600, 3);
 
-    giveItemsToSorcerer() {
-        // Clear the scene
-        this.children.removeAll();
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'sorcerer_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Ritual scene
-        this.add.text(SCREEN_WIDTH/2, 100, 'The Ritual', {
-            fontSize: '32px',
-            fill: '#FFD700',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        this.add.text(SCREEN_WIDTH/2, 150, '"Now for the ancient ritual! *dramatic pose*\nStep one: Pour rum into goblet. Step two: Add squid eye.\nStep three: Try not to think about how gross this is."', {
-            fontSize: '13px',
-            fill: '#DDA0DD',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 2,
-            fontStyle: 'italic'
-        }).setOrigin(0.5);
-
-        // Ritual elements - Sorcerer performing the ritual
-        const sorcererRitual = this.add.image(SCREEN_WIDTH/2, 250, 'sorcerer_char');
-        sorcererRitual.setDisplaySize(100, 125); // Slightly smaller for ritual scene
-        this.add.text(300, 300, '🏆', { fontSize: '32px' }).setOrigin(0.5);
-        this.add.text(400, 300, '🍾', { fontSize: '32px' }).setOrigin(0.5);
-        this.add.text(500, 300, '👁️', { fontSize: '32px' }).setOrigin(0.5);
-        this.add.text(SCREEN_WIDTH/2, 350, '✨✨✨', { fontSize: '32px' }).setOrigin(0.5);
-
-        this.add.text(SCREEN_WIDTH/2, 400, '"Ta-da! The portal spell worked! *whispers* I was only 60% sure it would.\nYou\'re officially worthy! The door to home awaits!"', {
-            fontSize: '13px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 2,
-            fontStyle: 'italic'
-        }).setOrigin(0.5);
-
-        // Mark as visited
-        this.gameState.visitLocation('Portal');
-
-        this.createButton(SCREEN_WIDTH/2, 480, 'Enter Portal Room', () => {
-            this.scene.start(SCENES.PORTAL);
-        });
-    }
-
-    createButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 220, 40, 0x2C1810)
-            .setInteractive()
-            .on('pointerdown', () => {
-                this.sound.play('click_sound', { volume: 0.5 });
-                callback();
-            })
-            .on('pointerover', () => button.setFillStyle(0x3D2017))
-            .on('pointerout', () => button.setFillStyle(0x2C1810));
-
-        this.add.text(x, y, text, {
-            fontSize: '14px',
-            fill: '#FFD700',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        return button;
-    }
-
-    startGameMusic(musicKey) {
-        // Stop any existing global music and start new music
-        const currentMusic = this.registry.get('currentMusic');
-        if (currentMusic) {
-            currentMusic.stop();
-        }
-        const newMusic = this.sound.add(musicKey, { loop: true, volume: 0.2 });
-        newMusic.play();
-        this.registry.set('currentMusic', newMusic);
-    }
-
-    createSorcererDialogueButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 180, 35, 0x6A0DAD)
-            .setInteractive()
-            .on('pointerdown', () => {
-                this.sound.play('click_sound', { volume: 0.5 });
-                callback();
-            })
-            .on('pointerover', () => button.setFillStyle(0x8B32CC))
-            .on('pointerout', () => button.setFillStyle(0x6A0DAD));
-
-        this.add.text(x, y, text, {
-            fontSize: '12px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            align: 'center'
-        }).setOrigin(0.5);
-
-        return button;
-    }
-
-    showSorcererDialogue(dialogue) {
-        // Clear existing content and show player's chosen dialogue
-        this.children.removeAll();
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'sorcerer_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title
-        this.add.text(SCREEN_WIDTH/2, 50, 'Sorcerer\'s House', {
-            fontSize: '32px',
-            fill: '#FFD700',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        // Player dialogue
-        this.add.text(SCREEN_WIDTH/2, 120, dialogue, {
-            fontSize: '16px',
-            fill: '#4ECDC4',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3,
-            fontStyle: 'italic'
-        }).setOrigin(0.5);
-
-        // Sorcerer response
-        this.add.text(SCREEN_WIDTH/2, 180, '"Haha! I like your sense of humor!\nYes, the great title was taken by my cousin.\nBut don\'t worry - my magic is still pretty decent!"', {
-            fontSize: '13px',
-            fill: '#DDA0DD',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 2,
-            fontStyle: 'italic'
-        }).setOrigin(0.5);
-
-        // Sorcerer character image
-        const sorcererChar = this.add.image(SCREEN_WIDTH/2, 280, 'sorcerer_char');
-        sorcererChar.setDisplaySize(180, 220);
-
-        // Now show the regular quest content
         this.showQuestContent();
     }
 
     showQuestContent() {
-        // Check if player has the required items
         const hasSquidEye = this.gameState.hasItem(ITEMS.SQUID_EYE.name);
         const hasRum = this.gameState.hasItem(ITEMS.RUM.name);
         const hasGoblet = this.gameState.hasItem(ITEMS.GOBLET.name);
 
         if (hasSquidEye && hasRum && hasGoblet) {
-            this.add.text(SCREEN_WIDTH/2, 380, '"Excellent! You have the three sacred ingredients!\nSquid Eye for wisdom, Rum for courage, Goblet for... well, holding rum."', {
-                fontSize: '13px',
-                fill: '#FFFFFF',
-                fontFamily: 'Arial',
-                align: 'center',
-                stroke: '#000000',
-                strokeThickness: 2,
-                fontStyle: 'italic'
-            }).setOrigin(0.5);
+            this.addSpeech(SCREEN_WIDTH/2, 545,
+                '"Marvellous! The three sacred ingredients! Squid Eye for wisdom,\n' +
+                'Rum for courage, and the Goblet for... well, holding the rum."', '#FFFFFF', 14);
 
-            this.createButton(SCREEN_WIDTH/2, 450, 'Give Items to Sorcerer', () => {
-                this.giveItemsToSorcerer();
+            this.createButton(SCREEN_WIDTH/2, 625, '✨ Begin the Ritual', () => this.performRitual(), {
+                width: 250, color: 0x2C1810, hover: 0x3D2017
             });
         } else {
-            this.add.text(SCREEN_WIDTH/2, 380, '"I need three very specific items for the portal spell:\nSquid Eye, Fine Rum, and a Golden Goblet."', {
-                fontSize: '13px',
-                fill: '#FFFFFF',
-                fontFamily: 'Arial',
-                align: 'center',
-                stroke: '#000000',
-                strokeThickness: 2,
-                fontStyle: 'italic'
-            }).setOrigin(0.5);
+            const missing = [];
+            if (!hasSquidEye) missing.push('the Squid Eye (out at sea)');
+            if (!hasRum) missing.push('the Bottle of Rum (pirates have it)');
+            if (!hasGoblet) missing.push('the Golden Goblet (under the mountain)');
 
-            // Show what items are missing
-            let missingItems = [];
-            if (!hasSquidEye) missingItems.push('Squid Eye');
-            if (!hasRum) missingItems.push('Rum');
-            if (!hasGoblet) missingItems.push('Golden Goblet');
-
-            this.add.text(SCREEN_WIDTH/2, 430, `Missing: ${missingItems.join(', ')}`, {
-                fontSize: '12px',
-                fill: '#ff6b6b',
-                fontFamily: 'Arial'
-            }).setOrigin(0.5);
+            this.addSpeech(SCREEN_WIDTH/2, 540,
+                '"For the portal spell I need three very specific things..."', '#FFFFFF', 14);
+            this.addText(SCREEN_WIDTH/2, 590, `Still missing: ${missing.join(', ')}`, 13, '#ff8f8f');
         }
 
-        this.createButton(SCREEN_WIDTH/2, 520, 'Return to Village', () => {
-            this.scene.start(SCENES.VILLAGE);
+        this.createButton(150, 700, '← Back to Village', () => this.goTo(SCENES.VILLAGE), { width: 190 });
+    }
+
+    performRitual() {
+        this.clearScene();
+        this.setBackground('sorcerer_bg');
+        this.addAmbient('sparkles');
+
+        this.addTitle('The Ritual', '#FFD700');
+
+        this.addSpeech(SCREEN_WIDTH/2, 160,
+            '"Now for the ancient ritual!" *dramatic pose*\n' +
+            '"Step one: pour rum into goblet. Step two: add squid eye.\n' +
+            'Step three: try very hard not to think about how gross that is."', '#DDA0DD', 14);
+
+        const sorcerer = this.add.image(SCREEN_WIDTH/2, 340, 'sorcerer_char');
+        sorcerer.setDisplaySize(140, 170);
+        this.animateCharacter(sorcerer, 1800, 5);
+
+        this.addText(362, 460, '🏆', 40);
+        this.addText(512, 460, '🍾', 40);
+        this.addText(662, 460, '👁️', 40);
+
+        const sparkleText = this.addText(SCREEN_WIDTH/2, 520, '✨ ✨ ✨', 36);
+        this.tweens.add({ targets: sparkleText, alpha: 0.2, duration: 500, yoyo: true, repeat: -1 });
+
+        this.sound.play('special_sound', { volume: 0.7 });
+
+        this.addSpeech(SCREEN_WIDTH/2, 580,
+            '"TA-DA! The portal spell worked!" *whispers* "I was only 60% sure it would."\n' +
+            '"You are officially worthy! Your door home awaits!"', '#FFFFFF', 14);
+
+        this.gameState.visitLocation('Portal');
+
+        this.createButton(SCREEN_WIDTH/2, 660, 'Enter the Portal Room →', () => this.goTo(SCENES.PORTAL), {
+            width: 260, color: 0x2C1810, hover: 0x3D2017
         });
+    }
+
+    showCompletionState() {
+        this.addText(SCREEN_WIDTH/2, 200, 'The ritual is complete!', 26, '#FFD700');
+        this.addSpeech(SCREEN_WIDTH/2, 270,
+            '"The portal\'s still warm! Off you go — and do leave\na five-star review for \'Merlin\'s Moderately Magical Services\'!"', '#DDA0DD');
+
+        const sorcerer = this.add.image(SCREEN_WIDTH/2, 430, 'sorcerer_char');
+        sorcerer.setDisplaySize(180, 220);
+        this.animateCharacter(sorcerer, 2600, 3);
+
+        this.createButton(SCREEN_WIDTH/2, 630, 'Enter the Portal Room →', () => this.goTo(SCENES.PORTAL), {
+            width: 260, color: 0x2C1810, hover: 0x3D2017
+        });
+        this.createButton(150, 700, '← Back to Village', () => this.goTo(SCENES.VILLAGE), { width: 190 });
     }
 }

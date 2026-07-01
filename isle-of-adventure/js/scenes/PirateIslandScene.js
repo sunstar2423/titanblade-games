@@ -1,295 +1,115 @@
 /*
- * Battle of the Druids - Web Edition
+ * Isle of Adventure - Web Edition
  * PirateIslandScene.js
- * 
+ *
  * Copyright (c) 2025 TitanBlade Games
- * 
+ *
  * This file is part of Battle of the Druids, licensed under the MIT License.
  * See LICENSE file in the project root for full license information.
- * 
+ *
  * https://github.com/sunstar2423/titanblade-games
  */
 
 import { SCREEN_WIDTH, SCREEN_HEIGHT, SCENES, ITEMS } from '../GameData.js';
+import BaseScene from '../BaseScene.js';
 
-export default class PirateIslandScene extends Phaser.Scene {
+export default class PirateIslandScene extends BaseScene {
     constructor() {
         super({ key: SCENES.PIRATE_ISLAND });
     }
 
     create() {
-        this.gameState = this.registry.get('gameState');
+        this.setupScene();
         this.gameState.visitLocation('Pirate Island');
-        
-        // Start Run to the Dream music for pirate party
         this.startGameMusic('run_to_dream');
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'pirate_island_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title with better visibility
-        this.add.text(SCREEN_WIDTH/2, 50, 'Pirate Island', {
-            fontSize: '32px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0.5);
+        this.setBackground('pirate_island_bg');
+        this.addAmbient('embers');
 
-        // Description with better visibility
-        this.add.text(SCREEN_WIDTH/2, 120, 'You spot a small island with pirates having a beach party!\nA fire crackles as they roast fish and share stories.', {
-            fontSize: '16px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
+        this.addTitle('Pirate Island');
 
-        // Beach party scene
-        this.add.text(200, 250, '🏴‍☠️', { fontSize: '32px' }).setOrigin(0.5); // pirate flag
-        this.add.text(350, 280, '🔥', { fontSize: '32px' }).setOrigin(0.5); // fire
-        this.add.text(500, 250, '🏴‍☠️', { fontSize: '32px' }).setOrigin(0.5); // pirate flag
-        this.add.text(250, 320, '🧑‍☠️', { fontSize: '32px' }).setOrigin(0.5); // pirate
-        this.add.text(450, 320, '🧑‍☠️', { fontSize: '32px' }).setOrigin(0.5); // pirate
-        this.add.text(600, 280, '🍺', { fontSize: '32px' }).setOrigin(0.5); // drink
-
-        this.add.text(SCREEN_WIDTH/2, 380, 'The pirates welcome you to their celebration!', {
-            fontSize: '18px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
-
-        this.add.text(SCREEN_WIDTH/2, 410, 'They offer you roasted fish and...', {
-            fontSize: '14px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
-
-        // Player dialogue options for joining the party
-        this.add.text(SCREEN_WIDTH/2, 440, 'What do you say to the pirates?', {
-            fontSize: '14px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
-
-        this.createPirateDialogueButton(200, 480, '"Ahoy! Mind if I crash\nyour beach party?"', () => {
-            this.showPirateDialogue('"Ahoy! Mind if I crash your beach party? I promise I won\'t steal your treasure... much."');
-        });
-
-        this.createPirateDialogueButton(400, 480, '"Is this a pirate party\nor a cooking show?"', () => {
-            this.showPirateDialogue('"Is this a pirate party or a cooking show? Where are the cannons and sword fights?"');
-        });
-
-        this.createPirateDialogueButton(600, 480, '"I\'ll join, but I don\'t\nknow any sea shanties."', () => {
-            this.showPirateDialogue('"I\'ll join, but I don\'t know any sea shanties. Will humming the Jeopardy theme work?"');
-        });
-
-        // Return button
-        this.createButton(SCREEN_WIDTH/2, 520, 'Return to Village', () => {
-            this.scene.start(SCENES.VILLAGE);
-        });
-    }
-
-    autoCollectRum() {
-        const rumName = ITEMS.RUM.name;
-        
-        if (this.gameState.hasItem(rumName)) {
-            // Rum already taken
-            this.add.text(SCREEN_WIDTH/2, 450, '✓', { fontSize: '32px', fill: '#4ecdc4' }).setOrigin(0.5);
-            this.add.text(SCREEN_WIDTH/2, 480, 'Rum Already Collected', { 
-                fontSize: '14px', 
-                fill: '#4ecdc4',
-                fontFamily: 'Arial',
-                stroke: '#000000',
-                strokeThickness: 2
-            }).setOrigin(0.5);
-        } else {
-            // Auto-collect the rum bottle
-            this.gameState.addItem(ITEMS.RUM.name);
-            
-            // Play special pickup sound
-            this.sound.play('special_sound', { volume: 0.6 });
-            
-            this.game.events.emit('inventory-updated');
-            
-            // Show rum bottle and collection message
-            this.add.text(SCREEN_WIDTH/2, 450, '🍾', { fontSize: '32px' }).setOrigin(0.5);
-            
-            const message = this.add.text(SCREEN_WIDTH/2, 400, 'The pirates gift you a bottle of rum!', {
-                fontSize: '18px',
-                fill: '#8B4513',
-                fontFamily: 'Arial',
-                stroke: '#000000',
-                strokeThickness: 3
-            }).setOrigin(0.5);
-
-            this.add.text(SCREEN_WIDTH/2, 480, 'Rum Collected!', { 
-                fontSize: '14px', 
-                fill: '#4ecdc4',
-                fontFamily: 'Arial',
-                stroke: '#000000',
-                strokeThickness: 2
-            }).setOrigin(0.5);
-
-            // Make message flash for emphasis
-            this.tweens.add({
-                targets: message,
-                alpha: 0.3,
-                duration: 800,
-                yoyo: true,
-                repeat: 2
-            });
+        if (this.gameState.hasItem(ITEMS.RUM.name)) {
+            this.showAfterParty();
+            return;
         }
+
+        this.addText(SCREEN_WIDTH/2, 135,
+            'Pirates are having a beach party around a crackling fire.\n' +
+            'One of them is grilling fish on a cutlass. Health code: unclear.', 16);
+
+        // Party scenery
+        this.addText(300, 300, '🏴‍☠️', 40);
+        this.addText(512, 330, '🔥', 48);
+        this.addText(724, 300, '🏴‍☠️', 40);
+        this.addText(400, 370, '🧑‍🦱', 36);
+        this.addText(620, 370, '🧔', 36);
+
+        this.addText(SCREEN_WIDTH/2, 450, 'The pirates wave you over to the fire!', 17);
+
+        this.addText(SCREEN_WIDTH/2, 520, 'What do you say to the pirates?', 15);
+
+        this.createChoiceButton(210, 585, '"Ahoy! Mind if I crash\nyour beach party?"', () => {
+            this.showExchange(
+                '"Ahoy! Mind if I crash your beach party?\nI promise I won\'t steal your treasure... much."',
+                '"HAR HAR! \'Much,\' the landlubber says!"\nThe crew roars with laughter. "Honesty! We like ye already.\nAny scallywag bold enough to ask gets a seat by the fire!"'
+            );
+        }, 0x8B4513, 0xA0522D);
+
+        this.createChoiceButton(512, 585, '"Is this a pirate party\nor a cooking show?"', () => {
+            this.showExchange(
+                '"Is this a pirate party or a cooking show?\nWhere are the cannons and sword fights?"',
+                '"It\'s a GRILLING show, ye uncultured barnacle!"\nThe cook waves his cutlass-spatula. "Cap\'n says we\'re\n\'rebranding.\' Piracy\'s a lifestyle brand now."'
+            );
+        }, 0x8B4513, 0xA0522D);
+
+        this.createChoiceButton(814, 585, '"I\'ll join, but I don\'t\nknow any sea shanties."', () => {
+            this.showExchange(
+                '"I\'ll join, but I don\'t know any sea shanties.\nWill humming the Jeopardy theme work?"',
+                '"The JEOPARDY theme?!" A hush falls...\nThen the whole crew hums it in perfect four-part harmony.\n"We watch a lot of telly between raids," one admits.'
+            );
+        }, 0x8B4513, 0xA0522D);
+
+        this.createButton(150, 700, '← Back to Village', () => this.goTo(SCENES.VILLAGE), { width: 190 });
     }
 
-    collectRum(sprite) {
-        this.gameState.addItem(ITEMS.RUM.name);
-        
-        // Play special pickup sound
-        this.sound.play('special_sound', { volume: 0.6 });
-        
-        // Update inventory display
-        this.game.events.emit('inventory-updated');
-        
-        // Show collection message
-        const message = this.add.text(SCREEN_WIDTH/2, 400, 'The pirates gift you a bottle of rum!', {
-            fontSize: '16px',
-            fill: '#4ecdc4',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+    showExchange(playerLine, pirateReply) {
+        this.clearScene();
+        this.setBackground('pirate_island_bg');
+        this.addAmbient('embers');
+        this.addTitle('Pirate Island');
 
-        // Replace sprite with checkmark
-        sprite.destroy();
-        this.add.text(SCREEN_WIDTH/2, 450, '✓', { fontSize: '32px', fill: '#4ecdc4' }).setOrigin(0.5);
-        this.add.text(SCREEN_WIDTH/2, 480, 'Rum Collected', { 
-            fontSize: '14px', 
-            fill: '#4ecdc4',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        this.addSpeech(SCREEN_WIDTH/2, 140, playerLine, '#4ECDC4');
+        this.addSpeech(SCREEN_WIDTH/2, 235, pirateReply, '#F39C12');
 
-        // Remove message after 3 seconds
-        this.time.delayedCall(3000, () => {
-            if (message) message.destroy();
+        this.addText(300, 370, '🏴‍☠️', 40);
+        this.addText(512, 390, '🔥', 48);
+        this.addText(724, 370, '🏴‍☠️', 40);
+
+        // The quest hook: rum lives at the base now
+        this.addSpeech(SCREEN_WIDTH/2, 480,
+            '"But if it\'s RUM ye be after..." — the crew leans in —\n' +
+            '"the good stuff be locked in our secret base, guarded by\n' +
+            'Cap\'n Barnacles and his fearsome WIT. Out-banter the Cap\'n,\nand the finest bottle be yours. Many have tried. Most cried."', '#F39C12', 14);
+
+        this.createButton(SCREEN_WIDTH/2, 620, '🏴‍☠️ Sail to the Secret Base', () => this.goTo(SCENES.PIRATE_BASE), {
+            width: 280, color: 0x8B4513, hover: 0xA0522D
         });
+        this.createButton(150, 700, '← Back to Village', () => this.goTo(SCENES.VILLAGE), { width: 190 });
     }
 
-    createButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 180, 40, 0x8B4513)
-            .setInteractive()
-            .on('pointerdown', () => {
-                this.sound.play('click_sound', { volume: 0.5 });
-                callback();
-            })
-            .on('pointerover', () => button.setFillStyle(0xA0522D))
-            .on('pointerout', () => button.setFillStyle(0x8B4513));
+    showAfterParty() {
+        this.addText(SCREEN_WIDTH/2, 140,
+            'The party is still going. The pirates cheer as you arrive —\n' +
+            'you\'re a legend here now: "The One Who Out-Witted The Cap\'n!"', 16);
 
-        this.add.text(x, y, text, {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        this.addText(512, 330, '🔥', 56);
+        this.addText(380, 380, '🏴‍☠️', 40);
+        this.addText(644, 380, '🏴‍☠️', 40);
+        this.addText(SCREEN_WIDTH/2, 460,
+            'They\'ve already written a shanty about you.\nIt doesn\'t rhyme, but their hearts are in it.', 15, '#F39C12');
 
-        return button;
-    }
-
-    startGameMusic(musicKey) {
-        // Stop any existing global music and start new music
-        const currentMusic = this.registry.get('currentMusic');
-        if (currentMusic) {
-            currentMusic.stop();
-        }
-        const newMusic = this.sound.add(musicKey, { loop: true, volume: 0.2 });
-        newMusic.play();
-        this.registry.set('currentMusic', newMusic);
-    }
-
-    createPirateDialogueButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 180, 35, 0x8B4513)
-            .setInteractive()
-            .on('pointerdown', () => {
-                this.sound.play('click_sound', { volume: 0.5 });
-                callback();
-            })
-            .on('pointerover', () => button.setFillStyle(0xA0522D))
-            .on('pointerout', () => button.setFillStyle(0x8B4513));
-
-        this.add.text(x, y, text, {
-            fontSize: '12px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            align: 'center'
-        }).setOrigin(0.5);
-
-        return button;
-    }
-
-    showPirateDialogue(dialogue) {
-        // Clear existing content and show player's chosen dialogue
-        this.children.removeAll();
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'pirate_island_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title
-        this.add.text(SCREEN_WIDTH/2, 50, 'Pirate Island', {
-            fontSize: '32px',
-            fill: '#FFFFFF',
-            fontFamily: 'Arial',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0.5);
-
-        // Player dialogue
-        this.add.text(SCREEN_WIDTH/2, 130, dialogue, {
-            fontSize: '16px',
-            fill: '#4ECDC4',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3,
-            fontStyle: 'italic'
-        }).setOrigin(0.5);
-
-        // Pirate response
-        this.add.text(SCREEN_WIDTH/2, 200, '"Har har har! Welcome aboard, landlubber!\nAny friend of adventure be a friend of ours!\nGrab some grub and join the festivities!"', {
-            fontSize: '14px',
-            fill: '#F39C12',
-            fontFamily: 'Arial',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 3,
-            fontStyle: 'italic'
-        }).setOrigin(0.5);
-
-        // Beach party scene
-        this.add.text(200, 280, '🏴‍☠️', { fontSize: '32px' }).setOrigin(0.5);
-        this.add.text(350, 310, '🔥', { fontSize: '32px' }).setOrigin(0.5);
-        this.add.text(500, 280, '🏴‍☠️', { fontSize: '32px' }).setOrigin(0.5);
-        this.add.text(250, 340, '🧑‍☠️', { fontSize: '32px' }).setOrigin(0.5);
-        this.add.text(450, 340, '🧑‍☠️', { fontSize: '32px' }).setOrigin(0.5);
-        this.add.text(600, 310, '🍺', { fontSize: '32px' }).setOrigin(0.5);
-
-        // Auto-collect rum bottle
-        this.autoCollectRum();
-
-        // Return button
-        this.createButton(SCREEN_WIDTH/2, 520, 'Return to Village', () => {
-            this.scene.start(SCENES.VILLAGE);
+        this.createButton(SCREEN_WIDTH/2, 610, '🏴‍☠️ Visit the Secret Base', () => this.goTo(SCENES.PIRATE_BASE), {
+            width: 260, color: 0x8B4513, hover: 0xA0522D
         });
+        this.createButton(150, 700, '← Back to Village', () => this.goTo(SCENES.VILLAGE), { width: 190 });
     }
 }

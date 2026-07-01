@@ -1,102 +1,64 @@
 /*
- * Battle of the Druids - Web Edition
+ * Isle of Adventure - Web Edition
  * BoatScene.js
- * 
+ *
  * Copyright (c) 2025 TitanBlade Games
- * 
+ *
  * This file is part of Battle of the Druids, licensed under the MIT License.
  * See LICENSE file in the project root for full license information.
- * 
+ *
  * https://github.com/sunstar2423/titanblade-games
  */
 
 import { SCREEN_WIDTH, SCREEN_HEIGHT, SCENES } from '../GameData.js';
+import BaseScene from '../BaseScene.js';
 
-export default class BoatScene extends Phaser.Scene {
+export default class BoatScene extends BaseScene {
     constructor() {
         super({ key: SCENES.BOAT });
     }
 
     create() {
-        this.gameState = this.registry.get('gameState');
+        this.setupScene();
         this.gameState.visitLocation('Boat at Sea');
-        
-        // Start serene journey music
         this.startGameMusic('serene_journey');
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'boat_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title
-        this.add.text(SCREEN_WIDTH/2, 50, 'Out at Sea', {
-            fontSize: '32px',
-            fill: '#ffffff',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        this.setBackground('boat_bg');
+        this.addAmbient('bubbles');
 
-        // Description
-        this.add.text(SCREEN_WIDTH/2, 120, 'The fishermen row you out into the deep blue sea.\nSudddenly, dark tentacles emerge from the depths!', {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            align: 'center'
-        }).setOrigin(0.5);
+        this.addTitle('Out at Sea');
 
-        // Sea waves
-        this.add.text(200, 250, '🌊', { fontSize: '32px' }).setOrigin(0.5);
-        this.add.text(600, 250, '🌊', { fontSize: '32px' }).setOrigin(0.5);
-
-        // Tentacles emerging
-        this.add.text(150, 350, '🐙', { fontSize: '64px' }).setOrigin(0.5);
-        this.add.text(650, 350, '🐙', { fontSize: '64px' }).setOrigin(0.5);
-
-        this.add.text(SCREEN_WIDTH/2, 400, 'A Giant Squid attacks!', {
-            fontSize: '24px',
-            fill: '#ff6b6b',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        // Action buttons
-        this.createButton(SCREEN_WIDTH/2, 470, 'Fight the Squid!', () => {
-            this.scene.start(SCENES.SQUID_BATTLE);
-        });
-
-        this.createButton(SCREEN_WIDTH/2, 520, 'Try to Escape', () => {
-            this.scene.start(SCENES.SHORE);
-        });
-    }
-
-    createButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 180, 40, 0x34495e)
-            .setInteractive()
-            .on('pointerdown', () => {
-                this.sound.play('click_sound', { volume: 0.5 });
-                callback();
-            })
-            .on('pointerover', () => button.setFillStyle(0x5d6d7e))
-            .on('pointerout', () => button.setFillStyle(0x34495e));
-
-        this.add.text(x, y, text, {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        return button;
-    }
-
-    startGameMusic(musicKey) {
-        // Stop any existing global music and start new music
-        const currentMusic = this.registry.get('currentMusic');
-        if (currentMusic) {
-            currentMusic.stop();
+        if (this.gameState.hasDefeatedEnemy('Giant Squid')) {
+            // Peaceful crossing after the battle
+            this.addText(SCREEN_WIDTH/2, 140,
+                'The fishermen row you across a mercifully tentacle-free sea.\n' +
+                '"Best commute we\'ve had in years," one says, misty-eyed.', 16);
+            this.addText(SCREEN_WIDTH/2, 330, '🌊  ⛵  🌊', 56);
+            this.createButton(SCREEN_WIDTH/2, 610, 'Sail to Pirate Island →', () => this.goTo(SCENES.PIRATE_ISLAND), { width: 250 });
+            this.createButton(150, 700, '← Back to Shore', () => this.goTo(SCENES.SHORE), { width: 190 });
+            return;
         }
-        const newMusic = this.sound.add(musicKey, { loop: true, volume: 0.2 });
-        newMusic.play();
-        this.registry.set('currentMusic', newMusic);
+
+        this.addText(SCREEN_WIDTH/2, 140,
+            'The fishermen row you out into deep blue water.\n' +
+            'Suddenly the boat lurches — dark tentacles rise from the depths!', 16);
+
+        // Tentacles
+        const t1 = this.addText(230, 400, '🐙', 72);
+        const t2 = this.addText(794, 400, '🐙', 72);
+        [t1, t2].forEach((t, i) => {
+            this.tweens.add({
+                targets: t, y: 380, duration: 1200 + i * 300,
+                yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+            });
+        });
+
+        this.addText(SCREEN_WIDTH/2, 480, 'A GIANT SQUID ATTACKS!', 28, '#ff6b6b', { fontStyle: 'bold' });
+        this.addSpeech(SCREEN_WIDTH/2, 530,
+            '"THAT\'S the tentacle-y situation we mentioned!" a fisherman yells, helpfully.', '#DDDDDD', 13);
+
+        this.createButton(360, 630, '⚔️ Stand and Fight!', () => this.goTo(SCENES.SQUID_BATTLE), { width: 240 });
+        this.createButton(670, 630, '🏊 Row for your life!', () => this.goTo(SCENES.SHORE), {
+            width: 240, color: 0x1B4F72, hover: 0x2E86C1
+        });
     }
 }

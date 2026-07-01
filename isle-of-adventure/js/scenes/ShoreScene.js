@@ -1,103 +1,59 @@
 /*
- * Battle of the Druids - Web Edition
+ * Isle of Adventure - Web Edition
  * ShoreScene.js
- * 
+ *
  * Copyright (c) 2025 TitanBlade Games
- * 
+ *
  * This file is part of Battle of the Druids, licensed under the MIT License.
  * See LICENSE file in the project root for full license information.
- * 
+ *
  * https://github.com/sunstar2423/titanblade-games
  */
 
 import { SCREEN_WIDTH, SCREEN_HEIGHT, SCENES } from '../GameData.js';
+import BaseScene from '../BaseScene.js';
 
-export default class ShoreScene extends Phaser.Scene {
+export default class ShoreScene extends BaseScene {
     constructor() {
         super({ key: SCENES.SHORE });
     }
 
     create() {
-        this.gameState = this.registry.get('gameState');
+        this.setupScene();
         this.gameState.visitLocation('Rocky Shore');
-        
-        // Start serene journey music
         this.startGameMusic('serene_journey');
-        
-        // Background image
-        const background = this.add.image(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 'shore_bg');
-        const scaleX = SCREEN_WIDTH / background.width;
-        const scaleY = SCREEN_HEIGHT / background.height;
-        const scale = Math.max(scaleX, scaleY);
-        background.setScale(scale);
-        
-        // Title
-        this.add.text(SCREEN_WIDTH/2, 50, 'Rocky Shore', {
-            fontSize: '32px',
-            fill: '#ffffff',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        this.setBackground('shore_bg');
+        this.addAmbient('seaspray');
 
-        // Description
-        this.add.text(SCREEN_WIDTH/2, 120, 'Waves crash against the rocky coastline.\nA boat with spear fishermen rests on the shore.', {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            align: 'center'
-        }).setOrigin(0.5);
+        this.addTitle('The Rocky Shore');
 
-        // Shore scenery
-        this.add.text(150, 250, '🧿', { fontSize: '32px' }).setOrigin(0.5); // rocks
-        this.add.text(300, 280, '🎣', { fontSize: '32px' }).setOrigin(0.5); // fishing
-        this.add.text(500, 260, '🚣', { fontSize: '48px' }).setOrigin(0.5); // boat
-        this.add.text(650, 270, '🎣', { fontSize: '32px' }).setOrigin(0.5); // fishing
+        this.addText(SCREEN_WIDTH/2, 135,
+            'Waves crash against the rocks. Two fishermen lean on their boat,\n' +
+            'having the world\'s slowest argument about bait.', 16);
 
-        this.add.text(SCREEN_WIDTH/2, 350, 'Fishermen with their boat', {
-            fontSize: '18px',
-            fill: '#ffffff',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        // The boat and fishermen
+        this.addText(370, 320, '🚣', 56);
+        this.addText(370, 385, 'The fishermen offer you a ride out to sea.\n' +
+            '"Fair warning," one says, "the sea\'s been\nextra... tentacle-y lately."', 13, '#DDDDDD');
+        this.createButton(370, 470, '⛵ Board the Boat', () => this.goTo(SCENES.BOAT), { width: 230 });
 
-        this.add.text(SCREEN_WIDTH/2, 380, 'They seem willing to take you out to sea', {
-            fontSize: '14px',
-            fill: '#cccccc',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        // Action buttons
-        this.createButton(SCREEN_WIDTH/2, 450, 'Board the Boat', () => {
-            this.scene.start(SCENES.BOAT);
+        // The beach cove — new optional path
+        this.addText(660, 320, '🏖️', 56);
+        const visitedGary = this.gameState.hasVisitedLocation('Beach Cove');
+        this.addText(660, 385,
+            visitedGary
+                ? 'Gary\'s cove. You can hear him\nnarrating his own sandcastle work.'
+                : 'Smoke rises from a sheltered cove\ndown the beach. Someone lives there?', 13, '#DDDDDD');
+        this.createButton(660, 470, '🏖️ Explore the Cove', () => this.goTo(SCENES.BEACH), {
+            width: 230, color: 0x8a6d3b, hover: 0xa8894e
         });
 
-        this.createButton(SCREEN_WIDTH/2, 520, 'Return to Fork', () => {
-            this.scene.start(SCENES.FORK);
-        });
-    }
-
-    createButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 180, 40, 0x34495e)
-            .setInteractive()
-            .on('pointerdown', callback)
-            .on('pointerover', () => button.setFillStyle(0x5d6d7e))
-            .on('pointerout', () => button.setFillStyle(0x34495e));
-
-        this.add.text(x, y, text, {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        return button;
-    }
-
-    startGameMusic(musicKey) {
-        // Stop any existing global music and start new music
-        const currentMusic = this.registry.get('currentMusic');
-        if (currentMusic) {
-            currentMusic.stop();
+        const squidDone = this.gameState.hasDefeatedEnemy('Giant Squid');
+        if (squidDone) {
+            this.addText(SCREEN_WIDTH/2, 575,
+                'The sea is calm now. The fishermen have started a squid-free tour company.', 14, '#7CFC90');
         }
-        const newMusic = this.sound.add(musicKey, { loop: true, volume: 0.2 });
-        newMusic.play();
-        this.registry.set('currentMusic', newMusic);
+
+        this.createButton(150, 700, '← Back to the Fork', () => this.goTo(SCENES.FORK), { width: 190 });
     }
 }

@@ -23,9 +23,11 @@ import MountainsScene from './scenes/MountainsScene.js';
 import CaveScene from './scenes/CaveScene.js';
 import TreasureScene from './scenes/TreasureScene.js';
 import ShoreScene from './scenes/ShoreScene.js';
+import BeachScene from './scenes/BeachScene.js';
 import BoatScene from './scenes/BoatScene.js';
 import SquidBattleScene from './scenes/SquidBattleScene.js';
 import PirateIslandScene from './scenes/PirateIslandScene.js';
+import PirateBaseScene from './scenes/PirateBaseScene.js';
 import SorcererScene from './scenes/SorcererScene.js';
 import PortalScene from './scenes/PortalScene.js';
 import CreditsScene from './scenes/CreditsScene.js';
@@ -69,9 +71,11 @@ class Game {
                 CaveScene,
                 TreasureScene,
                 ShoreScene,
+                BeachScene,
                 BoatScene,
                 SquidBattleScene,
                 PirateIslandScene,
+                PirateBaseScene,
                 SorcererScene,
                 PortalScene,
                 CreditsScene
@@ -80,6 +84,10 @@ class Game {
         
         this.game = new Phaser.Game(this.config);
         this.game.registry.set('gameState', this.gameState);
+
+        // Expose the Phaser game so DOM controls (e.g. the mute button) can reach it
+        window.game = this.game;
+        this.setupAudioToggle();
         
         
         // Create global music manager that will be accessible to all scenes
@@ -104,13 +112,45 @@ class Game {
 
     updateInventoryDisplay() {
         if (!this.inventoryList) return;
-        
+
+        const panel = document.getElementById('inventory');
+        const items = this.gameState.inventory;
+
+        // Hide the panel entirely when there is nothing to show (e.g. on the menu)
+        if (panel) {
+            panel.style.display = items.length ? 'block' : 'none';
+        }
+
+        const heading = panel ? panel.querySelector('h3') : null;
+        if (heading) {
+            heading.textContent = `Inventory (${items.length})`;
+        }
+
         this.inventoryList.innerHTML = '';
-        this.gameState.inventory.forEach(item => {
+        items.forEach(item => {
             const li = document.createElement('li');
             li.textContent = item;
             this.inventoryList.appendChild(li);
         });
+    }
+
+    setupAudioToggle() {
+        const toggle = document.getElementById('audio-toggle');
+        if (!toggle) return;
+
+        const render = () => {
+            const muted = this.game.sound.mute;
+            toggle.textContent = muted ? '🔇' : '🔊';
+            toggle.setAttribute('aria-label', muted ? 'Unmute audio' : 'Mute audio');
+            toggle.setAttribute('aria-pressed', String(muted));
+        };
+
+        toggle.addEventListener('click', () => {
+            this.game.sound.mute = !this.game.sound.mute;
+            render();
+        });
+
+        render();
     }
 }
 
