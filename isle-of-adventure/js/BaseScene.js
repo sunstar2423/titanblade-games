@@ -65,9 +65,15 @@ export default class BaseScene extends Phaser.Scene {
         }).setOrigin(0.5);
     }
 
-    /** Stroked, readable body text. */
-    addText(x, y, text, size = 16, color = '#FFFFFF', extra = {}) {
-        return this.add.text(x, y, text, {
+    /**
+     * Stroked, readable body text. Prose (multiline or longer than ~40
+     * characters) automatically gets a dark backing panel so it stays
+     * readable over detailed artwork. Pass `extra.panel: true/false` to
+     * force it either way.
+     */
+    addText(x, y, text, size = 17, color = '#FFFFFF', extra = {}) {
+        const { panel, ...style } = extra;
+        const txt = this.add.text(x, y, text, {
             fontSize: `${size}px`,
             fill: color,
             fontFamily: 'Arial',
@@ -75,13 +81,33 @@ export default class BaseScene extends Phaser.Scene {
             stroke: '#000000',
             strokeThickness: 3,
             shadow: { offsetX: 1, offsetY: 2, color: '#000000', blur: 4, fill: true },
-            ...extra
+            ...style
         }).setOrigin(0.5);
+
+        const wantsPanel = panel !== undefined
+            ? panel
+            : (text.includes('\n') || text.length > 40);
+
+        if (wantsPanel) {
+            const pad = { x: 18, y: 10 };
+            const backing = this.add.rectangle(
+                x, y, txt.width + pad.x * 2, txt.height + pad.y * 2, 0x000000, 0.55
+            );
+            backing.setStrokeStyle(1, 0xFFFFFF, 0.12);
+            backing.setDepth(6);
+            txt.setDepth(6.5);
+            // The panel lives and dies with its text
+            txt.once('destroy', () => { if (backing.scene) backing.destroy(); });
+        }
+
+        return txt;
     }
 
-    /** Italic character speech. */
+    /** Italic character speech — always panelled, never below 16px. */
     addSpeech(x, y, text, color = '#FFFF99', size = 15) {
-        return this.addText(x, y, text, size, color, { fontStyle: 'italic' });
+        return this.addText(x, y, text, Math.max(size, 16), color, {
+            fontStyle: 'italic', panel: true
+        });
     }
 
     /**
@@ -130,7 +156,7 @@ export default class BaseScene extends Phaser.Scene {
      */
     createChoiceButton(x, y, text, callback, color = 0x2C5F2D, hover = 0x4A7C59) {
         return this.createButton(x, y, text, callback, {
-            width: 264, height: 56, color, hover, fontSize: 13
+            width: 280, height: 60, color, hover, fontSize: 14
         });
     }
 
@@ -214,7 +240,8 @@ export default class BaseScene extends Phaser.Scene {
 
     /** Floating pickup animation + collect feedback. */
     celebrate(x, y, text, color = '#FFD700') {
-        const msg = this.addText(x, y, text, 22, color, { fontStyle: 'bold' });
+        // No panel: this text floats upward and a static backing would be left behind
+        const msg = this.addText(x, y, text, 22, color, { fontStyle: 'bold', panel: false });
         this.tweens.add({
             targets: msg, y: y - 26, duration: 900, ease: 'Sine.easeOut'
         });

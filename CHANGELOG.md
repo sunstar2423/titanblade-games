@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Isle of Adventure - Text Readability
+
+#### Changed
+- All dialogue and description text now renders on a dark semi-transparent backing panel, so it stays readable over detailed background artwork
+- Character speech is never smaller than 16px (previously as small as 13px); body text default raised from 16px to 17px
+- Dialogue choice buttons enlarged (280×60, 14px text) for easier reading and tapping
+- Dynamic texts (item checklists, quest progress) recreate their panels when they change so the backing always fits
+
 ### Battle of the Druids - Gameplay Overhaul & Polish
 
 #### Added

@@ -54,7 +54,7 @@ export default class VillageScene extends BaseScene {
         this.addText(SCREEN_WIDTH/2, 560,
             `Sacred items found: ${collected.length} / 3` +
             (collected.length ? `  (${collected.join(', ')})` : ''),
-            14, collected.length === 3 ? '#7CFC90' : '#FFD97a');
+            15, collected.length === 3 ? '#7CFC90' : '#FFD97a', { panel: true });
 
         this.createButton(SCREEN_WIDTH/2, 700, 'Main Menu', () => this.goTo('MainMenuScene'), { width: 180 });
     }
