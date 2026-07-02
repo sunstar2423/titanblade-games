@@ -1545,6 +1545,13 @@ function collectForestItem(item) {
   spawnFX(item.pos.clone().add(new THREE.Vector3(0, 1, 0)), item.color, 0.8, 1.5);
 }
 
+// Instantly move the camera to the player (used on area enter/exit so it
+// doesn't slowly pan across the empty void between the farm and an area).
+function snapCameraToPlayer() {
+  camera.position.copy(gs.playerPos.clone().add(CAM_OFF.clone().multiplyScalar(camZoom)));
+  camera.lookAt(gs.playerPos);
+}
+
 function showExploreButtons() {
   ['cavern-enter-btn'].forEach(id => { const b = document.getElementById(id); if (b) b.style.display = 'flex'; });
 }
@@ -1567,6 +1574,7 @@ function enterArea(area) {
   gs.playerVel.set(0, 0, 0);
   gs.playerJumpVel = 0; gs.playerOnGround = true;
   if (playerMesh) playerMesh.position.copy(gs.playerPos);
+  snapCameraToPlayer();
   _forestItems = [];
   _forestMeshes = [];
   buildArea(area);
@@ -1619,6 +1627,7 @@ function exitArea() {
   gs.playerVel.set(0, 0, 0);
   gs.playerJumpVel = 0; gs.playerOnGround = true;
   if (playerMesh) playerMesh.position.copy(gs.playerPos);
+  snapCameraToPlayer();
   scene.fog = new THREE.FogExp2(0x0d1220, 0.009);
   const rb = document.getElementById('forest-return-btn');
   if (rb) rb.style.display = 'none';
@@ -2652,11 +2661,18 @@ function updatePlayer(dt) {
   if (joystick.active) { gs.playerVel.x += joystick.dx * spd * dt; gs.playerVel.z += joystick.dy * spd * dt; }
   gs.playerVel.multiplyScalar(0.78);
   gs.playerPos.add(gs.playerVel);
-  // clamp to farm
-  const r = Math.hypot(gs.playerPos.x, gs.playerPos.z);
-  if (r > FARM_R - 0.6) {
-    gs.playerPos.x = (gs.playerPos.x / r) * (FARM_R - 0.6);
-    gs.playerPos.z = (gs.playerPos.z / r) * (FARM_R - 0.6);
+  // Clamp to the current arena — the farm, or whichever explore area we're in.
+  // (Without this, entering an area at its far-off center snaps you straight
+  //  back to the farm, so you never actually stand in the new place.)
+  const inArea = _inForest && _currentArea;
+  const cx = inArea ? _currentArea.center.x : 0;
+  const cz = inArea ? _currentArea.center.z : 0;
+  const bound = (inArea ? _currentArea.radius : FARM_R) - 0.6;
+  const ddx = gs.playerPos.x - cx, ddz = gs.playerPos.z - cz;
+  const r = Math.hypot(ddx, ddz);
+  if (r > bound) {
+    gs.playerPos.x = cx + (ddx / r) * bound;
+    gs.playerPos.z = cz + (ddz / r) * bound;
     gs.playerVel.set(0, 0, 0);
   }
   // Jump / gravity
