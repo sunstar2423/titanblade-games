@@ -37,7 +37,6 @@ export default class HouseScene extends BaseScene {
         this.createItem(800, 330, '🍞', ITEMS.FOOD.name, 'Fresh bread. Trolls are said to LOVE carbs.');
 
         // Gear checklist so players know when they're battle-ready
-        this.checklist = this.addText(SCREEN_WIDTH/2, 560, '', 15);
         this.updateChecklist();
 
         this.createButton(SCREEN_WIDTH/2, 700, 'Return to Village', () => this.goTo(SCENES.VILLAGE));
@@ -70,12 +69,14 @@ export default class HouseScene extends BaseScene {
     }
 
     updateChecklist() {
-        if (!this.checklist) return;
+        // Recreate rather than setText so the backing panel resizes with the text
+        if (this.checklist) this.checklist.destroy();
         const gear = ['Bow', 'Arrows', 'Leather Armor'].filter(i => this.gameState.hasItem(i));
-        this.checklist.setText(gear.length === 3
-            ? '⚔️ You are fully equipped for battle!'
-            : `Battle gear collected: ${gear.length} / 3 — grab it all before picking fights.`);
-        this.checklist.setFill(gear.length === 3 ? '#7CFC90' : '#FFD97A');
+        this.checklist = this.addText(SCREEN_WIDTH/2, 560,
+            gear.length === 3
+                ? '⚔️ You are fully equipped for battle!'
+                : `Battle gear collected: ${gear.length} / 3 — grab it all before picking fights.`,
+            16, gear.length === 3 ? '#7CFC90' : '#FFD97A', { panel: true });
     }
 
     collectItem(name, blurb, sprite, x, y) {
