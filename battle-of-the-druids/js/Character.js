@@ -42,6 +42,7 @@ class Character {
         this.armorBonus = 0;
         this.accessoryBonus = 0;
         this.locationVictories = {};
+        this.potions = []; // Consumables carried into battle
         
         // Equipment system
         if (!isEnemy) {
@@ -147,39 +148,98 @@ class Character {
         return this.baseSpeed + this.accessoryBonus;
     }
     
+    getDodgeChance(attacker) {
+        const combat = GAME_CONSTANTS.COMBAT;
+        const speedEdge = this.getTotalSpeed() - attacker.getTotalSpeed();
+        return Math.max(0, Math.min(combat.DODGE_CHANCE_CAP, speedEdge * combat.DODGE_SPEED_FACTOR));
+    }
+
+    getCritChance(defender) {
+        const combat = GAME_CONSTANTS.COMBAT;
+        const speedEdge = this.getTotalSpeed() - defender.getTotalSpeed();
+        let chance = combat.CRIT_BASE_CHANCE + Math.max(0, speedEdge * combat.CRIT_SPEED_FACTOR);
+        if (this.charType === CharacterType.ROGUE) {
+            chance += combat.ROGUE_CRIT_BONUS;
+        }
+        return Math.min(combat.CRIT_CHANCE_CAP, chance);
+    }
+
+    // Shared damage roll for basic and special attacks.
+    // Returns { damage, crit, dodged } so the UI can show misses and crits.
+    dealDamage(enemy, multiplier = 1.0) {
+        if (Math.random() < enemy.getDodgeChance(this)) {
+            return { damage: 0, crit: false, dodged: true };
+        }
+
+        const baseDamage = Math.floor(this.getTotalAttack() * multiplier);
+        const damageRange = Math.floor(baseDamage * 0.2);
+        let damage = Math.floor(Math.random() * (2 * damageRange + 1)) + baseDamage - damageRange;
+
+        const crit = Math.random() < this.getCritChance(enemy);
+        if (crit) {
+            damage = Math.floor(damage * GAME_CONSTANTS.COMBAT.CRIT_MULTIPLIER);
+        }
+
+        // Defense reduces damage proportionally, with a floor so hits always matter
+        const defenseReduction = enemy.getTotalDefense() / (enemy.getTotalDefense() + 150);
+        let finalDamage = Math.floor(damage * (1 - defenseReduction));
+        finalDamage = Math.max(Math.floor(damage * GAME_CONSTANTS.SCALING.MIN_DAMAGE_PERCENT), finalDamage);
+
+        enemy.health = Math.max(0, enemy.health - finalDamage);
+        return { damage: finalDamage, crit, dodged: false };
+    }
+
     attackEnemy(enemy) {
-        const baseDamage = this.getTotalAttack();
-        const damageRange = Math.floor(baseDamage * 0.2);
-        const damage = Math.floor(Math.random() * (2 * damageRange + 1)) + baseDamage - damageRange;
-        
-        // Balanced damage calculation: defense reduces damage but not too much
-        const defenseReduction = enemy.getTotalDefense() / (enemy.getTotalDefense() + 150); // Increased from 100 to 150
-        let finalDamage = Math.floor(damage * (1 - defenseReduction));
-        finalDamage = Math.max(Math.floor(damage * 0.4), finalDamage); // Minimum 40% damage (increased from 25%)
-        
-        enemy.health = Math.max(0, enemy.health - finalDamage);
-        return finalDamage;
+        return this.dealDamage(enemy, 1.0);
     }
-    
+
     specialAttack(enemy) {
-        const baseDamage = Math.floor(this.getTotalAttack() * 1.5);
-        const damageRange = Math.floor(baseDamage * 0.2);
-        const damage = Math.floor(Math.random() * (2 * damageRange + 1)) + baseDamage - damageRange;
-        
-        // Balanced damage calculation: defense reduces damage but not too much
-        const defenseReduction = enemy.getTotalDefense() / (enemy.getTotalDefense() + 150); // Increased from 100 to 150
-        let finalDamage = Math.floor(damage * (1 - defenseReduction));
-        finalDamage = Math.max(Math.floor(damage * 0.4), finalDamage); // Minimum 40% damage (increased from 25%)
-        
-        enemy.health = Math.max(0, enemy.health - finalDamage);
-        return finalDamage;
+        return this.dealDamage(enemy, 1.5);
     }
-    
+
     heal() {
-        const healAmount = Math.floor(Math.random() * 16) + 25; // 25-40
+        // Percentage-based so healing stays relevant as max health grows.
+        // Enemies heal a smaller share so boss fights don't stall out.
+        const healing = GAME_CONSTANTS.HEALING;
+        const minPercent = this.isEnemy ? 0.10 : healing.HEAL_PERCENT_MIN;
+        const maxPercent = this.isEnemy ? 0.15 : healing.HEAL_PERCENT_MAX;
+        const percent = minPercent + Math.random() * (maxPercent - minPercent);
+        const healAmount = Math.max(healing.MIN_HEAL, Math.floor(this.maxHealth * percent));
         const oldHealth = this.health;
         this.health = Math.min(this.maxHealth, this.health + healAmount);
         return this.health - oldHealth;
+    }
+
+    // Permanent stat gains earned with each victory
+    applyVictoryGains() {
+        const gains = GAME_CONSTANTS.LEVEL_UP;
+        this.maxHealth += gains.HEALTH_PER_VICTORY;
+        this.health = Math.min(this.maxHealth, this.health + gains.HEALTH_PER_VICTORY);
+        this.baseAttack += gains.ATTACK_PER_VICTORY;
+        this.baseDefense += gains.DEFENSE_PER_VICTORY;
+        return gains;
+    }
+
+    hasPotions() {
+        return this.potions && this.potions.length > 0;
+    }
+
+    // Drinks the weakest potion in the bag (saves the strong ones for emergencies)
+    usePotion() {
+        if (!this.hasPotions()) return null;
+
+        let weakestIdx = 0;
+        this.potions.forEach((potion, idx) => {
+            if (potion.healPercent < this.potions[weakestIdx].healPercent) {
+                weakestIdx = idx;
+            }
+        });
+
+        const potion = this.potions.splice(weakestIdx, 1)[0];
+        const healAmount = Math.max(1, Math.floor(this.maxHealth * potion.healPercent / 100));
+        const oldHealth = this.health;
+        this.health = Math.min(this.maxHealth, this.health + healAmount);
+        return { name: potion.name, healed: this.health - oldHealth };
     }
     
     castSpell(spellKey, enemy) {
@@ -209,39 +269,39 @@ class Character {
         
         // Calculate damage/effect
         if (spell.specialEffect === "heal") {
-            // Healing spell
-            const healAmount = Math.floor(Math.random() * 21) + 40; // 40-60
+            // Healing spell scales with max health
+            const healing = GAME_CONSTANTS.HEALING;
+            const percent = healing.WIZARD_HEAL_PERCENT_MIN + Math.random() * (healing.WIZARD_HEAL_PERCENT_MAX - healing.WIZARD_HEAL_PERCENT_MIN);
+            const healAmount = Math.max(healing.MIN_HEAL, Math.floor(this.maxHealth * percent));
             const oldHealth = this.health;
             this.health = Math.min(this.maxHealth, this.health + healAmount);
             const actualHeal = this.health - oldHealth;
             return { damage: actualHeal, effect: "heal" };
         } else {
-            // Damage spell
-            const baseDamage = spell.damageBase + this.weaponBonus;
+            // Damage spell - scales with weapon bonus and victories so spells stay strong late game
+            const baseDamage = spell.damageBase + this.weaponBonus + this.victories * 2;
             const variance = Math.floor(baseDamage * spell.damageVariance);
             const damage = Math.floor(Math.random() * (2 * variance + 1)) + baseDamage - variance;
-            
+
             let finalDamage;
-            
-            // Apply spell effects
+
             if (spell.specialEffect === "pierce") {
                 // Lightning bolt - ignores armor
                 finalDamage = damage;
-            } else if (spell.specialEffect === "fire") {
-                // Fireball - normal damage calculation
-                finalDamage = Math.max(1, damage - enemy.getTotalDefense());
-            } else if (spell.specialEffect === "freeze") {
-                // Ice shard - normal damage + chance to freeze
-                finalDamage = Math.max(1, damage - enemy.getTotalDefense());
-                // Check for freeze effect
-                if (Math.random() < (spell.effectChance || 0)) {
-                    enemy.frozenTurns = 2; // Skip 2 turns
-                    return { damage: finalDamage, effect: "freeze" };
-                }
             } else {
-                finalDamage = Math.max(1, damage - enemy.getTotalDefense());
+                // Fire/ice use the same proportional defense formula as physical
+                // attacks, so they don't fall off a cliff against armored enemies
+                const defenseReduction = enemy.getTotalDefense() / (enemy.getTotalDefense() + 150);
+                finalDamage = Math.floor(damage * (1 - defenseReduction));
+                finalDamage = Math.max(Math.floor(damage * GAME_CONSTANTS.SCALING.MIN_DAMAGE_PERCENT), finalDamage);
             }
-            
+
+            if (spell.specialEffect === "freeze" && Math.random() < (spell.effectChance || 0)) {
+                enemy.frozenTurns = 2; // Skip 2 turns
+                enemy.health = Math.max(0, enemy.health - finalDamage);
+                return { damage: finalDamage, effect: "freeze" };
+            }
+
             // Apply damage
             enemy.health = Math.max(0, enemy.health - finalDamage);
             return { damage: finalDamage, effect: spell.specialEffect };
@@ -285,10 +345,12 @@ function createEnemy(enemyType, playerVictories = 0, locationName = "Arena") {
     }
     
     const baseStats = ENEMY_STATS[enemyType] || { health: 80, attack: 70, defense: 35, speed: 65 };
-    
-    // Scale based on player victories (reduced scaling for better balance)
-    const scaleFactor = 1.0 + (playerVictories * 0.03); // Reduced from 0.05 to 0.03
-    
+
+    // Scale based on player victories, capped so grinding can't make enemies unbeatable
+    const scaling = GAME_CONSTANTS.SCALING;
+    const victoryBonus = Math.min(playerVictories * scaling.ENEMY_VICTORY_MULTIPLIER, scaling.ENEMY_VICTORY_CAP);
+    const scaleFactor = 1.0 + victoryBonus;
+
     // Location-based scaling
     const locationMultipliers = {
         "Arena": 1.0,
@@ -298,20 +360,24 @@ function createEnemy(enemyType, playerVictories = 0, locationName = "Arena") {
         "Ancient City": 1.4,
         "Sacred Shrine": 1.5,
         "Volcanic Caves": 1.6,
-        "Battle of Druids Castle": 2.0,
-        "Bot Attack": 2.0
+        "Battle of Druids Castle": 1.5,
+        "Bot Attack": 1.6
     };
-    
+
     const locationScale = locationMultipliers[locationName] || 1.0;
     const finalScale = scaleFactor * locationScale;
-    
+    // Attack grows slower than health/defense so late-game hits stay survivable
+    const attackScale = 1.0 + (finalScale - 1.0) * scaling.ENEMY_ATTACK_DAMPENING;
+
     // Create enemy with scaled stats
     const enemy = new Character(CharacterType.ENEMY, enemyType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), true, enemyType);
     enemy.maxHealth = Math.floor(baseStats.health * finalScale);
     enemy.health = enemy.maxHealth;
-    enemy.baseAttack = Math.floor(baseStats.attack * finalScale);
+    enemy.baseAttack = Math.floor(baseStats.attack * attackScale);
     enemy.baseDefense = Math.floor(baseStats.defense * finalScale);
-    enemy.baseSpeed = Math.floor(baseStats.speed * finalScale);
-    
+    // Speed is never scaled - it feeds crit/dodge, and scaling it would let
+    // late-game enemies out-crit the player no matter what gear they wear
+    enemy.baseSpeed = baseStats.speed;
+
     return enemy;
 }

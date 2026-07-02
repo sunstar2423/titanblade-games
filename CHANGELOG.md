@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Battle of the Druids - Gameplay Overhaul & Polish
+
+#### Added
+- **Save system** — progress is saved to the browser automatically (after battles, purchases, and on every menu/map visit); the character select screen shows a "Continue: <hero> (Lv N)" button when a save exists
+- **Level-up system** — every victory now grants permanent gains (+5 max HP, +2 attack, +2 defense), shown on the victory screen; the game no longer depends on the old potion max-HP exploit to be beatable
+- **Crits and dodges** — Speed finally does something: faster fighters dodge more and crit more (Rogue gets a +10% crit bonus, matching its "critical strikes" description); crits shake the screen, misses show "MISS"
+- **Potion bag** — potions are now consumables carried into battle (bag of 5) with a "Potion (n)" button in combat, instead of instant permanent max-HP boosts; bag contents shown in the Inventory
+- **Dragon Shard revive** — shards finally have a use: on defeat you can spend 3 to revive at 50% HP and keep fighting
+- **Flee button** in battle (the old forfeit dialog was unreachable dead code)
+- **"Begin Adventure" button** on character creation (no more Enter-key-only confirmation — much friendlier on mobile)
+- Battle feel: attack lunge animations, hit flashes, idle bobbing, victory-banner pop, turn indicator colors, and dimmed action buttons during the enemy turn
+- World map: player status header (level/gold/shards/potions), pulsing markers for locations with progress left to earn, and completed locations stay open for replay so gold/shard grinding is always possible
+
+#### Changed
+- **Rebalanced the whole difficulty curve** (verified by simulated playthroughs of all four classes): enemy scaling from player victories capped at +30%, enemy attack grows at half the rate of their health/defense, boss areas toned down, enemy speed no longer scales (so late-game enemies can't out-crit any gear)
+- Healing scales with max health (25–35%, Wizard spell 35–50%) so it stays useful late game; enemy self-heals are weaker (10–15%) and enemies only heal when actually hurt instead of wasting turns at full HP
+- Fireball/Ice Shard now use the same proportional defense formula as physical attacks (they previously fell to near-zero damage against armored enemies); spell damage also scales with victories
+- Wizards passively regain 5 mana every round on top of the +8 from basic attacks
+- Store: equipped items are labeled EQUIPPED and can't be re-bought; better gold rewards from later locations
+- Dark Mage now uses the full-resolution art instead of a 72px placeholder sprite
+
+#### Fixed
+- Wizard battle buttons leaked mana-cost labels on every action (text objects stacked forever)
+- Store leaked stat texts and tier circles when switching tiers
+- Dialog boxes (quit, forfeit) left their buttons and text behind when closed with "No"
+- Background music no longer restarts from the beginning on every scene change; battle no longer tries to stop a music key that doesn't exist
+- Sentry being blocked (ad blockers) no longer throws on page load — the game boots without it
+- Scene-reuse bugs: character selection kept stale name/selection state when revisited
+- Analytics events referenced undefined `player.level` / `player.attack` fields
+
 ### Isle of Adventure - The Inland Wilds & New Artwork
 
 #### Added

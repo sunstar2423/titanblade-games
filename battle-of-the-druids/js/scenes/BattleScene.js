@@ -66,12 +66,12 @@ class BattleScene extends Phaser.Scene {
         // Track battle started
         const battleStartData = {
             playerClass: this.player.charType,
-            playerLevel: this.player.level,
+            playerLevel: this.player.victories + 1,
             playerVictories: this.player.victories,
             locationName: this.location.name,
             enemyType: randomEnemyType,
             enemyName: this.enemy.name,
-            enemyLevel: this.enemy.level,
+            enemyMaxHealth: this.enemy.maxHealth,
             playerHealth: this.player.health,
             playerMaxHealth: this.player.maxHealth,
             playerMana: this.player.mana || 0,
@@ -150,10 +150,10 @@ class BattleScene extends Phaser.Scene {
         
         // Clean up battle buttons
         if (this.battleButtons) {
-            this.battleButtons.forEach(button => {
-                if (button && button.destroy) {
-                    button.destroy();
-                }
+            this.battleButtons.forEach(btn => {
+                if (btn.rect) btn.rect.destroy();
+                if (btn.text) btn.text.destroy();
+                if (btn.label) btn.label.destroy();
             });
             this.battleButtons = [];
         }
@@ -164,9 +164,10 @@ class BattleScene extends Phaser.Scene {
             this.effectManager = null;
         }
         
-        // Stop any background music
-        if (this.sound && this.sound.get('background_music')) {
-            this.sound.get('background_music').stop();
+        // Stop the finale fanfare if it's still playing (world music is shared
+        // with the world map, so leave it running for a seamless transition)
+        if (this.sound && this.sound.get('victory-fanfare')) {
+            this.sound.get('victory-fanfare').stop();
         }
         
         // Clear references
@@ -206,83 +207,85 @@ class BattleScene extends Phaser.Scene {
     
     createBattleButtons() {
         const { width, height } = this.scale;
-        
-        // Clear existing buttons
+
+        // Clear existing buttons (including any extra labels like mana costs,
+        // which previously leaked a new text object on every rebuild)
         this.battleButtons.forEach(btn => {
             if (btn.rect) btn.rect.destroy();
             if (btn.text) btn.text.destroy();
+            if (btn.label) btn.label.destroy();
         });
         this.battleButtons = [];
-        
+
+        const potionCount = this.player.potions ? this.player.potions.length : 0;
+        let buttonDefs;
+
         if (this.player.charType === CharacterType.WIZARD) {
-            // Wizard spell buttons
-            const spellButtons = [
-                { text: 'Attack', action: () => this.playerAttack(), x: 120, key: null },
+            buttonDefs = [
+                { text: 'Attack', action: () => this.playerAttack(), x: 120 },
                 { text: 'Fireball', action: () => this.castSpell('fireball'), x: 270, key: 'fireball' },
                 { text: 'Ice Shard', action: () => this.castSpell('iceShard'), x: 420, key: 'iceShard' },
                 { text: 'Lightning', action: () => this.castSpell('lightningBolt'), x: 570, key: 'lightningBolt' },
-                { text: 'Heal', action: () => this.castSpell('arcaneHealing'), x: 720, key: 'arcaneHealing' }
+                { text: 'Heal', action: () => this.castSpell('arcaneHealing'), x: 720, key: 'arcaneHealing' },
+                { text: `Potion (${potionCount})`, action: () => this.playerUsePotion(), x: 870, enabled: potionCount > 0 }
             ];
-            
-            spellButtons.forEach((btn, index) => {
-                const canCast = !btn.key || this.player.canCastSpell(btn.key);
-                const buttonColor = canCast ? COLORS.DARK_GRAY : 0x2a2a2a;
-                const textColor = canCast ? '#FFFFFF' : '#666666';
-                
-                const button = this.add.rectangle(btn.x, height - 150, 120, 40, buttonColor)
-                    .setStrokeStyle(2, COLORS.WHITE);
-                
-                const buttonText = this.add.text(btn.x, height - 150, btn.text, {
-                    fontSize: '16px',
-                    fontFamily: 'Arial',
-                    fill: textColor
-                }).setOrigin(0.5);
-                
-                if (canCast) {
-                    button.setInteractive();
-                    button.on('pointerdown', btn.action);
-                    button.on('pointerover', () => button.setFillStyle(COLORS.GRAY));
-                    button.on('pointerout', () => button.setFillStyle(COLORS.DARK_GRAY));
-                }
-                
-                // Show mana cost for spells
-                if (btn.key && WIZARD_SPELLS[btn.key]) {
-                    const spell = WIZARD_SPELLS[btn.key];
-                    this.add.text(btn.x, height - 125, `${spell.manaCost}MP`, {
-                        fontSize: '12px',
-                        fontFamily: 'Arial',
-                        fill: '#40E0D0'
-                    }).setOrigin(0.5);
-                }
-                
-                this.battleButtons.push({ rect: button, text: buttonText, key: btn.key });
-            });
         } else {
-            // Regular character buttons
-            const regularButtons = [
+            buttonDefs = [
                 { text: 'Attack', action: () => this.playerAttack(), x: 200 },
                 { text: 'Special', action: () => this.playerSpecialAttack(), x: 400 },
-                { text: 'Heal', action: () => this.playerHeal(), x: 600 }
+                { text: 'Heal', action: () => this.playerHeal(), x: 600 },
+                { text: `Potion (${potionCount})`, action: () => this.playerUsePotion(), x: 800, enabled: potionCount > 0 }
             ];
-            
-            regularButtons.forEach(btn => {
-                const button = this.add.rectangle(btn.x, height - 150, 120, 40, COLORS.DARK_GRAY)
-                    .setStrokeStyle(2, COLORS.WHITE)
-                    .setInteractive();
-                
-                const buttonText = this.add.text(btn.x, height - 150, btn.text, {
-                    fontSize: '18px',
-                    fontFamily: 'Arial',
-                    fill: '#FFFFFF'
-                }).setOrigin(0.5);
-                
+        }
+
+        buttonDefs.forEach(btn => {
+            const canUse = (btn.enabled !== false) && (!btn.key || this.player.canCastSpell(btn.key));
+            const buttonColor = canUse ? COLORS.DARK_GRAY : 0x2a2a2a;
+            const textColor = canUse ? '#FFFFFF' : '#666666';
+
+            const button = this.add.rectangle(btn.x, height - 150, 130, 40, buttonColor)
+                .setStrokeStyle(2, canUse ? COLORS.WHITE : COLORS.GRAY);
+
+            const buttonText = this.add.text(btn.x, height - 150, btn.text, {
+                fontSize: '16px',
+                fontFamily: 'Arial',
+                fill: textColor
+            }).setOrigin(0.5);
+
+            if (canUse) {
+                button.setInteractive();
                 button.on('pointerdown', btn.action);
                 button.on('pointerover', () => button.setFillStyle(COLORS.GRAY));
                 button.on('pointerout', () => button.setFillStyle(COLORS.DARK_GRAY));
-                
-                this.battleButtons.push({ rect: button, text: buttonText });
-            });
-        }
+            }
+
+            // Show mana cost for spells
+            let label = null;
+            if (btn.key && WIZARD_SPELLS[btn.key]) {
+                const spell = WIZARD_SPELLS[btn.key];
+                label = this.add.text(btn.x, height - 125, `${spell.manaCost}MP`, {
+                    fontSize: '12px',
+                    fontFamily: 'Arial',
+                    fill: '#40E0D0'
+                }).setOrigin(0.5);
+            }
+
+            this.battleButtons.push({ rect: button, text: buttonText, label, key: btn.key });
+        });
+
+        // Flee button (bottom-right corner, away from the action row)
+        const fleeBtn = this.add.rectangle(width - 90, height - 60, 120, 36, 0x5a1f1f)
+            .setStrokeStyle(2, COLORS.WHITE)
+            .setInteractive();
+        const fleeText = this.add.text(width - 90, height - 60, 'Flee', {
+            fontSize: '16px',
+            fontFamily: 'Arial',
+            fill: '#FFFFFF'
+        }).setOrigin(0.5);
+        fleeBtn.on('pointerdown', () => this.forfeitBattle());
+        fleeBtn.on('pointerover', () => fleeBtn.setFillStyle(0x803030));
+        fleeBtn.on('pointerout', () => fleeBtn.setFillStyle(0x5a1f1f));
+        this.battleButtons.push({ rect: fleeBtn, text: fleeText, label: null, alwaysOn: true });
     }
     
     createHealthBars() {
@@ -404,15 +407,56 @@ class BattleScene extends Phaser.Scene {
     
     createCharacterDisplays() {
         const { width, height } = this.scale;
-        
-        // Initialize asset manager for this scene
-        this.assetManager = new AssetManager(this);
-        
+
         // Player character (left side)
         this.playerImage = this.assetManager.getCharacterImage(this, this.player.charType.toLowerCase(), 300, 350, 180);
-        
+
         // Enemy character (right side)
         this.enemyImage = this.assetManager.getEnemyImage(this, this.enemy.name, width - 300, 350, 180);
+
+        // Gentle idle bob so the battlefield doesn't feel static
+        [this.playerImage, this.enemyImage].forEach(sprite => {
+            this.tweens.add({
+                targets: sprite,
+                y: sprite.y - 8,
+                duration: 1200,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+        });
+    }
+
+    // Lunge the attacker toward the target and flash the target red
+    playAttackAnimation(attackerSprite, targetSprite, direction = 1) {
+        if (attackerSprite) {
+            this.tweens.add({
+                targets: attackerSprite,
+                x: attackerSprite.x + 60 * direction,
+                duration: 120,
+                yoyo: true,
+                ease: 'Power2'
+            });
+        }
+        this.flashSprite(targetSprite);
+    }
+
+    flashSprite(sprite) {
+        if (!sprite) return;
+        if (sprite.setTint) {
+            sprite.setTint(0xFF6666);
+            this.time.delayedCall(180, () => {
+                if (sprite.active && sprite.clearTint) sprite.clearTint();
+            });
+        } else {
+            // Shape fallback (no tint support) - quick alpha blink
+            this.tweens.add({
+                targets: sprite,
+                alpha: 0.4,
+                duration: 90,
+                yoyo: true
+            });
+        }
     }
     
     drawWeaponIndicator(x, y, character) {
@@ -441,19 +485,19 @@ class BattleScene extends Phaser.Scene {
         
         // Play attack sound (higher volume for custom MP3)
         this.assetManager.playSound(this, 'attack', 0.9);
-        
-        const damage = this.player.attackEnemy(this.enemy);
-        this.effectManager.addDamageNumber(this.scale.width - 300, 350, damage);
-        this.effectManager.addAttackEffect(this.scale.width - 300, 350, 'slash');
-        
+
+        const result = this.player.attackEnemy(this.enemy);
+        this.showAttackResult(this.scale.width - 300, 350, result, 'slash');
+        this.playAttackAnimation(this.playerImage, result.dodged ? null : this.enemyImage, 1);
+
         // Track player attack
         const attackData = {
             actionType: 'attack',
-            damage: damage,
+            damage: result.damage,
             playerClass: this.player.charType,
             enemyType: this.enemy.enemyType || this.enemy.name,
             enemyHealthRemaining: this.enemy.health,
-            isCritical: damage > this.player.attack * 1.5 // Estimate critical hit
+            isCritical: result.crit
         };
         
         if (typeof trackGameEvent !== 'undefined') {
@@ -462,7 +506,7 @@ class BattleScene extends Phaser.Scene {
         
         if (typeof Sentry !== 'undefined') {
             Sentry.addBreadcrumb({
-                message: `Player attacked for ${damage} damage`,
+                message: `Player attacked for ${result.damage} damage`,
                 category: 'battle_action',
                 level: 'info',
                 data: attackData
@@ -471,52 +515,97 @@ class BattleScene extends Phaser.Scene {
         
         this.playerTurn = false;
         this.turnTimer = 60;
-        this.player.regenerateMana(8); // Increased from 5 to 8 for better mana economy
-        
+        this.player.regenerateMana(GAME_CONSTANTS.MANA.REGEN_ON_ATTACK);
+
         this.updateUI();
         this.checkBattleEnd();
     }
-    
+
     playerSpecialAttack() {
         if (!this.playerTurn || this.turnTimer > 0 || this.battleOver) return;
-        
+
         // Play special attack sound
         this.assetManager.playSound(this, 'special', 0.7);
-        
-        const damage = this.player.specialAttack(this.enemy);
-        this.effectManager.addDamageNumber(this.scale.width - 300, 350, damage, true);
-        
+
+        const result = this.player.specialAttack(this.enemy);
+        this.showAttackResult(this.scale.width - 300, 350, result, `special_${this.player.charType.toLowerCase()}`, true);
+        this.playAttackAnimation(this.playerImage, result.dodged ? null : this.enemyImage, 1);
+
         const effectType = `special_${this.player.charType.toLowerCase()}`;
-        this.effectManager.addAttackEffect(this.scale.width - 300, 350, effectType);
-        
+
         // Track special attack
         const specialAttackData = {
             actionType: 'special_attack',
-            damage: damage,
+            damage: result.damage,
             playerClass: this.player.charType,
             enemyType: this.enemy.enemyType || this.enemy.name,
             enemyHealthRemaining: this.enemy.health,
+            isCritical: result.crit,
             specialType: effectType
         };
-        
+
         if (typeof trackGameEvent !== 'undefined') {
             trackGameEvent('player_special_attack', specialAttackData);
         }
-        
+
         if (typeof Sentry !== 'undefined') {
             Sentry.addBreadcrumb({
-                message: `Player used special attack for ${damage} damage`,
+                message: `Player used special attack for ${result.damage} damage`,
                 category: 'battle_action',
                 level: 'info',
                 data: specialAttackData
             });
         }
-        
+
         this.playerTurn = false;
         this.turnTimer = 60;
-        
+
         this.updateUI();
         this.checkBattleEnd();
+    }
+
+    // Renders damage numbers, misses, and crits for an attack result
+    showAttackResult(x, y, result, effectType, isSpecial = false) {
+        if (result.dodged) {
+            this.effectManager.addDamageNumber(x, y, 'MISS');
+            return;
+        }
+        if (result.crit) {
+            this.effectManager.addDamageNumber(x, y, `${result.damage} CRIT!`, true);
+            this.cameras.main.shake(200, 0.005);
+        } else {
+            this.effectManager.addDamageNumber(x, y, result.damage, isSpecial);
+        }
+        this.effectManager.addAttackEffect(x, y, effectType);
+    }
+
+    playerUsePotion() {
+        if (!this.playerTurn || this.turnTimer > 0 || this.battleOver) return;
+        if (!this.player.hasPotions()) {
+            this.showStatusMessage("No potions in your bag!", 60);
+            return;
+        }
+
+        this.assetManager.playSound(this, 'heal', 0.5);
+
+        const result = this.player.usePotion();
+        this.effectManager.addDamageNumber(300, 350, result.healed, false, true);
+        this.effectManager.addAttackEffect(300, 350, 'spell_heal');
+        this.showStatusMessage(`${result.name}: restored ${result.healed} HP!`, 120);
+
+        if (typeof trackGameEvent !== 'undefined') {
+            trackGameEvent('potion_used', {
+                potionName: result.name,
+                healAmount: result.healed,
+                playerClass: this.player.charType,
+                potionsRemaining: this.player.potions.length
+            });
+        }
+
+        this.playerTurn = false;
+        this.turnTimer = 60;
+
+        this.updateUI();
     }
     
     playerHeal() {
@@ -636,10 +725,16 @@ class BattleScene extends Phaser.Scene {
     enemyTurn() {
         if (this.battleOver || this.enemy.health <= 0) return;
         
+        // Wizards slowly recover mana every round
+        this.player.regenerateMana(GAME_CONSTANTS.MANA.REGEN_PER_TURN);
+
         // Check if enemy is frozen
         if (this.enemy.frozenTurns > 0) {
             this.enemy.frozenTurns--;
-            this.showStatusMessage(`Enemy frozen! ${this.enemy.frozenTurns} turns remaining`, 120);
+            const remaining = this.enemy.frozenTurns;
+            this.showStatusMessage(remaining > 0 ?
+                `Enemy is frozen solid! (${remaining} more turn${remaining === 1 ? '' : 's'})` :
+                'Enemy is frozen solid!', 120);
             
             // Track enemy frozen turn
             if (typeof Sentry !== 'undefined') {
@@ -656,32 +751,37 @@ class BattleScene extends Phaser.Scene {
             
             this.playerTurn = true;
             this.turnTimer = 60;
+            this.updateUI();
             return;
         }
-        
-        // Simple AI
+
+        // Enemy AI: only heals when actually hurt, otherwise attacks
+        const canHeal = this.enemy.health < this.enemy.maxHealth * 0.6;
         const action = Math.random();
         let actionType, damage;
-        
-        if (action < 0.6) {
-            // Attack
-            actionType = 'attack';
-            damage = this.enemy.attackEnemy(this.player);
-            this.effectManager.addDamageNumber(300, 350, damage);
-            this.effectManager.addAttackEffect(300, 350, 'slash');
-        } else if (action < 0.8) {
-            // Special attack
-            actionType = 'special_attack';
-            damage = this.enemy.specialAttack(this.player);
-            this.effectManager.addDamageNumber(300, 350, damage, true);
-            this.effectManager.addAttackEffect(300, 350, `special_${this.enemy.enemyType}`);
-        } else {
+
+        if (canHeal && action < 0.2) {
             // Heal
             actionType = 'heal';
             damage = this.enemy.heal();
             this.effectManager.addDamageNumber(this.scale.width - 300, 350, damage, false, true);
+            this.effectManager.addAttackEffect(this.scale.width - 300, 350, 'spell_heal');
+        } else if (action < 0.75) {
+            // Attack
+            actionType = 'attack';
+            const result = this.enemy.attackEnemy(this.player);
+            damage = result.damage;
+            this.showAttackResult(300, 350, result, 'slash');
+            this.playAttackAnimation(this.enemyImage, result.dodged ? null : this.playerImage, -1);
+        } else {
+            // Special attack
+            actionType = 'special_attack';
+            const result = this.enemy.specialAttack(this.player);
+            damage = result.damage;
+            this.showAttackResult(300, 350, result, `special_${this.enemy.enemyType}`, true);
+            this.playAttackAnimation(this.enemyImage, result.dodged ? null : this.playerImage, -1);
         }
-        
+
         // Track enemy action
         const enemyActionData = {
             actionType: actionType,
@@ -746,11 +846,18 @@ class BattleScene extends Phaser.Scene {
         
         // Update turn indicator
         this.turnIndicator.setText(this.playerTurn ? "Your Turn" : "Enemy Turn");
-        
-        // Update battle buttons for wizards
-        if (this.player.charType === CharacterType.WIZARD) {
-            this.createBattleButtons();
-        }
+        this.turnIndicator.setStyle({ fill: this.playerTurn ? '#7CFC7C' : '#FF8888' });
+
+        // Rebuild action buttons (updates potion count and spell affordability),
+        // then dim them while it's not the player's turn
+        this.createBattleButtons();
+        const buttonAlpha = this.playerTurn && !this.battleOver ? 1.0 : 0.5;
+        this.battleButtons.forEach(btn => {
+            const alpha = btn.alwaysOn ? 1.0 : buttonAlpha;
+            if (btn.rect) btn.rect.setAlpha(alpha);
+            if (btn.text) btn.text.setAlpha(alpha);
+            if (btn.label) btn.label.setAlpha(alpha);
+        });
     }
     
     showStatusMessage(message, duration) {
@@ -767,7 +874,7 @@ class BattleScene extends Phaser.Scene {
             const defeatData = {
                 battleResult: 'defeat',
                 playerClass: this.player.charType,
-                playerLevel: this.player.level,
+                playerLevel: this.player.victories + 1,
                 locationName: this.location.name,
                 enemyType: this.enemy.enemyType || this.enemy.name,
                 enemyHealthRemaining: this.enemy.health,
@@ -796,7 +903,7 @@ class BattleScene extends Phaser.Scene {
             const victoryData = {
                 battleResult: 'victory',
                 playerClass: this.player.charType,
-                playerLevel: this.player.level,
+                playerLevel: this.player.victories + 1,
                 locationName: this.location.name,
                 enemyType: this.enemy.enemyType || this.enemy.name,
                 playerHealthRemaining: this.player.health,
@@ -828,36 +935,34 @@ class BattleScene extends Phaser.Scene {
         this.assetManager.playSound(this, 'victory', 0.8);
         
         // Calculate rewards (improved gold economy)
-        const goldReward = Math.floor(Math.random() * 31) + 30 + this.location.minVictoriesRequired * 15; // Increased base and multiplier
+        const goldReward = Math.floor(Math.random() * 31) + 40 + this.location.minVictoriesRequired * 25;
         const shardReward = Math.floor(Math.random() * 3) + 1;
-        
-        // Check for level up
-        const oldLevel = this.player.level;
-        
+
         // Update player
         this.player.victories++;
         this.player.gold += goldReward;
         this.player.dragonShards += shardReward;
         this.player.locationVictories[this.location.name] = (this.player.locationVictories[this.location.name] || 0) + 1;
-        
-        // Check for level up after victory
-        const newLevel = this.player.level;
-        const leveledUp = newLevel > oldLevel;
-        
+
+        // Every victory grants permanent stat gains (the level-up system)
+        const gains = this.player.applyVictoryGains();
+
         // Check for final victory at Battle of Druids Castle
-        const isFinaleVictory = this.location.name === "Battle of Druids Castle" && 
+        const isFinaleVictory = this.location.name === "Battle of Druids Castle" &&
                                this.player.locationVictories[this.location.name] === 3;
-        
-        console.log(`🏰 Victory check: Location=${this.location.name}, Victories=${this.player.locationVictories[this.location.name]}, IsFinale=${isFinaleVictory}`);
-        
+
+        // Save progress
+        if (typeof SaveSystem !== 'undefined') {
+            SaveSystem.save(this.player);
+        }
+
         // Track victory rewards and level up
         const rewardsData = {
             goldReward: goldReward,
             shardReward: shardReward,
             totalVictories: this.player.victories,
             locationVictories: this.player.locationVictories[this.location.name],
-            playerLevel: newLevel,
-            leveledUp: leveledUp,
+            playerLevel: this.player.victories + 1,
             isFinaleVictory: isFinaleVictory,
             totalGold: this.player.gold,
             totalShards: this.player.dragonShards
@@ -869,43 +974,19 @@ class BattleScene extends Phaser.Scene {
         
         if (typeof Sentry !== 'undefined') {
             Sentry.addBreadcrumb({
-                message: `Victory rewards: ${goldReward} gold, ${shardReward} shards${leveledUp ? ', LEVEL UP!' : ''}`,
+                message: `Victory rewards: ${goldReward} gold, ${shardReward} shards, level up!`,
                 category: 'battle_result',
                 level: 'info',
                 data: rewardsData
             });
         }
-        
-        // Track level up if it occurred
-        if (leveledUp) {
-            const levelUpData = {
-                oldLevel: oldLevel,
-                newLevel: newLevel,
-                playerClass: this.player.charType,
-                totalVictories: this.player.victories,
-                locationName: this.location.name
-            };
-            
-            if (typeof trackGameEvent !== 'undefined') {
-                trackGameEvent('level_up', levelUpData);
-            }
-            
-            if (typeof Sentry !== 'undefined') {
-                Sentry.addBreadcrumb({
-                    message: `Level up! ${oldLevel} -> ${newLevel}`,
-                    category: 'progression',
-                    level: 'info',
-                    data: levelUpData
-                });
-            }
-        }
-        
+
         // Track finale victory
         if (isFinaleVictory) {
             if (typeof trackGameEvent !== 'undefined') {
                 trackGameEvent('finale_victory', {
                     playerClass: this.player.charType,
-                    playerLevel: this.player.level,
+                    playerLevel: this.player.victories + 1,
                     totalVictories: this.player.victories,
                     completionTime: Date.now() - (this.battleStartTime || Date.now())
                 });
@@ -918,7 +999,7 @@ class BattleScene extends Phaser.Scene {
                     level: 'info',
                     data: {
                         playerClass: this.player.charType,
-                        playerLevel: this.player.level,
+                        playerLevel: this.player.victories + 1,
                         totalVictories: this.player.victories
                     }
                 });
@@ -929,50 +1010,71 @@ class BattleScene extends Phaser.Scene {
         if (isFinaleVictory) {
             this.showFinaleVictory();
         } else {
-            this.showRegularVictory(goldReward, shardReward);
+            this.showRegularVictory(goldReward, shardReward, gains);
         }
     }
-    
-    showRegularVictory(goldReward, shardReward) {
+
+    showRegularVictory(goldReward, shardReward, gains) {
         const { width, height } = this.scale;
-        
-        // Victory overlay
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height, COLORS.BLACK, 0.8);
-        
-        this.add.text(width / 2, height / 2 - 100, 'VICTORY!', {
+
+        // Victory overlay (interactive so battle buttons underneath can't be clicked)
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, COLORS.BLACK, 0.8)
+            .setInteractive();
+
+        const victoryTitle = this.add.text(width / 2, height / 2 - 130, 'VICTORY!', {
             fontSize: '64px',
             fontFamily: 'Arial',
             fill: '#FFD700',
             stroke: '#000000',
             strokeThickness: 3
         }).setOrigin(0.5);
-        
+
+        // Little celebratory pop
+        victoryTitle.setScale(0.3);
+        this.tweens.add({
+            targets: victoryTitle,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 400,
+            ease: 'Back.easeOut'
+        });
+
         const rewardText = [
             `Gold Earned: +${goldReward}`,
             `Dragon Shards: +${shardReward}`,
             `Total Victories: ${this.player.victories}`,
-            `Location Cleared: ${this.location.name}`
+            `Location: ${this.location.name} (${this.player.locationVictories[this.location.name]}/3)`
         ];
-        
+
         rewardText.forEach((text, index) => {
-            this.add.text(width / 2, height / 2 - 20 + index * 30, text, {
+            this.add.text(width / 2, height / 2 - 50 + index * 30, text, {
                 fontSize: '20px',
                 fontFamily: 'Arial',
                 fill: '#FFFFFF'
             }).setOrigin(0.5);
         });
-        
+
+        // Level-up banner
+        this.add.text(width / 2, height / 2 + 90,
+            `⬆ Level ${this.player.victories + 1}!  +${gains.HEALTH_PER_VICTORY} Max HP, +${gains.ATTACK_PER_VICTORY} Attack, +${gains.DEFENSE_PER_VICTORY} Defense`, {
+            fontSize: '22px',
+            fontFamily: 'Arial',
+            fill: '#7CFC7C',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+
         // Continue button
-        const continueBtn = this.add.rectangle(width / 2, height / 2 + 150, 200, 50, COLORS.GREEN)
+        const continueBtn = this.add.rectangle(width / 2, height / 2 + 160, 200, 50, COLORS.GREEN)
             .setStrokeStyle(2, COLORS.WHITE)
             .setInteractive();
-        
-        this.add.text(width / 2, height / 2 + 150, 'Continue', {
+
+        this.add.text(width / 2, height / 2 + 160, 'Continue', {
             fontSize: '20px',
             fontFamily: 'Arial',
             fill: '#FFFFFF'
         }).setOrigin(0.5);
-        
+
         continueBtn.on('pointerdown', () => {
             this.registry.set('currentPlayer', this.player);
             this.scene.start('WorldMap'); // Return to world map instead of main menu
@@ -984,9 +1086,10 @@ class BattleScene extends Phaser.Scene {
         
         // Play victory fanfare
         this.assetManager.playVictoryFanfare(this, 0.8);
-        
-        // Dark overlay background
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height, COLORS.BLACK, 0.9);
+
+        // Dark overlay background (interactive to block battle buttons underneath)
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, COLORS.BLACK, 0.9)
+            .setInteractive();
         
         // Show victory image if loaded, otherwise use colored background
         let victoryImage = null;
@@ -1096,116 +1199,150 @@ class BattleScene extends Phaser.Scene {
     
     showDefeat() {
         const { width, height } = this.scale;
-        
+
         // Play defeat sound
         this.assetManager.playSound(this, 'defeat', 0.7);
-        
-        // Defeat overlay
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height, COLORS.BLACK, 0.8);
-        
-        this.add.text(width / 2, height / 2 - 50, 'DEFEAT', {
+
+        // Defeat overlay (interactive to block battle buttons underneath)
+        const elements = [];
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, COLORS.BLACK, 0.8)
+            .setInteractive();
+        elements.push(overlay);
+
+        elements.push(this.add.text(width / 2, height / 2 - 80, 'DEFEAT', {
             fontSize: '64px',
             fontFamily: 'Arial',
             fill: '#FF0000',
             stroke: '#000000',
             strokeThickness: 3
-        }).setOrigin(0.5);
-        
-        this.add.text(width / 2, height / 2 + 20, 'Better luck next time, warrior!', {
+        }).setOrigin(0.5));
+
+        elements.push(this.add.text(width / 2, height / 2 - 10, 'Better luck next time, warrior!', {
             fontSize: '24px',
             fontFamily: 'Arial',
             fill: '#FFFFFF'
-        }).setOrigin(0.5);
-        
+        }).setOrigin(0.5));
+
+        // Dragon Shard revive option - get back up and keep fighting!
+        const reviveCost = GAME_CONSTANTS.REVIVE_SHARD_COST;
+        if (this.player.dragonShards >= reviveCost) {
+            const reviveBtn = this.add.rectangle(width / 2, height / 2 + 60, 320, 50, 0x6a0dad)
+                .setStrokeStyle(2, COLORS.GOLD)
+                .setInteractive();
+            const reviveText = this.add.text(width / 2, height / 2 + 60,
+                `Revive! (${reviveCost} Dragon Shards)`, {
+                fontSize: '20px',
+                fontFamily: 'Arial',
+                fill: '#FFD700'
+            }).setOrigin(0.5);
+            elements.push(reviveBtn, reviveText);
+
+            reviveBtn.on('pointerover', () => reviveBtn.setFillStyle(0x8a2dcd));
+            reviveBtn.on('pointerout', () => reviveBtn.setFillStyle(0x6a0dad));
+            reviveBtn.on('pointerdown', () => {
+                this.player.dragonShards -= reviveCost;
+                this.player.health = Math.floor(this.player.maxHealth * 0.5);
+                this.battleOver = false;
+                this.playerTurn = true;
+                this.turnTimer = 30;
+
+                elements.forEach(el => el.destroy());
+                this.assetManager.playSound(this, 'heal', 0.6);
+                this.effectManager.addDamageNumber(300, 350, this.player.health, false, true);
+                this.showStatusMessage('The Dragon Shards revive you!', 120);
+                this.updateUI();
+
+                if (typeof trackGameEvent !== 'undefined') {
+                    trackGameEvent('shard_revive', {
+                        shardsRemaining: this.player.dragonShards,
+                        locationName: this.location.name
+                    });
+                }
+            });
+        }
+
         // Continue button
-        const continueBtn = this.add.rectangle(width / 2, height / 2 + 100, 200, 50, COLORS.RED)
+        const continueBtn = this.add.rectangle(width / 2, height / 2 + 130, 200, 50, COLORS.RED)
             .setStrokeStyle(2, COLORS.WHITE)
             .setInteractive();
-        
-        this.add.text(width / 2, height / 2 + 100, 'Continue', {
+        elements.push(continueBtn);
+
+        elements.push(this.add.text(width / 2, height / 2 + 130, 'Continue', {
             fontSize: '20px',
             fontFamily: 'Arial',
             fill: '#FFFFFF'
-        }).setOrigin(0.5);
-        
+        }).setOrigin(0.5));
+
         continueBtn.on('pointerdown', () => {
             // Restore player health
             this.player.health = this.player.maxHealth;
             this.registry.set('currentPlayer', this.player);
+            if (typeof SaveSystem !== 'undefined') {
+                SaveSystem.save(this.player);
+            }
             this.scene.start('MainMenu');
         });
     }
     
     forfeitBattle() {
-        // Track battle forfeit
-        const forfeitData = {
-            battleResult: 'forfeit',
-            playerClass: this.player.charType,
-            playerLevel: this.player.level,
-            locationName: this.location.name,
-            enemyType: this.enemy.enemyType || this.enemy.name,
-            playerHealthRemaining: this.player.health,
-            enemyHealthRemaining: this.enemy.health,
-            battleDuration: Date.now() - (this.battleStartTime || Date.now())
-        };
-        
-        if (typeof trackGameEvent !== 'undefined') {
-            trackGameEvent('battle_forfeit', forfeitData);
-        }
-        
-        if (typeof Sentry !== 'undefined') {
-            Sentry.addBreadcrumb({
-                message: 'Battle forfeited by player',
-                category: 'battle_result',
-                level: 'info',
-                data: forfeitData
-            });
-        }
-        
         // Show confirmation dialog
         const { width, height } = this.scale;
-        
+        const elements = [];
+
         const overlay = this.add.rectangle(width / 2, height / 2, width, height, COLORS.BLACK, 0.8)
             .setInteractive();
-        
-        const dialogBg = this.add.rectangle(width / 2, height / 2, 300, 200, COLORS.DARK_GRAY)
-            .setStrokeStyle(3, COLORS.WHITE);
-        
-        this.add.text(width / 2, height / 2 - 40, 'Forfeit Battle?', {
+        elements.push(overlay);
+
+        elements.push(this.add.rectangle(width / 2, height / 2, 320, 200, COLORS.DARK_GRAY)
+            .setStrokeStyle(3, COLORS.WHITE));
+
+        elements.push(this.add.text(width / 2, height / 2 - 40, 'Flee from battle?', {
             fontSize: '24px',
             fontFamily: 'Arial',
             fill: '#FFFFFF'
-        }).setOrigin(0.5);
-        
+        }).setOrigin(0.5));
+
         // Yes button
         const yesBtn = this.add.rectangle(width / 2 - 60, height / 2 + 30, 100, 40, COLORS.RED)
             .setStrokeStyle(2, COLORS.WHITE)
             .setInteractive();
-        
-        this.add.text(width / 2 - 60, height / 2 + 30, 'Yes', {
+        elements.push(yesBtn);
+
+        elements.push(this.add.text(width / 2 - 60, height / 2 + 30, 'Yes', {
             fontSize: '18px',
             fontFamily: 'Arial',
             fill: '#FFFFFF'
-        }).setOrigin(0.5);
-        
+        }).setOrigin(0.5));
+
         yesBtn.on('pointerdown', () => {
+            if (typeof trackGameEvent !== 'undefined') {
+                trackGameEvent('battle_forfeit', {
+                    battleResult: 'forfeit',
+                    playerClass: this.player.charType,
+                    locationName: this.location.name,
+                    enemyType: this.enemy.enemyType || this.enemy.name,
+                    playerHealthRemaining: this.player.health,
+                    enemyHealthRemaining: this.enemy.health,
+                    battleDuration: Date.now() - (this.battleStartTime || Date.now())
+                });
+            }
             this.scene.start('MainMenu');
         });
-        
+
         // No button
         const noBtn = this.add.rectangle(width / 2 + 60, height / 2 + 30, 100, 40, COLORS.GREEN)
             .setStrokeStyle(2, COLORS.WHITE)
             .setInteractive();
-        
-        this.add.text(width / 2 + 60, height / 2 + 30, 'No', {
+        elements.push(noBtn);
+
+        elements.push(this.add.text(width / 2 + 60, height / 2 + 30, 'No', {
             fontSize: '18px',
             fontFamily: 'Arial',
             fill: '#FFFFFF'
-        }).setOrigin(0.5);
-        
+        }).setOrigin(0.5));
+
         noBtn.on('pointerdown', () => {
-            overlay.destroy();
-            dialogBg.destroy();
+            elements.forEach(el => el.destroy());
         });
     }
     
@@ -1234,26 +1371,17 @@ class BattleScene extends Phaser.Scene {
     }
     
     showEnemyDialogue(enemyType) {
-        console.log(`💬 showEnemyDialogue called with enemyType: ${enemyType}`);
-        console.log(`💬 Enemy object:`, this.enemy);
-        console.log(`💬 Enemy name: ${this.enemy?.name}, Enemy type: ${this.enemy?.enemyType}`);
         const { width, height } = this.scale;
-        
+
         // Get random dialogue for this enemy type
         let dialogue = "Let's battle!"; // Default fallback
         if (ENEMY_DIALOGUE && ENEMY_DIALOGUE[enemyType]) {
             const dialogues = ENEMY_DIALOGUE[enemyType];
             dialogue = dialogues[Math.floor(Math.random() * dialogues.length)];
-            console.log(`💬 Found dialogue: "${dialogue}"`);
-        } else {
-            console.warn(`💬 No dialogue found for enemy type: ${enemyType}`);
-            console.log(`💬 Available enemy types:`, ENEMY_DIALOGUE ? Object.keys(ENEMY_DIALOGUE) : 'ENEMY_DIALOGUE not loaded');
-            console.log(`💬 Using fallback dialogue: "${dialogue}"`);
         }
-        
+
         // Create dialogue bubble with high depth to appear on top (more visible positioning)
         const dialogueY = 200; // Lower position to avoid conflict with health bars
-        console.log(`💬 Creating dialogue bubble at position (${width / 2}, ${dialogueY})`);
         const dialogueBg = this.add.rectangle(width / 2, dialogueY, width - 60, 120, 0x001133, 0.95)
             .setStrokeStyle(5, COLORS.YELLOW) // Thicker yellow border
             .setDepth(2000); // Even higher depth to appear on top
@@ -1272,7 +1400,6 @@ class BattleScene extends Phaser.Scene {
         
         // Enemy name label
         const enemyName = this.enemy.name || enemyType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        console.log(`💬 Enemy name: ${enemyName}`);
         const nameText = this.add.text(width / 2, dialogueY - 45, enemyName + " says:", {
             fontSize: '20px', // Larger font
             fontFamily: 'Arial',
@@ -1282,8 +1409,6 @@ class BattleScene extends Phaser.Scene {
             strokeThickness: 3
         }).setOrigin(0.5)
           .setDepth(2001); // High depth for name text
-        
-        console.log(`💬 Dialogue elements created successfully`);
         
         // Auto-hide after 4 seconds
         this.time.delayedCall(4000, () => {

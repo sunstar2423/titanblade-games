@@ -36,7 +36,7 @@ class AssetManager {
         const enemies = [
             'goblin', 'orc', 'skeleton', 'banshee', 'ghost', 'vampire',
             'lich', 'dragon_whelp', 'ancient_warrior', 'ancient_guardian',
-            'assassin', 'city_guard', 'dark_mage', 'elite_dark_mage',
+            'assassin', 'city_guard', 'elite_dark_mage',
             'fire_elemental', 'divine_beast', 'celestial', 'temple_guardian',
             'spirit_monk', 'pirate', 'ghost_ship', 'sea_serpent', 'kraken_spawn',
             'minotaur', 'golem', 'magma_golem', 'lava_beast', 'war_machine',
@@ -45,6 +45,11 @@ class AssetManager {
         enemies.forEach(enemy => {
             scene.load.image(enemy, `${enemy}.png`);
         });
+
+        // dark_mage.png is a tiny 72px placeholder - use the full-res elite art
+        // instead (must not also be queued under its own name above, or Phaser
+        // keeps the first file registered for the key)
+        scene.load.image('dark_mage', 'elite_dark_mage.png');
         
         // Background images
         scene.load.image('world_map', 'world_map.png');
@@ -184,19 +189,11 @@ class AssetManager {
     // Play sound with fallback
     playSound(scene, soundName, volume = 0.5) {
         try {
-            console.log(`🔊 Attempting to play sound: ${soundName}`);
-            console.log(`🔊 Scene.sound exists:`, !!scene.sound);
-            console.log(`🔊 Available sounds:`, scene.sound ? Object.keys(scene.sound.sounds) : 'No sound manager');
-            
             if (scene.sound && scene.cache.audio.exists(soundName)) {
-                console.log(`🔊 Playing sound: ${soundName} at volume ${volume}`);
                 scene.sound.play(soundName, { volume });
                 return true;
             } else {
                 console.warn(`🔊 Sound not found or not loaded: ${soundName}`);
-                if (scene.sound) {
-                    console.warn(`🔊 Available audio keys:`, scene.cache.audio.getKeys());
-                }
             }
         } catch (error) {
             console.warn(`🔊 Could not play sound: ${soundName}`, error);
@@ -224,19 +221,23 @@ class AssetManager {
     // Play background music
     playBackgroundMusic(scene, loop = true, volume = 0.3, trackName = 'background_music') {
         try {
-            console.log(`🎵 Attempting to play background music: ${trackName}`);
-            
-            // Stop any existing background music first
+            if (!scene.sound) return null;
+
+            // If this track is already playing, keep it going instead of
+            // restarting it on every scene change
+            const existing = scene.sound.get(trackName);
+            if (existing && existing.isPlaying) {
+                existing.setVolume(volume);
+                return existing;
+            }
+
+            // Stop any other background music first
             this.stopAllMusic(scene);
-            
-            console.log(`🎵 Scene.sound exists:`, !!scene.sound);
-            console.log(`🎵 ${trackName} exists:`, scene.cache.audio.exists(trackName));
-            
-            if (scene.sound && scene.cache.audio.exists(trackName)) {
-                console.log(`🎵 Playing ${trackName} at volume ${volume}`);
-                const music = scene.sound.play(trackName, { 
-                    loop, 
-                    volume 
+
+            if (scene.cache.audio.exists(trackName)) {
+                const music = scene.sound.play(trackName, {
+                    loop,
+                    volume
                 });
                 return music;
             } else {

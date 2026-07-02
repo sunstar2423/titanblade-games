@@ -22,20 +22,45 @@ const GAME_CONSTANTS = {
         ANIMATION_DELAY: 30
     },
     SCALING: {
-        ENEMY_VICTORY_MULTIPLIER: 0.05,
-        DEFENSE_REDUCTION_CAP: 0.75,
-        MIN_DAMAGE_PERCENT: 0.25
+        // Enemies get 2% stronger per player victory, capped at +30%
+        ENEMY_VICTORY_MULTIPLIER: 0.02,
+        ENEMY_VICTORY_CAP: 0.30,
+        // Enemy attack grows at half the rate of their health/defense
+        ENEMY_ATTACK_DAMPENING: 0.5,
+        MIN_DAMAGE_PERCENT: 0.4
     },
     HEALING: {
-        MIN_HEAL: 25,
-        MAX_HEAL: 40,
-        WIZARD_MIN_HEAL: 40,
-        WIZARD_MAX_HEAL: 60
+        // Heals scale with max health so they stay useful late game
+        HEAL_PERCENT_MIN: 0.25,
+        HEAL_PERCENT_MAX: 0.35,
+        WIZARD_HEAL_PERCENT_MIN: 0.35,
+        WIZARD_HEAL_PERCENT_MAX: 0.50,
+        MIN_HEAL: 25
     },
     MANA: {
-        REGENERATION_PER_TURN: 10,
+        REGEN_PER_TURN: 5,
+        REGEN_ON_ATTACK: 8,
         WIZARD_MAX_MANA: 100
     },
+    COMBAT: {
+        CRIT_BASE_CHANCE: 0.05,
+        CRIT_SPEED_FACTOR: 0.0015,
+        CRIT_CHANCE_CAP: 0.35,
+        CRIT_MULTIPLIER: 1.6,
+        ROGUE_CRIT_BONUS: 0.10,
+        DODGE_SPEED_FACTOR: 0.002,
+        DODGE_CHANCE_CAP: 0.15
+    },
+    LEVEL_UP: {
+        // Permanent gains per victory
+        HEALTH_PER_VICTORY: 5,
+        ATTACK_PER_VICTORY: 2,
+        DEFENSE_PER_VICTORY: 2
+    },
+    POTIONS: {
+        BAG_LIMIT: 5
+    },
+    REVIVE_SHARD_COST: 3,
     UI: {
         CHARACTER_SIZE: 120,
         BUTTON_WIDTH: 120,
@@ -209,9 +234,9 @@ const STORE_ITEMS = {
         {
             name: "Health Potion",
             type: "consumable",
-            health: 20,
+            healPercent: 30,
             price: 25,
-            description: "Restores health"
+            description: "Restores 30% health in battle"
         }
     ],
     [ItemTier.INTERMEDIATE]: [
@@ -251,9 +276,9 @@ const STORE_ITEMS = {
         {
             name: "Magic Elixir",
             type: "consumable",
-            health: 40,
+            healPercent: 45,
             price: 60,
-            description: "Magical healing potion"
+            description: "Restores 45% health in battle"
         }
     ],
     [ItemTier.ADVANCED]: [
@@ -293,9 +318,9 @@ const STORE_ITEMS = {
         {
             name: "Greater Healing Potion",
             type: "consumable",
-            health: 60,
+            healPercent: 60,
             price: 120,
-            description: "Powerful healing elixir"
+            description: "Restores 60% health in battle"
         }
     ],
     [ItemTier.LEGENDARY]: [
@@ -335,9 +360,9 @@ const STORE_ITEMS = {
         {
             name: "Phoenix Tears",
             type: "consumable",
-            health: 100,
+            healPercent: 80,
             price: 250,
-            description: "Legendary healing essence"
+            description: "Restores 80% health in battle"
         }
     ],
     [ItemTier.MYTHIC]: [
@@ -377,9 +402,9 @@ const STORE_ITEMS = {
         {
             name: "Ambrosia",
             type: "consumable",
-            health: 150,
+            healPercent: 100,
             price: 500,
-            description: "Food of the gods"
+            description: "Fully restores health in battle"
         }
     ]
 };
@@ -521,12 +546,12 @@ const ENEMY_STATS = {
     lost_soul: { health: 70, attack: 80, defense: 15, speed: 85 },
     
     // Castle (Boss area)
-    druid_lord: { health: 200, attack: 110, defense: 55, speed: 80 },
-    ancient_guardian: { health: 180, attack: 95, defense: 60, speed: 65 },
-    
+    druid_lord: { health: 200, attack: 100, defense: 55, speed: 80 },
+    ancient_guardian: { health: 180, attack: 90, defense: 60, speed: 65 },
+
     // Bot Attack (Special area)
-    mech_dragon: { health: 220, attack: 120, defense: 50, speed: 70 },
-    war_machine: { health: 200, attack: 100, defense: 65, speed: 50 }
+    mech_dragon: { health: 220, attack: 105, defense: 50, speed: 70 },
+    war_machine: { health: 200, attack: 95, defense: 65, speed: 50 }
 };
 
 // Enemy dialogue for battle starts (kid-friendly)

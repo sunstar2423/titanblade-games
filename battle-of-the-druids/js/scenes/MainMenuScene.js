@@ -19,7 +19,10 @@ class MainMenuScene extends Phaser.Scene {
     
     create() {
         const { width, height } = this.scale;
-        
+
+        // Reset per-visit state (scene instances are reused)
+        this.buttons = [];
+
         // Get player from registry
         this.player = this.registry.get('currentPlayer');
         
@@ -52,11 +55,17 @@ class MainMenuScene extends Phaser.Scene {
             fill: '#FFFFFF'
         }).setOrigin(0.5);
         
-        this.add.text(width / 2, 250, `Gold: ${this.player.gold} | Dragon Shards: ${this.player.dragonShards}`, {
+        const potionCount = this.player.potions ? this.player.potions.length : 0;
+        this.add.text(width / 2, 250, `Gold: ${this.player.gold} | Dragon Shards: ${this.player.dragonShards} | Potions: ${potionCount}/${GAME_CONSTANTS.POTIONS.BAG_LIMIT}`, {
             fontSize: '20px',
             fontFamily: 'Arial',
             fill: '#FFD700'
         }).setOrigin(0.5);
+
+        // Checkpoint save
+        if (typeof SaveSystem !== 'undefined') {
+            SaveSystem.save(this.player);
+        }
         
         // Create menu buttons
         this.createMenuButtons();
@@ -107,55 +116,61 @@ class MainMenuScene extends Phaser.Scene {
     quitGame() {
         // Create confirmation dialog
         const { width, height } = this.scale;
-        
+        const elements = [];
+
         const overlay = this.add.rectangle(width / 2, height / 2, width, height, COLORS.BLACK, 0.8)
             .setInteractive();
-        
-        const dialogBg = this.add.rectangle(width / 2, height / 2, 300, 200, COLORS.DARK_GRAY)
-            .setStrokeStyle(3, COLORS.WHITE);
-        
-        this.add.text(width / 2, height / 2 - 40, 'Quit Game?', {
+        elements.push(overlay);
+
+        elements.push(this.add.rectangle(width / 2, height / 2, 340, 200, COLORS.DARK_GRAY)
+            .setStrokeStyle(3, COLORS.WHITE));
+
+        elements.push(this.add.text(width / 2, height / 2 - 40, 'Quit Game?', {
             fontSize: '24px',
             fontFamily: 'Arial',
             fill: '#FFFFFF'
-        }).setOrigin(0.5);
-        
-        this.add.text(width / 2, height / 2, 'Return to Character Selection?', {
+        }).setOrigin(0.5));
+
+        elements.push(this.add.text(width / 2, height / 2, 'Your progress is saved automatically.', {
             fontSize: '16px',
             fontFamily: 'Arial',
             fill: '#CCCCCC'
-        }).setOrigin(0.5);
-        
+        }).setOrigin(0.5));
+
         // Yes button
         const yesBtn = this.add.rectangle(width / 2 - 60, height / 2 + 50, 100, 40, COLORS.RED)
             .setStrokeStyle(2, COLORS.WHITE)
             .setInteractive();
-        
-        this.add.text(width / 2 - 60, height / 2 + 50, 'Yes', {
+        elements.push(yesBtn);
+
+        elements.push(this.add.text(width / 2 - 60, height / 2 + 50, 'Yes', {
             fontSize: '18px',
             fontFamily: 'Arial',
             fill: '#FFFFFF'
-        }).setOrigin(0.5);
-        
+        }).setOrigin(0.5));
+
         yesBtn.on('pointerdown', () => {
+            if (typeof SaveSystem !== 'undefined') {
+                SaveSystem.save(this.player);
+            }
             this.registry.remove('currentPlayer');
             this.scene.start('CharacterSelection');
         });
-        
+
         // No button
         const noBtn = this.add.rectangle(width / 2 + 60, height / 2 + 50, 100, 40, COLORS.GREEN)
             .setStrokeStyle(2, COLORS.WHITE)
             .setInteractive();
-        
-        this.add.text(width / 2 + 60, height / 2 + 50, 'No', {
+        elements.push(noBtn);
+
+        elements.push(this.add.text(width / 2 + 60, height / 2 + 50, 'No', {
             fontSize: '18px',
             fontFamily: 'Arial',
             fill: '#FFFFFF'
-        }).setOrigin(0.5);
-        
+        }).setOrigin(0.5));
+
         noBtn.on('pointerdown', () => {
-            overlay.destroy();
-            dialogBg.destroy();
+            elements.forEach(el => el.destroy());
         });
     }
     

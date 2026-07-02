@@ -49,7 +49,7 @@ class StoreScene extends Phaser.Scene {
         }).setOrigin(0.5);
         
         // Player gold display
-        this.goldText = this.add.text(50, 100, `Gold: ${this.player.gold}`, {
+        this.goldText = this.add.text(50, 100, this.getGoldLabel(), {
             fontSize: '24px',
             fontFamily: 'Arial',
             fill: '#FFD700'
@@ -89,6 +89,11 @@ class StoreScene extends Phaser.Scene {
         // Note: Keyboard input disabled to prevent mobile keyboard popup
     }
     
+    getGoldLabel() {
+        const potionCount = this.player.potions ? this.player.potions.length : 0;
+        return `Gold: ${this.player.gold}   Potions: ${potionCount}/${GAME_CONSTANTS.POTIONS.BAG_LIMIT}`;
+    }
+
     createTierButtons() {
         const { width } = this.scale;
         const tiers = Object.values(ItemTier);
@@ -182,10 +187,12 @@ class StoreScene extends Phaser.Scene {
         // Determine if this is equipment or consumable
         const isEquipment = item.slot !== undefined;
         const canAfford = this.player.gold >= item.price;
-        
+        const equippedItem = isEquipment ? this.player.getEquippedItem(item.slot) : null;
+        const isEquipped = !!(equippedItem && equippedItem.name === item.name);
+
         // Item card background
         const cardBg = this.add.rectangle(width / 2, y, cardWidth, cardHeight, canAfford ? COLORS.DARK_GRAY : 0x3c1414)
-            .setStrokeStyle(2, COLORS.WHITE)
+            .setStrokeStyle(2, isEquipped ? COLORS.GOLD : COLORS.WHITE)
             .setInteractive();
         
         // Item name
@@ -208,27 +215,41 @@ class StoreScene extends Phaser.Scene {
         if (isEquipment) {
             const equipment = new Equipment(item);
             statsText = equipment.getStatText();
-        } else {
-            if (item.health) statsText += `Health +${item.health} `;
+        } else if (item.healPercent) {
+            statsText = `Restores ${item.healPercent}% HP in battle`;
         }
-        
+
+        // Track every element so tier switches clean them up properly
+        let statsTextObj = null;
         if (statsText) {
-            this.add.text(400, y, statsText, {
+            statsTextObj = this.add.text(400, y, statsText, {
                 fontSize: '16px',
                 fontFamily: 'Arial',
                 fill: '#00FF00'
             });
         }
-        
+
         // Tier indicator for equipment
+        let tierCircle = null;
         if (isEquipment) {
             const tierColor = TIER_COLORS[item.tier];
-            this.add.circle(width - 100, y, 15, tierColor)
+            tierCircle = this.add.circle(width - 100, y, 15, tierColor)
                 .setStrokeStyle(2, COLORS.WHITE);
         }
-        
+
+        // Equipped indicator
+        let equippedText = null;
+        if (isEquipped) {
+            equippedText = this.add.text(width - 180, y, 'EQUIPPED', {
+                fontSize: '16px',
+                fontFamily: 'Arial',
+                fill: '#FFD700',
+                fontStyle: 'bold'
+            }).setOrigin(0.5);
+        }
+
         // Purchase interaction
-        if (canAfford) {
+        if (canAfford && !isEquipped) {
             cardBg.on('pointerdown', () => this.purchaseItem(item));
             cardBg.on('pointerover', () => cardBg.setFillStyle(COLORS.GRAY));
             cardBg.on('pointerout', () => cardBg.setFillStyle(COLORS.DARK_GRAY));
@@ -239,7 +260,9 @@ class StoreScene extends Phaser.Scene {
             cardBg,
             nameText,
             priceText,
-            item
+            statsTextObj,
+            tierCircle,
+            equippedText
         });
     }
     
@@ -249,16 +272,21 @@ class StoreScene extends Phaser.Scene {
         if (result.success) {
             // Play purchase sound
             this.assetManager.playSound(this, 'buy', 0.6);
-            
+
             // Update gold display
-            this.goldText.setText(`Gold: ${this.player.gold}`);
-            
+            this.goldText.setText(this.getGoldLabel());
+
             // Show success message
             this.showPurchaseMessage(result.message, true);
-            
+
             // Refresh item display to update affordability
             this.updateItemDisplay();
-            
+
+            // Save after every purchase
+            if (typeof SaveSystem !== 'undefined') {
+                SaveSystem.save(this.player);
+            }
+
         } else {
             // Show failure message
             this.showPurchaseMessage(result.message, false);

@@ -20,7 +20,10 @@ class WorldMapScene extends Phaser.Scene {
     
     create() {
         const { width, height } = this.scale;
-        
+
+        // Reset per-visit state (scene instances are reused)
+        this.locationCircles = [];
+
         // Get player from registry
         this.player = this.registry.get('currentPlayer');
         
@@ -51,6 +54,22 @@ class WorldMapScene extends Phaser.Scene {
             fontFamily: 'Arial',
             fill: '#FFFFFF'
         }).setOrigin(0.5);
+
+        // Player status header
+        const potionCount = this.player.potions ? this.player.potions.length : 0;
+        this.add.text(width / 2, 135,
+            `${this.player.name}  •  Lv ${this.player.victories + 1}  •  Gold: ${this.player.gold}  •  Shards: ${this.player.dragonShards}  •  Potions: ${potionCount}`, {
+            fontSize: '18px',
+            fontFamily: 'Arial',
+            fill: '#FFD700',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+
+        // Checkpoint save whenever the map is visited
+        if (typeof SaveSystem !== 'undefined') {
+            SaveSystem.save(this.player);
+        }
         
         // Main Menu button (bottom-right corner)
         const mainMenuBtn = this.add.rectangle(width - 100, height - 50, 160, 40, COLORS.DARK_GRAY)
@@ -145,33 +164,38 @@ class WorldMapScene extends Phaser.Scene {
             }
             
             // Interaction handlers
-            if (isUnlocked && victories < 3) {
+            if (isUnlocked) {
+                // Completed locations stay open for replay (gold and shard grinding)
                 locationCircle.on('pointerdown', () => {
                     this.selectLocation(location);
                 });
-                
+
                 locationCircle.on('pointerover', () => {
                     locationCircle.setScale(1.1);
-                    this.showLocationDescription(location);
+                    if (victories >= 3) {
+                        this.showCompletedMessage(location);
+                    } else {
+                        this.showLocationDescription(location);
+                    }
                 });
-                
+
                 locationCircle.on('pointerout', () => {
                     locationCircle.setScale(1.0);
                     this.hideLocationDescription();
                 });
-            } else if (isUnlocked && victories >= 3) {
-                // Completed location - show info but can't enter
-                locationCircle.on('pointerover', () => {
-                    this.showCompletedMessage(location);
-                });
-                
-                locationCircle.on('pointerout', () => {
-                    this.hideLocationDescription();
-                });
-                
-                locationCircle.on('pointerdown', () => {
-                    this.showCompletedMessage(location);
-                });
+
+                // Pulse locations that still have progress to earn
+                if (victories < 3) {
+                    this.tweens.add({
+                        targets: locationCircle,
+                        scaleX: 1.12,
+                        scaleY: 1.12,
+                        duration: 900,
+                        yoyo: true,
+                        repeat: -1,
+                        ease: 'Sine.easeInOut'
+                    });
+                }
             } else {
                 // Show locked state
                 locationCircle.on('pointerover', () => {
@@ -244,7 +268,7 @@ class WorldMapScene extends Phaser.Scene {
     }
     
     showCompletedMessage(location) {
-        this.hoverDescription.setText(`${location.name} - COMPLETED!\nYou've defeated all enemies here. (3/3)\nTry exploring other locations!`);
+        this.hoverDescription.setText(`${location.name} - COMPLETED! (3/3)\nYou can still battle here for extra gold and shards.`);
         this.hoverDescription.setVisible(true);
     }
     

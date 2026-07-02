@@ -60,6 +60,17 @@ class CharacterSelectionScene extends Phaser.Scene {
         try {
             console.log('🎯 CharacterSelectionScene starting...');
             const { width, height } = this.scale;
+
+            // Reset state - Phaser reuses scene instances, so anything left
+            // over from a previous visit points at destroyed objects
+            this.selectedCharacter = null;
+            this.playerName = "";
+            this.inputActive = false;
+            this.nameInputBox = null;
+            this.nameInputText = null;
+            this.cursor = null;
+            this.startButton = null;
+            this.startButtonText = null;
             
             // Background
             console.log('🎨 Drawing background...');
@@ -93,6 +104,9 @@ class CharacterSelectionScene extends Phaser.Scene {
                 fontFamily: 'Arial',
                 fill: '#FFFFFF'
             }).setOrigin(0.5);
+
+            // Continue button if a saved hero exists
+            this.createContinueButton();
             
             console.log('⌨️ Keyboard input will be enabled when character is selected...');
             // Note: Keyboard listener is registered only when text input is needed
@@ -105,6 +119,40 @@ class CharacterSelectionScene extends Phaser.Scene {
         }
     }
     
+    createContinueButton() {
+        const saveData = (typeof SaveSystem !== 'undefined') ? SaveSystem.peek() : null;
+        if (!saveData) return;
+
+        const { width } = this.scale;
+        const label = `Continue: ${saveData.name} the ${saveData.charType} (Lv ${(saveData.victories || 0) + 1})`;
+
+        const continueBtn = this.add.rectangle(width / 2, 660, 460, 56, 0x1e5c1e)
+            .setStrokeStyle(3, COLORS.GOLD)
+            .setInteractive();
+
+        const continueText = this.add.text(width / 2, 660, label, {
+            fontSize: '22px',
+            fontFamily: 'Arial',
+            fill: '#FFD700',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        continueBtn.on('pointerover', () => continueBtn.setFillStyle(0x2e7c2e));
+        continueBtn.on('pointerout', () => continueBtn.setFillStyle(0x1e5c1e));
+        continueBtn.on('pointerdown', () => {
+            const player = SaveSystem.load();
+            if (player) {
+                if (window.trackGameEvent) {
+                    window.trackGameEvent('save_loaded', 'Player_Actions');
+                }
+                this.registry.set('currentPlayer', player);
+                this.scene.start('MainMenu');
+            } else {
+                continueText.setText('Save could not be loaded');
+            }
+        });
+    }
+
     createCharacterCards() {
         try {
             console.log('🃏 Creating character cards...');
@@ -234,6 +282,29 @@ class CharacterSelectionScene extends Phaser.Scene {
         
         // Mobile keyboard support
         this.setupMobileInput();
+
+        // Begin Adventure button (click/tap alternative to pressing Enter)
+        if (!this.startButton) {
+            this.startButton = this.add.rectangle(width / 2, 590, 260, 50, 0x1e5c1e)
+                .setStrokeStyle(2, COLORS.WHITE)
+                .setInteractive();
+            this.startButtonText = this.add.text(width / 2, 590, 'Begin Adventure!', {
+                fontSize: '20px',
+                fontFamily: 'Arial',
+                fill: '#FFFFFF',
+                fontStyle: 'bold'
+            }).setOrigin(0.5);
+
+            this.startButton.on('pointerover', () => this.startButton.setFillStyle(0x2e7c2e));
+            this.startButton.on('pointerout', () => this.startButton.setFillStyle(0x1e5c1e));
+            this.startButton.on('pointerdown', () => {
+                if (this.playerName.trim().length > 0) {
+                    this.createCharacter();
+                } else if (this.instructionText) {
+                    this.instructionText.setText('Please enter a name for your hero first!');
+                }
+            });
+        }
         
         // Blinking cursor
         this.cursor = this.add.text(width / 2 + this.nameInputText.width / 2 + 5, 520, '|', {
@@ -342,9 +413,14 @@ class CharacterSelectionScene extends Phaser.Scene {
         
         // Create character object
         const character = new Character(this.selectedCharacter.type, this.playerName.trim());
-        
+
         // Store globally for other scenes
         this.registry.set('currentPlayer', character);
+
+        // Starting a new hero becomes the active save
+        if (typeof SaveSystem !== 'undefined') {
+            SaveSystem.save(character);
+        }
         
         // Disable keyboard input when character creation is complete
         this.inputActive = false;
