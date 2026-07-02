@@ -26,30 +26,38 @@ export default class ForkScene extends BaseScene {
 
         this.addTitle('The Fork in the Road');
 
-        this.addText(SCREEN_WIDTH/2, 135,
-            'The path splits in two. A weathered signpost reads:\n' +
-            '"Left: DOOM. Right: ALSO DOOM (but with a nice sea breeze)."', 16);
+        this.addText(SCREEN_WIDTH/2, 130,
+            'The path splits three ways. A weathered signpost reads:\n' +
+            '"Left: DOOM. Right: ALSO DOOM (sea breeze). Middle: flowers?? Suspicious."', 15);
 
-        // Left: mountains
-        this.addText(300, 300, '⛰️', 56);
-        this.addText(300, 375, 'The Mountain Path', 20, '#FFFFFF');
-        this.addText(300, 420, 'Jagged peaks, dark caves,\nand — rumor has it — treasure.', 13, '#DDDDDD');
-        this.createButton(300, 490, 'Climb the Mountain Path', () => this.goTo(SCENES.MOUNTAINS), { width: 250 });
+        // Left: mountains (via the pass and the toll bridge)
+        this.addText(210, 280, '⛰️', 52);
+        this.addText(210, 350, 'The Mountain Road', 19);
+        this.addText(210, 398, 'A fortified pass, a rickety\nbridge, and buried treasure.', 12, '#DDDDDD');
+        this.createButton(210, 465, 'Take the Mountain Road', () => this.goTo(SCENES.MOUNTAIN_PASS), { width: 240 });
 
-        // Right: coast
-        this.addText(724, 300, '🌊', 56);
-        this.addText(724, 375, 'The Coastal Path', 20, '#FFFFFF');
-        this.addText(724, 420, 'Salt air, crashing waves,\nand things with tentacles.', 13, '#DDDDDD');
-        this.createButton(724, 490, 'Follow the Coastal Path', () => this.goTo(SCENES.SHORE), { width: 250 });
+        // Middle: the meadow trail (optional wonders)
+        this.addText(512, 280, '🌼', 52);
+        this.addText(512, 350, 'The Meadow Trail', 19);
+        this.addText(512, 398, 'Flowers, a fairy lake, and\nelves. Probably too peaceful.', 12, '#DDDDDD');
+        this.createButton(512, 465, 'Wander the Meadow Trail', () => this.goTo(SCENES.MEADOW), {
+            width: 240, color: 0x2C5F2D, hover: 0x4A7C59
+        });
+
+        // Right: the coast (via the raging river)
+        this.addText(814, 280, '🌊', 52);
+        this.addText(814, 350, 'The Coastal Path', 19);
+        this.addText(814, 398, 'A raging river, a rocky shore,\nand things with tentacles.', 12, '#DDDDDD');
+        this.createButton(814, 465, 'Follow the Coastal Path', () => this.goTo(SCENES.RIVER), { width: 240 });
 
         // Quest guidance
         const needGoblet = !this.gameState.hasItem('Golden Goblet');
         const needSea = !this.gameState.hasItem('Squid Eye') || !this.gameState.hasItem('Bottle of Rum');
-        let hint = 'Both paths hold something the sorcerer wants...';
+        let hint = 'The mountain and the sea both hold something the sorcerer wants...';
         if (!needGoblet && needSea) hint = 'The goblet is yours — the sea still owes you two treasures.';
         if (needGoblet && !needSea) hint = 'The sea is conquered — the mountain still hides a golden prize.';
         if (!needGoblet && !needSea) hint = 'You have everything! The sorcerer\'s sign awaits in the village.';
-        this.addText(SCREEN_WIDTH/2, 580, hint, 14, '#FFD97A');
+        this.addText(SCREEN_WIDTH/2, 575, hint, 14, '#FFD97A');
 
         this.createButton(150, 700, '← Back to Forest', () => this.goTo(SCENES.FOREST), { width: 190 });
     }

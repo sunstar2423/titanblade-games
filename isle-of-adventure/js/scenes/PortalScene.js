@@ -122,8 +122,11 @@ export default class PortalScene extends BaseScene {
         const places = this.gameState.visitedLocations.length;
         const items = this.gameState.inventory.length;
         const breadDiplomacy = this.gameState.hasVisitedLocation('Bread Gambit');
+        const trinkets = ['Lucky Pebble', 'Elven Charm', 'Ancient Coin']
+            .filter(t => this.gameState.hasItem(t)).length;
         return `Adventure report:\n` +
             `${places} locations explored  •  ${enemies} foes bested  •  ${items} items pocketed\n` +
+            `Optional wonders discovered: ${trinkets} / 3\n` +
             (breadDiplomacy ? 'Diplomatic use of baked goods: ✓' : 'Baked goods deployed: 0 (violence works too)');
     }
 }

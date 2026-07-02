@@ -93,6 +93,9 @@ export default class PirateIslandScene extends BaseScene {
         this.createButton(SCREEN_WIDTH/2, 620, '🏴‍☠️ Sail to the Secret Base', () => this.goTo(SCENES.PIRATE_BASE), {
             width: 280, color: 0x8B4513, hover: 0xA0522D
         });
+        this.createButton(874, 700, '🗿 Explore the Ruins', () => this.goTo(SCENES.RUINS), {
+            width: 220, color: 0x6b5a3e, hover: 0x8a7550
+        });
         this.createButton(150, 700, '← Back to Village', () => this.goTo(SCENES.VILLAGE), { width: 190 });
     }
 
@@ -109,6 +112,9 @@ export default class PirateIslandScene extends BaseScene {
 
         this.createButton(SCREEN_WIDTH/2, 610, '🏴‍☠️ Visit the Secret Base', () => this.goTo(SCENES.PIRATE_BASE), {
             width: 260, color: 0x8B4513, hover: 0xA0522D
+        });
+        this.createButton(874, 700, '🗿 Explore the Ruins', () => this.goTo(SCENES.RUINS), {
+            width: 220, color: 0x6b5a3e, hover: 0x8a7550
         });
         this.createButton(150, 700, '← Back to Village', () => this.goTo(SCENES.VILLAGE), { width: 190 });
     }

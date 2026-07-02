@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Isle of Adventure - The Inland Wilds & New Artwork
+
+#### Added
+- Eight new locations built around the newly added artwork:
+  - **The Mountain Pass** (`mountainpass.png`) — Captain Doris of the Mountain Watch guards the gate after 14 years without an interesting shift
+  - **The Toll Bridge** (`trollbridge.png`) — the Troll Brothers' cousins went into infrastructure; the toll is one (1) good joke, choose from three
+  - **The Raging River** (`ragingriver.png`) — the bridge is out; swim it, walk the log, or compliment the union beavers
+  - **The Peaceful Meadow** (`peaceful meadow.png`) — gateway to the Inland Wilds, patrolled by deer with opinions
+  - **The Fairy Lake** (`peacefulfansyscenelake.png`) — Lady Marina, Regional Manager of Mystical Lakes (Interim), is out of swords but has a Lucky Pebble
+  - **The Elf Village** (`elvestreehutvillage.png`) — Aelenwood, where modesty was removed from the curriculum in the Third Age
+  - **The Elven Palace** (`elves palace interior.png`) — amuse Queen Elarwen the Eternally Unimpressed to earn the Elven Charm (and waybread)
+  - **The Whispering Ruins** (`ruinsonanisland.png`) — a riddle door guards the lore of the Portal Makers and the Ancient Coin
+- The Fork now offers three paths (Mountain Road, Meadow Trail, Coastal Path); Pirate Island gains an "Explore the Ruins" option
+- Three optional trinkets (Lucky Pebble, Elven Charm, Ancient Coin) tracked as "Optional wonders discovered" in the victory report
+- Beach Cove and the Secret Pirate Base now display their intended artwork (`beachscene.png`, `piratebase.png`)
+
+#### Fixed
+- CI `test` job could never pass: it installed html5validator from apt, which doesn't exist there — now installed via pip, with the deploy-time `{{GOOGLE_ANALYTICS_ID}}` placeholder excluded from URL validation
+- CI `security` job (super-linter) failed on every run because the checkout was shallow — now uses `fetch-depth: 0`
+- Invalid `http-equiv` meta tags (X-Content-Type-Options, Referrer-Policy, Permissions-Policy) in both web games — these are response-header-only directives browsers ignore as meta tags; Referrer-Policy replaced with the valid `<meta name="referrer">` form
+
 ### Isle of Adventure - Story Expansion & Overhaul
 
 #### Added

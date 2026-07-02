@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes, shrink-to-fit=no, viewport-fit=cover">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://cdn.jsdelivr.net https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io; worker-src blob:; frame-ancestors 'none';">
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+    <!-- X-Content-Type-Options and Permissions-Policy are response-header-only
+         directives (set by the hosting layer); browsers ignore them as meta tags. -->
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Battle of the Druids - Free Online RPG Game</title>
     <meta name="description" content="Play Battle of the Druids - A free turn-based RPG with 4 character classes, tactical combat, equipment progression, and 9 unique locations. Play instantly in your browser!">
     <meta name="keywords" content="free online rpg, browser game, turn-based combat, fantasy rpg, character classes, online game">
