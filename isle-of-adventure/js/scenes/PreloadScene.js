@@ -71,6 +71,14 @@ export default class PreloadScene extends Phaser.Scene {
         // New expansion artwork (optional — falls back if not present yet)
         this.load.image('beach_bg', 'images/beachscene.png');
         this.load.image('pirate_base_bg', 'images/piratebase.png');
+        this.load.image('meadow_bg', 'images/peaceful meadow.png');
+        this.load.image('lake_bg', 'images/peacefulfansyscenelake.png');
+        this.load.image('elf_village_bg', 'images/elvestreehutvillage.png');
+        this.load.image('elf_palace_bg', 'images/elves palace interior.png');
+        this.load.image('mountain_pass_bg', 'images/mountainpass.png');
+        this.load.image('troll_bridge_bg', 'images/trollbridge.png');
+        this.load.image('river_bg', 'images/ragingriver.png');
+        this.load.image('ruins_bg', 'images/ruinsonanisland.png');
         
         // Load character images with transparent backgrounds
         this.load.image('troll1', 'images/troll1.png');

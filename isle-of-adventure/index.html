@@ -6,9 +6,9 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://cdn.jsdelivr.net https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io; worker-src blob:; frame-ancestors 'none';">
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+    <!-- X-Content-Type-Options and Permissions-Policy are response-header-only
+         directives (set by the hosting layer); browsers ignore them as meta tags. -->
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Isle of Adventure</title>
     
     <!-- Google Analytics -->
@@ -153,7 +153,7 @@
             <ul id="inventory-list"></ul>
         </div>
         <div id="music-credits">
-            Music: "Serene Journey" & "Run to the Dream" by Lite Saturation (Free Music Archive, CC BY-ND)
+            Music: "Serene Journey" &amp; "Run to the Dream" by Lite Saturation (Free Music Archive, CC BY-ND)
         </div>
     </div>
 

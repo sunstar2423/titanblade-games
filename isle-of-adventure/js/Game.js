@@ -24,6 +24,14 @@ import CaveScene from './scenes/CaveScene.js';
 import TreasureScene from './scenes/TreasureScene.js';
 import ShoreScene from './scenes/ShoreScene.js';
 import BeachScene from './scenes/BeachScene.js';
+import MeadowScene from './scenes/MeadowScene.js';
+import LakeScene from './scenes/LakeScene.js';
+import ElfVillageScene from './scenes/ElfVillageScene.js';
+import ElfPalaceScene from './scenes/ElfPalaceScene.js';
+import MountainPassScene from './scenes/MountainPassScene.js';
+import TrollBridgeScene from './scenes/TrollBridgeScene.js';
+import RagingRiverScene from './scenes/RagingRiverScene.js';
+import RuinsScene from './scenes/RuinsScene.js';
 import BoatScene from './scenes/BoatScene.js';
 import SquidBattleScene from './scenes/SquidBattleScene.js';
 import PirateIslandScene from './scenes/PirateIslandScene.js';
@@ -72,6 +80,14 @@ class Game {
                 TreasureScene,
                 ShoreScene,
                 BeachScene,
+                MeadowScene,
+                LakeScene,
+                ElfVillageScene,
+                ElfPalaceScene,
+                MountainPassScene,
+                TrollBridgeScene,
+                RagingRiverScene,
+                RuinsScene,
                 BoatScene,
                 SquidBattleScene,
                 PirateIslandScene,
