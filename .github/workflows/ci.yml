@@ -34,10 +34,13 @@ jobs:
       run: |
         # html5validator is a pip package (it was never available via apt)
         pip install html5validator
-        # The {{GOOGLE_ANALYTICS_ID}} placeholder is substituted at deploy time,
-        # so the raw source is allowed to fail the URL-character check.
-        html5validator --root battle-of-the-druids/ --ignore-re "Attribute.*not allowed.*element.*at this point" "Illegal character in query"
-        html5validator --root isle-of-adventure/ --ignore-re "Attribute.*not allowed.*element.*at this point" "Illegal character in query"
+        # Ignored patterns:
+        # - the {{GOOGLE_ANALYTICS_ID}} placeholder is substituted at deploy time,
+        #   so the raw source is allowed to fail the URL-character check
+        # - the vnu.jar bundled with html5validator predates the (real, widely
+        #   supported) CSS property overscroll-behavior
+        html5validator --root battle-of-the-druids/ --ignore-re "Attribute.*not allowed.*element.*at this point" "Illegal character in query" "overscroll-behavior"
+        html5validator --root isle-of-adventure/ --ignore-re "Attribute.*not allowed.*element.*at this point" "Illegal character in query" "overscroll-behavior"
         
     - name: Test web games startup
       run: |
