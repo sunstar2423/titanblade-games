@@ -45,9 +45,12 @@ class InventoryScene extends Phaser.Scene {
         
         // Create equipment display
         this.createEquipmentDisplay();
-        
+
         // Create stats display
         this.createStatsDisplay();
+
+        // Create potion bag display
+        this.createPotionDisplay();
         
         // Back button
         const backButton = this.add.rectangle(100, height - 80, 120, 40, COLORS.DARK_GRAY)
@@ -93,6 +96,42 @@ class InventoryScene extends Phaser.Scene {
         });
     }
     
+    createPotionDisplay() {
+        const { width } = this.scale;
+        const panelX = width - 175;
+        const panelY = 200;
+        const panelWidth = 250;
+        const panelHeight = 260;
+
+        this.add.rectangle(panelX, panelY + panelHeight / 2, panelWidth, panelHeight, COLORS.BLACK, 0.7)
+            .setStrokeStyle(2, COLORS.WHITE);
+
+        const potions = this.player.potions || [];
+        this.add.text(panelX, panelY + 30, `Potion Bag (${potions.length}/${GAME_CONSTANTS.POTIONS.BAG_LIMIT})`, {
+            fontSize: '20px',
+            fontFamily: 'Arial',
+            fill: '#FFD700',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        if (potions.length === 0) {
+            this.add.text(panelX, panelY + 80, 'Empty\nBuy potions at the Store\nto use during battles!', {
+                fontSize: '14px',
+                fontFamily: 'Arial',
+                fill: '#CCCCCC',
+                align: 'center'
+            }).setOrigin(0.5);
+        } else {
+            potions.forEach((potion, index) => {
+                this.add.text(panelX, panelY + 65 + index * 30, `🧪 ${potion.name} (${potion.healPercent}%)`, {
+                    fontSize: '14px',
+                    fontFamily: 'Arial',
+                    fill: '#FFFFFF'
+                }).setOrigin(0.5);
+            });
+        }
+    }
+
     createStatsDisplay() {
         const { width } = this.scale;
         

@@ -191,6 +191,9 @@
     <!-- Sentry SDK -->
     <script src="https://browser.sentry-cdn.com/8.42.0/bundle.min.js" integrity="sha384-ojBBhiQvhkfZfAhojXYPuIYW8dxzV1I8R7YJlq9Tz7T4YOZQcTuUoCgGbCz5lWAE" crossorigin="anonymous"></script>
     <script>
+        // Guard: Sentry CDN may be blocked (ad blockers, strict networks) -
+        // the game must still boot without it
+        if (typeof Sentry !== 'undefined') {
         Sentry.init({
             dsn: "https://5752f76100bc0ed5d17444652339d50f@o4509524111523840.ingest.us.sentry.io/4509524122075136",
             integrations: [
@@ -214,6 +217,7 @@
             platform: "browser",
             engine: "phaser3"
         });
+        }
     </script>
 
     <!-- Phaser.js from CDN -->
@@ -222,6 +226,7 @@
     <!-- Game modules -->
     <script src="js/GameData.js"></script>
     <script src="js/Character.js"></script>
+    <script src="js/SaveSystem.js"></script>
     <script src="js/Equipment.js"></script>
     <script src="js/Effects.js"></script>
     <script src="js/Assets.js"></script>

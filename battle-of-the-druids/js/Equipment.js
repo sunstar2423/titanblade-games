@@ -46,26 +46,36 @@ class Store {
     }
     
     static purchaseItem(player, item) {
-        if (player.gold < item.price) {
-            return { success: false, message: "Not enough gold!" };
-        }
-        
-        player.gold -= item.price;
-        
         // Handle equipment vs consumables
         if (item.slot) {
-            // Equipment item - equip it
+            const currentItem = player.getEquippedItem(item.slot);
+            if (currentItem && currentItem.name === item.name) {
+                return { success: false, message: `${item.name} is already equipped!` };
+            }
+            if (player.gold < item.price) {
+                return { success: false, message: "Not enough gold!" };
+            }
+            player.gold -= item.price;
             const equipment = new Equipment(item);
             player.equipItem(equipment);
             return { success: true, message: `Equipped ${item.name}!` };
-        } else {
-            // Consumable item
-            if (item.health) {
-                player.maxHealth += item.health;
-                player.health += item.health;
-                return { success: true, message: `Used ${item.name}! +${item.health} max health!` };
+        } else if (item.healPercent) {
+            // Potion - goes into the bag for use during battle
+            if (!player.potions) player.potions = [];
+            if (player.potions.length >= GAME_CONSTANTS.POTIONS.BAG_LIMIT) {
+                return { success: false, message: `Potion bag is full! (${GAME_CONSTANTS.POTIONS.BAG_LIMIT} max)` };
             }
-            // Handle other consumable effects here
+            if (player.gold < item.price) {
+                return { success: false, message: "Not enough gold!" };
+            }
+            player.gold -= item.price;
+            player.potions.push({ name: item.name, healPercent: item.healPercent });
+            return { success: true, message: `${item.name} added to your bag! (${player.potions.length}/${GAME_CONSTANTS.POTIONS.BAG_LIMIT})` };
+        } else {
+            if (player.gold < item.price) {
+                return { success: false, message: "Not enough gold!" };
+            }
+            player.gold -= item.price;
             return { success: true, message: `Purchased ${item.name}!` };
         }
     }
