@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes, shrink-to-fit=no, viewport-fit=cover">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://cdn.jsdelivr.net https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io; worker-src blob:; frame-ancestors 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://www.google-analytics.com https://analytics.google.com; worker-src blob:; frame-ancestors 'none';">
     <!-- X-Content-Type-Options and Permissions-Policy are response-header-only
          directives (set by the hosting layer); browsers ignore them as meta tags. -->
     <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -64,7 +64,7 @@
             touch-action: manipulation;
         }
         
-        /* Mobile: Use full viewport height when ads are hidden */
+        /* Mobile: Use full viewport height */
         @media (max-width: 768px) {
             body {
                 min-height: 100vh;
@@ -85,11 +85,6 @@
         
         /* Mobile specific adjustments */
         @media (max-width: 768px) {
-            /* Hide ad spaces on mobile to save screen space */
-            #ad-top, #ad-bottom {
-                display: none !important;
-            }
-            
             body {
                 padding: 0;
                 margin: 0;
@@ -128,15 +123,6 @@
             }
         }
         
-        /* Tablet adjustments - smaller ads */
-        @media (min-width: 769px) and (max-width: 1024px) {
-            #ad-top, #ad-bottom {
-                width: 468px !important;
-                height: 60px !important;
-                font-size: 12px;
-            }
-        }
-        
         .loading {
             color: white;
             text-align: center;
@@ -161,20 +147,10 @@
 </head>
 <body>
     <div>
-        <!-- Top Ad Space (728x90 leaderboard) -->
-        <div id="ad-top" style="width: 728px; height: 90px; margin: 10px auto; background: #f0f0f0; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; color: #666; font-size: 14px;">
-            Ad Space - 728x90
-        </div>
-        
         <div id="game-container">
             <div class="loading">Loading Battle of the Druids...</div>
         </div>
-        
-        <!-- Bottom Ad Space (728x90 leaderboard) -->
-        <div id="ad-bottom" style="width: 728px; height: 90px; margin: 10px auto; background: #f0f0f0; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; color: #666; font-size: 14px;">
-            Ad Space - 728x90
-        </div>
-        
+
         <div class="game-info">
             <strong>Battle of the Druids - Web Edition</strong><br>
             A complete turn-based RPG with inventory, equipment, magic spells, and epic battles!
@@ -187,38 +163,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Sentry SDK -->
-    <script src="https://browser.sentry-cdn.com/8.42.0/bundle.min.js" integrity="sha384-ojBBhiQvhkfZfAhojXYPuIYW8dxzV1I8R7YJlq9Tz7T4YOZQcTuUoCgGbCz5lWAE" crossorigin="anonymous"></script>
-    <script>
-        // Guard: Sentry CDN may be blocked (ad blockers, strict networks) -
-        // the game must still boot without it
-        if (typeof Sentry !== 'undefined') {
-        Sentry.init({
-            dsn: "https://5752f76100bc0ed5d17444652339d50f@o4509524111523840.ingest.us.sentry.io/4509524122075136",
-            integrations: [
-                Sentry.browserTracingIntegration(),
-                Sentry.replayIntegration({
-                    maskAllText: true,
-                    blockAllMedia: true,
-                }),
-            ],
-            environment: "production",
-            release: "battle-of-the-druids@1.0.0",
-            tracesSampleRate: 0.1,
-            replaysSessionSampleRate: 0.05,
-            replaysOnErrorSampleRate: 1.0,
-        });
-        
-        // Custom Sentry context for game
-        Sentry.setTag("game", "battle-of-the-druids");
-        Sentry.setContext("game_info", {
-            version: "web-1.0.0",
-            platform: "browser",
-            engine: "phaser3"
-        });
-        }
-    </script>
 
     <!-- Phaser.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
