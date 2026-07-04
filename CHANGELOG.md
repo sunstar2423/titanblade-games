@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Garden Farmers - Performance Overhaul
+
+#### Fixed
+- **GPU memory leaks** — enemies, projectiles, effects, damage numbers, plants, and explore-area scenery now release their geometries, materials, and textures when removed; previously they accumulated for the whole session, so the game got steadily slower the longer you played (in testing: hundreds of leaked GPU buffers after a few waves, ~150 more per cavern visit — now flat no matter how long the session runs)
+
+#### Changed
+- **Far fewer dynamic lights** — the farm scene ran 25 point lights (18 of them on the distant enemy fortress) and the Molten Cavern ran 41; every point light makes every lit pixel on screen more expensive to draw. Decorative torch/lantern lights were replaced by the emissive glows that were already there; the farm now uses 4 point lights and the cavern 13, with near-identical visuals
+- **Pooled special effects** — projectile trails, impact sparks, shock rings, and floating damage numbers now reuse a shared pool of meshes and canvases instead of allocating fresh geometry, materials, and textures dozens of times per second during combat
+- **Adaptive quality** — if the frame rate drops, the game automatically lowers render resolution and then disables shadows (with fewer particle effects) instead of staying choppy; mobile devices also start at a lower pixel ratio
+- Tiny decorative parts (straw tufts, eyes, small props) no longer cast shadows, cutting shadow-pass draw calls per enemy with no visible difference
+- HUD text/styles only touch the DOM when a value actually changes (previously rewritten every frame)
+- Hot per-frame code paths (enemy movement, projectiles, camera follow) no longer allocate temporary vectors every frame, reducing garbage-collector hitches
+
 ### Isle of Adventure - Text Readability
 
 #### Changed

@@ -311,6 +311,111 @@ topLight.position.set(0, 30, 0);
 scene.add(topLight);
 
 // ═══════════════════════════════════════
+//  PERFORMANCE UTILITIES
+// ═══════════════════════════════════════
+// GPU resources (geometries, materials, textures) are not freed by
+// scene.remove() alone — they must be disposed or they accumulate for
+// the whole session and the game gets progressively slower.
+function disposeDeep(root) {
+  root.traverse(o => {
+    if (o.geometry && !o.isSprite && !o.geometry.userData._shared) o.geometry.dispose();
+    if (o.material) {
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of mats) {
+        if (m.userData._shared) continue;
+        if (m.map) m.map.dispose();
+        m.dispose();
+      }
+    }
+  });
+}
+function removeAndDispose(obj) {
+  if (!obj) return;
+  if (obj.parent) obj.parent.remove(obj);
+  disposeDeep(obj);
+}
+
+// Shared unit-size geometries for high-frequency FX, scaled per use so a
+// projectile trail or impact burst never allocates a new GPU buffer.
+const FX_GEO = {
+  sphere:   new THREE.SphereGeometry(1, 5, 4),
+  ringThin: new THREE.TorusGeometry(1, 0.133, 4, 12),
+  ringMed:  new THREE.TorusGeometry(1, 0.275, 4, 12),
+  ringFat:  new THREE.TorusGeometry(1, 0.5, 4, 16),
+};
+Object.values(FX_GEO).forEach(g => { g.userData._shared = true; });
+
+// Pool of reusable FX meshes (sparks, trails, shock rings)
+const _fxPool = [];
+function fxAcquire(geoKey, color, opacity) {
+  let m = _fxPool.pop();
+  if (!m) {
+    m = new THREE.Mesh(FX_GEO.sphere, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true }));
+    m.material.userData._shared = true; // pooled — never disposed
+    m._fxPooled = true;
+  }
+  m.geometry = FX_GEO[geoKey];
+  m.material.color.setHex(color);
+  m.material.opacity = opacity;
+  m.visible = true;
+  m.scale.set(1, 1, 1);
+  m.rotation.set(0, 0, 0);
+  m.position.set(0, 0, 0);
+  return m;
+}
+function fxRelease(m) {
+  if (m.parent) m.parent.remove(m);
+  if (_fxPool.length < 300) _fxPool.push(m);
+}
+// Remove an effect's scene objects: pooled meshes go back to the pool,
+// anything else is disposed for real.
+function releaseEffect(ef) {
+  if (!ef.mesh) return;
+  if (ef.mesh._fxPooled) { fxRelease(ef.mesh); return; }
+  const pooled = [];
+  ef.mesh.traverse(o => { if (o._fxPooled) pooled.push(o); });
+  pooled.forEach(fxRelease);
+  removeAndDispose(ef.mesh);
+}
+
+// Tiny shadow casters cost a draw call each in the shadow pass but
+// contribute almost nothing visually — strip them from built groups.
+function trimTinyShadowCasters(root, minRadius = 0.18) {
+  root.traverse(o => {
+    if (o.isMesh && o.castShadow) {
+      if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+      const s = Math.max(Math.abs(o.scale.x), Math.abs(o.scale.y), Math.abs(o.scale.z)) || 1;
+      if (o.geometry.boundingSphere.radius * s < minRadius) o.castShadow = false;
+    }
+  });
+}
+
+// Adaptive quality — degrade render cost instead of dropping frames.
+// Tier 0: full quality. Tier 1: pixel ratio 1.0. Tier 2: shadows off, fewer FX.
+let _perfTier = 0, _perfAcc = 0, _perfFrames = 0, _perfCooldown = 5;
+function _perfUpdate(dt) {
+  _perfAcc += dt; _perfFrames++;
+  _perfCooldown -= dt;
+  if (_perfAcc < 2) return;
+  const fps = _perfFrames / _perfAcc;
+  _perfAcc = 0; _perfFrames = 0;
+  if (_perfCooldown > 0) return;
+  if (_perfTier === 0 && fps < 42) {
+    _perfTier = 1; _perfCooldown = 5;
+    renderer.setPixelRatio(1.0);
+  } else if (_perfTier === 1 && fps < 32) {
+    _perfTier = 2; _perfCooldown = 10;
+    renderer.shadowMap.enabled = false;
+    scene.traverse(o => {
+      if (o.material) {
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        mats.forEach(m => { m.needsUpdate = true; });
+      }
+    });
+  }
+}
+
+// ═══════════════════════════════════════
 //  FARM SCENE
 // ═══════════════════════════════════════
 let FARM_R = 42;
@@ -318,6 +423,9 @@ let _farmDirt = null, _farmDirtMat = null;
 const _fenceMeshes = [];
 let _pathMesh = null, _pathMat = null;
 const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+// Phone GPUs struggle at high pixel ratios — start lower there; the adaptive
+// tier system above will still step down further if needed.
+if (isMobile) renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
 
 // Outer ground — canvas grass texture
 (function() {
@@ -384,12 +492,14 @@ const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
   }
   const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(6, 6);
   _farmDirtMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.97, metalness: 0 });
+  _farmDirtMat.userData._shared = true; // reused across farm rebuilds — never dispose
   _farmDirt = new THREE.Mesh(new THREE.CircleGeometry(FARM_R, 64), _farmDirtMat);
   _farmDirt.rotation.x = -Math.PI / 2; _farmDirt.position.y = 0.01; _farmDirt.receiveShadow = true; scene.add(_farmDirt);
 })();
 
 // Fence posts + rails around edge
 const FENCE_MAT = new THREE.MeshStandardMaterial({ color: 0x8B5E3C, roughness: 0.9, metalness: 0 });
+FENCE_MAT.userData._shared = true; // reused across farm rebuilds — never dispose
 const POST_N = 52;
 for (let i = 0; i < POST_N; i++) {
   const a = (i / POST_N) * Math.PI * 2;
@@ -467,21 +577,16 @@ function addBarnCannonMesh(lvl) {
   barnGrp.add(cg);
   _barnCannonMeshes[lvl-1] = cg;
 }
-// Warm glow from barn windows
-const barnLight = new THREE.PointLight(0xff6611, 3.0, 18);
+// Warm glow from barn windows — one light covers the whole barn; every
+// extra PointLight makes ALL lit pixels in the scene more expensive.
+const barnLight = new THREE.PointLight(0xff6611, 3.0, 20);
 barnLight.position.set(0, 3.5, 3.5);
 scene.add(barnLight);
-const barnLight2 = new THREE.PointLight(0xff5500, 1.4, 12);
-barnLight2.position.set(0, 3.5, -3.5);
-scene.add(barnLight2);
-const barnLight3 = new THREE.PointLight(0xff8833, 1.2, 10);
-barnLight3.position.set(0, 1.0, 3.2);
-scene.add(barnLight3);
 
 // Barn HP ring
 let barnRing = null;
 function updateBarnRing() {
-  if (barnRing) scene.remove(barnRing);
+  if (barnRing) removeAndDispose(barnRing);
   const pct = Math.max(0, gs.barnHP / gs.barnMaxHP);
   const mat = new THREE.MeshBasicMaterial({ color: pct > 0.5 ? 0x4CAF50 : pct > 0.25 ? 0xff9800 : 0xff2222 });
   barnRing = new THREE.Mesh(new THREE.TorusGeometry(4.0, 0.2, 8, 40, Math.PI * 2 * pct), mat);
@@ -676,16 +781,17 @@ let windmillBlades = null;
     post.position.set(lx, 1.7, lz); scene.add(post);
     const box = new THREE.Mesh(new THREE.BoxGeometry(0.32,0.36,0.32), new THREE.MeshStandardMaterial({color:0x664400,roughness:0.7}));
     box.position.set(lx, 2.22, lz); scene.add(box);
-    const glow = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.22,0.18), new THREE.MeshStandardMaterial({color:0xffcc44,emissive:0xffaa00,emissiveIntensity:1.2,roughness:0.5}));
+    // Emissive glow cube only — a PointLight per lantern (4 total) taxed
+    // every lit pixel in the scene for a barely visible ground glow.
+    const glow = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.22,0.18), new THREE.MeshStandardMaterial({color:0xffcc44,emissive:0xffaa00,emissiveIntensity:1.6,roughness:0.5}));
     glow.position.set(lx, 2.22, lz); scene.add(glow);
-    const ptLight = new THREE.PointLight(0xffaa00, 0.8, 8);
-    ptLight.position.set(lx, 2.5, lz); scene.add(ptLight);
   });
 })();
 
 // Dirt path from barn south to fence
 (function() {
   _pathMat = new THREE.MeshStandardMaterial({ color: 0x8a6010, roughness: 0.97 });
+  _pathMat.userData._shared = true; // reused across farm rebuilds — never dispose
   _pathMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.4, FARM_R - 6), _pathMat);
   _pathMesh.rotation.x = -Math.PI / 2; _pathMesh.position.set(0, 0.018, (FARM_R - 6) / 2 + 4);
   _pathMesh.receiveShadow = true; scene.add(_pathMesh);
@@ -855,7 +961,6 @@ function buildEnemyBase() {
       bracket.position.set(wx*0.88, 5, wz*0.88); enemyBaseGrp.add(bracket);
       const flame = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 5), dm(0xff4400, 0xff2200, 2.8, 0.1));
       flame.position.set(wx*0.88, 5.55, wz*0.88); flame._isTorchFlame=true; enemyBaseGrp.add(flame);
-      const tl = new THREE.PointLight(0xff3300, 0.8, 7); tl.position.set(wx*0.88, 5.6, wz*0.88); enemyBaseGrp.add(tl);
     }
   }
 
@@ -964,7 +1069,6 @@ function buildEnemyBase() {
     }
     const tf = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.5, 5), dm(0xff4400, 0xff2200, 3.0, 0.1));
     tf.position.set(tx, 20.2, tz); tf._isTorchFlame=true; enemyBaseGrp.add(tf);
-    const tl2 = new THREE.PointLight(0xff2200, 1.0, 8); tl2.position.set(tx, 20.5, tz); enemyBaseGrp.add(tl2);
   }
 
   // ── LOWER & UPPER BATTLEMENTS ────────────────────────────────
@@ -1066,13 +1170,11 @@ function buildEnemyBase() {
     torch.position.set(Math.cos(a)*7.3, 5.5, Math.sin(a)*7.3); enemyBaseGrp.add(torch);
     const tflame = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.48, 5), dm(0xff4400, 0xff2200, 2.8, 0.1));
     tflame.position.set(Math.cos(a)*7.3, 6.08, Math.sin(a)*7.3); tflame._isTorchFlame=true; enemyBaseGrp.add(tflame);
-    const tl = new THREE.PointLight(0xff3300, 0.7, 6); tl.position.set(Math.cos(a)*7.3, 6.1, Math.sin(a)*7.3); enemyBaseGrp.add(tl);
   }
 
   // ── AMBIENT EVIL LIGHTS ──────────────────────────────────────
-  const glow = new THREE.PointLight(0xff1100, 3.5, 35); glow.position.y = 5; enemyBaseGrp.add(glow);
-  const glow2 = new THREE.PointLight(0xff4400, 2.0, 25); glow2.position.y = 22; enemyBaseGrp.add(glow2);
-  const glow3 = new THREE.PointLight(0xff2200, 1.5, 20); glow3.position.y = 40; enemyBaseGrp.add(glow3);
+  // Two lights sell the whole glow; the emissive flames/eyes/windows do the rest.
+  const glow = new THREE.PointLight(0xff1100, 3.5, 40); glow.position.y = 8; enemyBaseGrp.add(glow);
   const moatGlow = new THREE.PointLight(0xff3300, 2.5, 22); moatGlow.position.set(0, 0.4, 0); enemyBaseGrp.add(moatGlow);
 
   enemyBaseGrp.position.set(0, 0, -95);
@@ -1309,7 +1411,10 @@ function buildCavernScenery(area) {
     const z = fc.z + Math.sin(angle) * r;
     const pool = new THREE.Mesh(new THREE.CircleGeometry(1.2 + Math.random()*1.8, 18), new THREE.MeshStandardMaterial({ color:0xff3300, emissive:0xff3300, emissiveIntensity:1.1, roughness:0.5 }));
     pool.rotation.x = -Math.PI / 2; pool.position.set(x, 0.04, z); scene.add(pool); _forestMeshes.push(pool);
-    const glow = new THREE.PointLight(0xff4400, 1.5, 11, 1.5); glow.position.set(x, 1.4, z); scene.add(glow); _forestMeshes.push(glow);
+    // A real light on every other pool only — the emissive pool mesh glows regardless
+    if (i % 2 === 0) {
+      const glow = new THREE.PointLight(0xff4400, 1.5, 11, 1.5); glow.position.set(x, 1.4, z); scene.add(glow); _forestMeshes.push(glow);
+    }
   }
 
   // ── Enclose it as a real underground cavern (a whole different place) ──
@@ -1437,8 +1542,13 @@ function buildArea(area) {
     );
     halo.position.copy(pos); scene.add(halo); _forestMeshes.push(halo);
 
-    const orbLight = new THREE.PointLight(itemData.color, 2.2, 14, 1.6);
-    orbLight.position.copy(pos); scene.add(orbLight); _forestMeshes.push(orbLight);
+    // Point lights only on the first few orbs — the emissive orb, halo and
+    // beam already read clearly, and 7 extra lights slow the whole area down.
+    let orbLight = null;
+    if (idx < 3) {
+      orbLight = new THREE.PointLight(itemData.color, 2.2, 14, 1.6);
+      orbLight.position.copy(pos); scene.add(orbLight); _forestMeshes.push(orbLight);
+    }
 
     const beam = new THREE.Mesh(
       new THREE.CylinderGeometry(0.32, 0.55, 22, 12, 1, true),
@@ -1528,10 +1638,10 @@ function spawnAreaEnemy(area, data) {
 
 function collectForestItem(item) {
   item.collected = true;
-  scene.remove(item.mesh);
-  if (item.glowRing) scene.remove(item.glowRing);
-  if (item.halo) scene.remove(item.halo);
-  if (item.beam) scene.remove(item.beam);
+  removeAndDispose(item.mesh);
+  if (item.glowRing) removeAndDispose(item.glowRing);
+  if (item.halo) removeAndDispose(item.halo);
+  if (item.beam) removeAndDispose(item.beam);
   if (item.orbLight) scene.remove(item.orbLight);
   if (item.type === 'weapon') {
     if (!gs.ownedWeapons.has(item.weaponId)) {
@@ -1614,11 +1724,11 @@ function enterArea(area) {
 function exitArea() {
   _inForest = false;
   _currentArea = null;
-  gs.enemies.filter(e => e._forestEnemy).forEach(e => scene.remove(e.mesh));
+  gs.enemies.filter(e => e._forestEnemy).forEach(e => removeAndDispose(e.mesh));
   gs.enemies = gs.enemies.filter(e => !e._forestEnemy);
-  _forestMeshes.forEach(m => scene.remove(m));
+  _forestMeshes.forEach(m => removeAndDispose(m));
   _forestMeshes = [];
-  _forestItems.forEach(i => { if (!i.collected) { scene.remove(i.mesh); if (i.glowRing) scene.remove(i.glowRing); if (i.halo) scene.remove(i.halo); if (i.beam) scene.remove(i.beam); if (i.orbLight) scene.remove(i.orbLight); } });
+  _forestItems.forEach(i => { if (!i.collected) { removeAndDispose(i.mesh); if (i.glowRing) removeAndDispose(i.glowRing); if (i.halo) removeAndDispose(i.halo); if (i.beam) removeAndDispose(i.beam); if (i.orbLight) scene.remove(i.orbLight); } });
   _forestItems = [];
   _forestFireflies = null;
   // Restore the farm's daytime ambiance and sky
@@ -2436,7 +2546,7 @@ document.getElementById('c').addEventListener('mousemove', e => {
 //  PLAYER
 // ═══════════════════════════════════════
 function buildPlayerMesh() {
-  if (playerMesh) scene.remove(playerMesh);
+  if (playerMesh) removeAndDispose(playerMesh);
   const sk = SKINS.find(s => s.id === gs.skin) || SKINS[0];
   const g = new THREE.Group();
   const mat = (col, rough=0.75, met=0) => new THREE.MeshStandardMaterial({color:col, roughness:rough, metalness:met});
@@ -2727,60 +2837,63 @@ function updatePlayer(dt) {
 // ═══════════════════════════════════════
 //  FLOATING TEXT
 // ═══════════════════════════════════════
+const _ftPool = [];
 function floatText(pos, text, color) {
-  const cv = document.createElement('canvas');
-  cv.width = 160; cv.height = 56;
-  const x = cv.getContext('2d');
+  if (gs.floatingTexts.length >= 30) return; // plenty on screen already
+  let ft = _ftPool.pop();
+  if (!ft) {
+    const cv = document.createElement('canvas');
+    cv.width = 160; cv.height = 56;
+    const tex = new THREE.CanvasTexture(cv);
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    mat.userData._shared = true; // pooled — never disposed
+    ft = { cv, tex, sp: new THREE.Sprite(mat) };
+  }
+  const x = ft.cv.getContext('2d');
+  x.clearRect(0, 0, 160, 56);
   x.font = 'bold 32px Arial'; x.textAlign = 'center';
   x.strokeStyle = 'rgba(0,0,0,0.85)'; x.lineWidth = 5; x.lineJoin = 'round';
   x.strokeText(text, 80, 42);
   x.fillStyle = '#' + color.toString(16).padStart(6, '0');
   x.fillText(text, 80, 42);
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true }));
-  sp.scale.set(2.5, 0.875, 1);
-  sp.position.copy(pos).add(new THREE.Vector3(0, 1.5, 0));
-  scene.add(sp);
-  gs.floatingTexts.push({ sp, pos: sp.position.clone(), timer: 1.4 });
+  ft.tex.needsUpdate = true;
+  ft.sp.material.opacity = 1;
+  ft.sp.scale.set(2.5, 0.875, 1);
+  ft.sp.position.copy(pos).add(new THREE.Vector3(0, 1.5, 0));
+  scene.add(ft.sp);
+  gs.floatingTexts.push({ sp: ft.sp, _ft: ft, pos: ft.sp.position.clone(), timer: 1.4 });
+}
+function releaseFloatText(rec) {
+  scene.remove(rec.sp);
+  if (rec._ft && _ftPool.length < 40) _ftPool.push(rec._ft);
 }
 
 function spawnFX(pos, color, dur, size) {
-  if (gs.effects.length > 50) return; // cap effects to reduce GPU load
+  if (gs.effects.length > (_perfTier >= 2 ? 28 : 50)) return; // cap effects to reduce GPU load
   const g = new THREE.Group(); g.position.copy(pos); scene.add(g);
-  const orb = new THREE.Mesh(
-    new THREE.SphereGeometry(size * 0.55, 5, 5),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1.0 })
-  );
-  g.add(orb);
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(size * 0.4, size * 0.11, 4, 12),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1.0 })
-  );
-  ring.rotation.x = Math.PI / 2; ring.position.y = 0.1; g.add(ring);
-  const ring2 = new THREE.Mesh(
-    new THREE.TorusGeometry(size * 0.6, size * 0.08, 4, 12),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55 })
-  );
-  ring2.rotation.x = Math.PI / 2; ring2.position.y = 0.1; g.add(ring2);
+  const orb = fxAcquire('sphere', 0xffffff, 1.0);
+  orb.scale.setScalar(size * 0.55); g.add(orb);
+  const ring = fxAcquire('ringMed', color, 1.0);
+  ring.rotation.x = Math.PI / 2; ring.position.y = 0.1; ring.scale.setScalar(size * 0.4); g.add(ring);
+  const ring2 = fxAcquire('ringThin', color, 0.55);
+  ring2.rotation.x = Math.PI / 2; ring2.position.y = 0.1; ring2.scale.setScalar(size * 0.6); g.add(ring2);
   gs.effects.push({ mesh: g, timer: dur, max: dur, type: 'fx', _orb: orb, _ring: ring, _ring2: ring2, size });
 }
 
 function spawnImpact(pos, color) {
-  const shockRing = new THREE.Mesh(
-    new THREE.TorusGeometry(0.1, 0.05, 4, 16),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 })
-  );
+  const shockRing = fxAcquire('ringFat', color, 0.9);
   shockRing.rotation.x = Math.PI/2; shockRing.position.copy(pos); shockRing.position.y = 0.05;
+  shockRing.scale.setScalar(0.1);
   scene.add(shockRing);
-  gs.effects.push({ mesh: shockRing, timer: 0.28, max: 0.28, type: 'shockRing' });
-  for (let i = 0; i < 12; i++) {
+  gs.effects.push({ mesh: shockRing, timer: 0.28, max: 0.28, type: 'shockRing', _bs: 0.1 });
+  const sparkN = _perfTier >= 1 ? 6 : 12;
+  for (let i = 0; i < sparkN; i++) {
     const angle = Math.random() * Math.PI * 2;
     const up = Math.random() * Math.PI * 0.65;
     const spd = 6 + Math.random() * 9;
     const vel = new THREE.Vector3(Math.cos(angle)*Math.cos(up)*spd, Math.sin(up)*spd, Math.sin(angle)*Math.cos(up)*spd);
-    const spark = new THREE.Mesh(
-      new THREE.SphereGeometry(0.07 + Math.random() * 0.09, 4, 4),
-      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 })
-    );
+    const spark = fxAcquire('sphere', color, 1);
+    spark.scale.setScalar(0.07 + Math.random() * 0.09);
     spark.position.copy(pos); scene.add(spark);
     const dur = 0.18 + Math.random() * 0.24;
     gs.effects.push({ mesh: spark, timer: dur, max: dur, type: 'spark', vel });
@@ -3043,7 +3156,7 @@ function killEnemy(e) {
     if (gs.playerPos.distanceTo(e.pos) < br) { gs.playerHP -= 32; if (gs.playerHP <= 0) { gs.playerHP = 0; endGame(); } sfxPlayerHurt(); }
     spawnFX(e.pos.clone(), fxCol, 0.7, br * 0.55); sfxExplosion(0.65);
   }
-  scene.remove(e.mesh);
+  removeAndDispose(e.mesh);
   gs.enemies = gs.enemies.filter(x => x !== e);
   const straw = gs.activeEvents.strawRain ? e.data.straw * 2 : e.data.straw;
   gs.straw += straw;
@@ -3070,9 +3183,9 @@ function updateProjectiles(dt) {
         spawnImpact(p.pos.clone().add(new THREE.Vector3(0,0.5,0)), p.data.color || 0xff8800);
         sfxExplosion();
       }
-      scene.remove(p.mesh); return false;
+      removeAndDispose(p.mesh); return false;
     }
-    p.pos.add(p.vel.clone().multiplyScalar(dt));
+    p.pos.addScaledVector(p.vel, dt);
     p.mesh.position.copy(p.pos);
 
     // Spin projectiles
@@ -3083,14 +3196,12 @@ function updateProjectiles(dt) {
     if (p.data.kind === 'crystal') { p.mesh.rotation.y += dt * 4.5; p.mesh.rotation.x += dt * 2.2; }
     if (p.data.kind === 'throw')     p.mesh.rotation.x += dt * 4;
 
-    // Trail afterimage
+    // Trail afterimage — pooled mesh, spawned less often when running slow
     p._trailT -= dt;
     if (p._trailT <= 0 && p.data.kind !== 'shotgun') {
-      p._trailT = 0.042;
-      const trail = new THREE.Mesh(
-        new THREE.SphereGeometry(0.15, 5, 5),
-        new THREE.MeshBasicMaterial({ color: p.data.color || 0xffffff, transparent: true, opacity: 0.72 })
-      );
+      p._trailT = _perfTier >= 1 ? 0.09 : 0.042;
+      const trail = fxAcquire('sphere', p.data.color || 0xffffff, 0.72);
+      trail.scale.setScalar(0.15);
       trail.position.copy(p.pos); scene.add(trail);
       gs.effects.push({ mesh: trail, timer: 0.22, max: 0.22, type: 'trail' });
     }
@@ -3103,7 +3214,7 @@ function updateProjectiles(dt) {
         if (gs.playerHP <= 0) { gs.playerHP = 0; endGame(); }
         sfxPlayerHurt(); spawnFX(p.pos.clone(), p.data.color, 0.32, 0.65);
         spawnImpact(p.pos.clone().add(new THREE.Vector3(0, 0.6, 0)), p.data.color);
-        scene.remove(p.mesh); return false;
+        removeAndDispose(p.mesh); return false;
       }
       const hitPlant = gs.placedPlants.find(pp => Math.hypot(p.pos.x - pp.pos.x, p.pos.z - pp.pos.z) < 1.2);
       if (hitPlant) {
@@ -3111,12 +3222,12 @@ function updateProjectiles(dt) {
         spawnFX(p.pos.clone(), p.data.color, 0.28, 0.55);
         spawnImpact(p.pos.clone().add(new THREE.Vector3(0, 0.5, 0)), p.data.color);
         if (hitPlant.hp <= 0) {
-          scene.remove(hitPlant.mesh);
+          removeAndDispose(hitPlant.mesh);
           gs.placedPlants = gs.placedPlants.filter(x => x !== hitPlant);
           if (hitPlant.data.kind === 'animal') showAnimalEliminated(hitPlant.data);
           else showToast('A plant was destroyed!');
         }
-        scene.remove(p.mesh); return false;
+        removeAndDispose(p.mesh); return false;
       }
       const barnDist = new THREE.Vector2(p.pos.x, p.pos.z).length();
       if (barnDist < 2.5) {
@@ -3126,7 +3237,7 @@ function updateProjectiles(dt) {
           updateBarnRing();
         }
         spawnFX(p.pos.clone(), p.data.color, 0.32, 0.65);
-        scene.remove(p.mesh); return false;
+        removeAndDispose(p.mesh); return false;
       }
     }
     if (p.owner === 'weapon' || p.owner === 'plant') {
@@ -3163,7 +3274,7 @@ function updateProjectiles(dt) {
           }
           // pierce: icicle javelin passes through all enemies
           if (p.data.pierce) { break; }
-          if (p.data.kind !== 'melee') { scene.remove(p.mesh); return false; }
+          if (p.data.kind !== 'melee') { removeAndDispose(p.mesh); return false; }
         }
       }
     }
@@ -3246,6 +3357,7 @@ function spawnEnemyFireball(pos, dir, enemyData) {
       new THREE.MeshBasicMaterial({ color: 0xffffaa }));
     g.add(outer); g.add(core);
   }
+  trimTinyShadowCasters(g);
   g.position.copy(pos); scene.add(g);
   gs.projectiles.push({ mesh: g, pos: pos.clone(), vel: dir.clone().multiplyScalar(7),
     data: { color: col, dmg: enemyData.dmg, kind: 'fireball', freeze: isIce, poison: isMonkey && enemyData.id === 'poison_monk' },
@@ -3257,6 +3369,7 @@ function _addEnemyToScene(g, pos, data, sz) {
   hpBg.rotation.x = -Math.PI/2; hpBg.position.y = 3.8*sz; g.add(hpBg);
   const hpFill = new THREE.Mesh(new THREE.PlaneGeometry(1.2*sz, 0.2), new THREE.MeshBasicMaterial({ color: 0x44ff44 }));
   hpFill.rotation.x = -Math.PI/2; hpFill.position.y = 3.82*sz; g.add(hpFill);
+  trimTinyShadowCasters(g);
   g.position.copy(pos); scene.add(g);
   const scaledHP = data.hp * (1 + (gs.wave - 1) * 0.1);
   gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, poisonTimer: 0, rootTimer: 0, _dead: false, _hpFill: hpFill, _hpSz: 1.2*sz, _phase: Math.random() * Math.PI * 2, _swayZ: 0, _leanX: 0, _bob: 0, _poisonFxT: 0 });
@@ -3334,7 +3447,6 @@ function spawnMonkey(data, pos) {
     gr1.rotation.x = Math.PI/2; gr1.position.y = 0.15; g.add(gr1);
     const gr2 = new THREE.Mesh(new THREE.TorusGeometry(1.12*sz, 0.04*sz, 6, 18), Sg(0xffcc44, 0.9, 0.15, 0xffcc44, 0.9));
     gr2.rotation.x = Math.PI/5; gr2.position.y = 0.22; g.add(gr2);
-    const gl = new THREE.PointLight(0xFFD700, 1.2, 5); gl.position.y = 1.0; g.add(gl);
   }
   _addEnemyToScene(g, pos, data, sz);
 }
@@ -3434,7 +3546,6 @@ function spawnSnowman(data, pos) {
     gr1.rotation.x = Math.PI/2; gr1.position.y = 0.12; g.add(gr1);
     const gr2 = new THREE.Mesh(new THREE.TorusGeometry(1.1*sz, 0.04*sz, 6, 18), new THREE.MeshStandardMaterial({color:0xffcc44, emissive:0xffcc44, emissiveIntensity:0.9, metalness:0.9, roughness:0.15}));
     gr2.rotation.x = Math.PI/5; gr2.position.y = 0.2; g.add(gr2);
-    const gl = new THREE.PointLight(0xFFD700, 1.2, 5); gl.position.y = 1.0; g.add(gl);
   } else {
     // Regular hat
     mk(new THREE.CylinderGeometry(0.34*sz, 0.34*sz, 0.06*sz, 10), 0x1a1a1a, 2.14*sz);
@@ -3615,7 +3726,6 @@ function spawnSeaCreature(data, pos) {
     gr1.rotation.x = Math.PI/2; gr1.position.y = 0.15; g.add(gr1);
     const gr2 = new THREE.Mesh(new THREE.TorusGeometry(1.12*sz, 0.04*sz, 6, 18), new THREE.MeshStandardMaterial({color:0xffcc44, emissive:0xffcc44, emissiveIntensity:0.9, metalness:0.9, roughness:0.15}));
     gr2.rotation.x = Math.PI/5; gr2.position.y = 0.2; g.add(gr2);
-    const gl = new THREE.PointLight(0xFFD700, 1.5, 6); gl.position.y = 0.6; g.add(gl);
   } else {
     // Default fish (clownfish, ghost_fish)
     const isGhost = id === 'ghost_fish';
@@ -3845,6 +3955,7 @@ function spawnEnemy(typeId, atPos = null) {
   hpBg.rotation.x = -Math.PI/2; hpBg.position.y = 3.8*sz; g.add(hpBg);
   const hpFill = new THREE.Mesh(new THREE.PlaneGeometry(1.2*sz, 0.2), new THREE.MeshBasicMaterial({ color: 0x44ff44 }));
   hpFill.rotation.x = -Math.PI/2; hpFill.position.y = 3.82*sz; g.add(hpFill);
+  trimTinyShadowCasters(g);
   g.position.copy(pos); scene.add(g);
   const scaledHP = data.hp * (1 + (gs.wave - 1) * 0.1);
   gs.enemies.push({ mesh: g, data, hp: scaledHP, maxHp: scaledHP, pos: pos.clone(), vel: new THREE.Vector3(), attackCd: 0, slowTimer: 0, burnTimer: 0, poisonTimer: 0, rootTimer: 0, _dead: false, _hpFill: hpFill, _hpSz: 1.2*sz, _phase: Math.random() * Math.PI * 2, _swayZ: 0, _leanX: 0, _bob: 0, _poisonFxT: 0 });
@@ -3866,7 +3977,9 @@ function updateEnemies(dt) {
     // Find nearest target: placed plant → barn → player
     let tgt = new THREE.Vector3(0, 0, 0); // barn default
     let minDsq = e.pos.lengthSq(); // squared dist to barn
-    for (const p of gs.placedPlants) { const dsq = e.pos.distanceToSquared(p.pos); if (dsq < minDsq) { minDsq = dsq; tgt = p.pos.clone(); } }
+    let tgtPlant = null;
+    for (const p of gs.placedPlants) { const dsq = e.pos.distanceToSquared(p.pos); if (dsq < minDsq) { minDsq = dsq; tgtPlant = p; } }
+    if (tgtPlant) tgt = tgtPlant.pos.clone();
     const minD = Math.sqrt(minDsq); // one sqrt only
     const pd = e.pos.distanceTo(gs.playerPos);
     if (pd < minD - 2) { tgt = gs.playerPos.clone(); }
@@ -3926,7 +4039,7 @@ function updateEnemies(dt) {
       const spd = e.data.spd * rageMult * frozenMult * (e.slowTimer > 0 ? 0.3 : 1) * (e._berserk ? 2.8 : 1);
       if (dist > attackRange) {
         e.vel.lerp(dir.multiplyScalar(spd), 0.12);
-        e.pos.add(e.vel.clone().multiplyScalar(dt));
+        e.pos.addScaledVector(e.vel, dt);
       } else {
         e.vel.set(0, 0, 0);
       }
@@ -4022,7 +4135,7 @@ function updateEnemies(dt) {
           const pp = gs.placedPlants.find(p => p.pos.distanceTo(e.pos) < 2);
           if (pp) {
             pp.hp -= e.data.dmg;
-            if (pp.hp <= 0) { scene.remove(pp.mesh); gs.placedPlants = gs.placedPlants.filter(x => x !== pp); if (pp.data.kind === 'animal') showAnimalEliminated(pp.data); else showToast('A plant was destroyed!'); }
+            if (pp.hp <= 0) { removeAndDispose(pp.mesh); gs.placedPlants = gs.placedPlants.filter(x => x !== pp); if (pp.data.kind === 'animal') showAnimalEliminated(pp.data); else showToast('A plant was destroyed!'); }
           }
         }
       }
@@ -5185,6 +5298,7 @@ function placeAtMouse() {
 
   const g = buildPlantMesh(data);
   const pos = new THREE.Vector3(x, 0, z);
+  trimTinyShadowCasters(g);
   g.position.copy(pos); scene.add(g);
 
   if (pd || an) {
@@ -5246,7 +5360,7 @@ function updatePlacedPlants(dt) {
       if (near) {
         for (const e of gs.enemies) { if (e.pos.distanceToSquared(p.pos) < p.data.aoe*p.data.aoe) dmgEnemy(e, p.data.dmg); }
         spawnFX(p.pos.clone(), 0xff8800, 0.5, p.data.aoe * 0.5);
-        scene.remove(p.mesh); gs.placedPlants = gs.placedPlants.filter(x => x !== p);
+        removeAndDispose(p.mesh); gs.placedPlants = gs.placedPlants.filter(x => x !== p);
       }
     }
 
@@ -5567,7 +5681,7 @@ function spawnWildBird() {
 function updateWildBirds(dt) {
   gs.wildBirds = gs.wildBirds.filter(b => {
     b.life -= dt;
-    if (b.life <= 0) { scene.remove(b.mesh); return false; }
+    if (b.life <= 0) { removeAndDispose(b.mesh); return false; }
     b.orbitAngle += b.orbitSpd * dt;
     b.bobPhase += 2.8 * dt;
     b.pos.set(
@@ -5599,7 +5713,7 @@ function catchWildBird() {
       const bonus = 15 + Math.floor(Math.random() * 12);
       gs.straw += bonus;
       spawnFX(b.pos.clone(), 0xffee44, 0.5, 1.8);
-      scene.remove(b.mesh);
+      removeAndDispose(b.mesh);
       gs.wildBirds.splice(i, 1);
       showToast('🐦 Caught a bird! +' + bonus + ' straw!');
       return true;
@@ -5614,7 +5728,7 @@ function updateEffects(dt) {
     const pct = Math.max(0, ef.timer / ef.max);
     if (ef.type === 'spark') {
       ef.vel.y -= 22 * dt;
-      ef.mesh.position.add(ef.vel.clone().multiplyScalar(dt));
+      ef.mesh.position.addScaledVector(ef.vel, dt);
       ef.mesh.material.opacity = pct;
     } else if (ef.type === 'slash') {
       ef._arc.material.opacity = pct * 0.95;
@@ -5627,13 +5741,14 @@ function updateEffects(dt) {
     } else if (ef.type === 'trail') {
       if (ef.mesh.material) ef.mesh.material.opacity = pct * 0.72;
     } else if (ef.type === 'shockRing') {
-      ef.mesh.scale.setScalar(1 + (1 - pct) * 5.0);
+      ef.mesh.scale.setScalar((ef._bs || 1) * (1 + (1 - pct) * 5.0));
       ef.mesh.material.opacity = pct * 0.85;
     } else {
-      // Default spawnFX: orb + expanding rings
-      if (ef._orb) { ef._orb.material.opacity = pct; ef._orb.scale.setScalar(0.4 + (1 - pct) * 1.8); }
-      if (ef._ring)  { ef._ring.material.opacity  = pct; ef._ring.scale.setScalar(1 + (1 - pct) * 4.5); }
-      if (ef._ring2) { ef._ring2.material.opacity = pct * 0.55; ef._ring2.scale.setScalar(1 + (1 - pct) * 3.5); }
+      // Default spawnFX: orb + expanding rings (pooled unit geometry — the
+      // spawn-time scale is the base size, animation multiplies onto it)
+      if (ef._orb) { ef._orb.material.opacity = pct; ef._orb.scale.setScalar(ef.size * 0.55 * (0.4 + (1 - pct) * 1.8)); }
+      if (ef._ring)  { ef._ring.material.opacity  = pct; ef._ring.scale.setScalar(ef.size * 0.4 * (1 + (1 - pct) * 4.5)); }
+      if (ef._ring2) { ef._ring2.material.opacity = pct * 0.55; ef._ring2.scale.setScalar(ef.size * 0.6 * (1 + (1 - pct) * 3.5)); }
       if (!ef._orb && ef.mesh && ef.mesh.material) ef.mesh.material.opacity = Math.max(0, pct * 0.7);
     }
     if (ef.type === 'cloud') {
@@ -5643,14 +5758,14 @@ function updateEffects(dt) {
         gs.enemies.forEach(e => { if (e.pos.distanceTo(ef.pos) < ef.aoe) { dmgEnemy(e, ef.dmg * 0.5); } });
       }
     }
-    if (ef.timer <= 0 && ef.mesh) { scene.remove(ef.mesh); return false; }
+    if (ef.timer <= 0 && ef.mesh) { releaseEffect(ef); return false; }
     return ef.timer > 0;
   });
 
   gs.floatingTexts = gs.floatingTexts.filter(ft => {
     ft.timer -= dt; ft.pos.y += dt * 1.5; ft.sp.position.copy(ft.pos);
     ft.sp.material.opacity = ft.timer / 1.4;
-    if (ft.timer <= 0) { scene.remove(ft.sp); return false; }
+    if (ft.timer <= 0) { releaseFloatText(ft); return false; }
     return true;
   });
 }
@@ -5671,23 +5786,32 @@ function buildHotbar() {
   });
 }
 
+// Only touch the DOM when a value actually changed — updateHUD runs every
+// frame and unconditional style/text writes force needless style recalcs.
+const _hud = {};
+function _hudSet(key, apply, value) {
+  if (_hud[key] === value) return;
+  _hud[key] = value;
+  apply(value);
+}
 function updateHUD() {
   const pct = gs.playerHP / gs.playerMaxHP;
-  document.getElementById('hp-bar').style.width = (pct * 100) + '%';
-  document.getElementById('hp-bar').style.background = pct > 0.5 ? '#4CAF50' : pct > 0.25 ? '#ff9800' : '#f44';
-  document.getElementById('hp-txt').textContent = Math.ceil(gs.playerHP) + '/' + gs.playerMaxHP;
-  document.getElementById('straw-txt').textContent = gs.straw;
+  const hpBar = document.getElementById('hp-bar');
+  _hudSet('hpW', v => { hpBar.style.width = v; }, (pct * 100).toFixed(1) + '%');
+  _hudSet('hpBg', v => { hpBar.style.background = v; }, pct > 0.5 ? '#4CAF50' : pct > 0.25 ? '#ff9800' : '#f44');
+  _hudSet('hpTxt', v => { document.getElementById('hp-txt').textContent = v; }, Math.ceil(gs.playerHP) + '/' + gs.playerMaxHP);
+  _hudSet('straw', v => { document.getElementById('straw-txt').textContent = v; }, String(gs.straw));
   const _semoji = document.getElementById('straw-emoji');
-  if (_semoji) _semoji.textContent = getActiveData().resourceEmoji;
-  const wi = document.getElementById('wave-info');
+  if (_semoji) _hudSet('semoji', v => { _semoji.textContent = v; }, getActiveData().resourceEmoji);
   const totalWaves = getActiveData().waves.length;
-  wi.textContent = gs.betweenWaves
+  const wiTxt = gs.betweenWaves
     ? (gs.wave === 0 ? (isMobile ? 'Tap ▶ START WAVE' : 'Press SPACE to start!') : 'Wave ' + gs.wave + '/' + totalWaves + ' done!')
     : 'Wave ' + gs.wave + '/' + totalWaves + ' — ' + (gs.enemies.length + gs.spawnQueue.length) + ' left';
+  _hudSet('wi', v => { document.getElementById('wave-info').textContent = v; }, wiTxt);
   const wsb = document.getElementById('wave-start-btn');
-  if (wsb) wsb.style.display = (isMobile && gameStarted && gs.betweenWaves) ? 'block' : 'none';
+  if (wsb) _hudSet('wsb', v => { wsb.style.display = v; }, (isMobile && gameStarted && gs.betweenWaves) ? 'block' : 'none');
   const bpEl = document.getElementById('barn-prompt');
-  if (bpEl) bpEl.style.display = (gameStarted && !barnOpen && gs.playerPos.length() < 6) ? 'block' : 'none';
+  if (bpEl) _hudSet('bp', v => { bpEl.style.display = v; }, (gameStarted && !barnOpen && gs.playerPos.length() < 6) ? 'block' : 'none');
 }
 
 function showToast(msg, dur = 2200) {
@@ -5977,12 +6101,12 @@ const LAND_COSTS = [150, 300, 500, 750];
 const MAX_FARM_EXPANSIONS = 4;
 
 function rebuildFarmGeometry() {
-  if (_farmDirt) { scene.remove(_farmDirt); _farmDirt.geometry.dispose(); }
+  if (_farmDirt) removeAndDispose(_farmDirt);
   _farmDirt = new THREE.Mesh(new THREE.CircleGeometry(FARM_R, 64), _farmDirtMat);
   _farmDirt.rotation.x = -Math.PI / 2; _farmDirt.position.y = 0.01; _farmDirt.receiveShadow = true;
   scene.add(_farmDirt);
 
-  _fenceMeshes.forEach(m => scene.remove(m));
+  _fenceMeshes.forEach(m => removeAndDispose(m));
   _fenceMeshes.length = 0;
   const pn = Math.round(52 * FARM_R / 42);
   for (let i = 0; i < pn; i++) {
@@ -6000,7 +6124,7 @@ function rebuildFarmGeometry() {
     const rail2 = rail.clone(); rail2.position.y = 0.45; scene.add(rail2); _fenceMeshes.push(rail2);
   }
 
-  if (_pathMesh) { scene.remove(_pathMesh); _pathMesh.geometry.dispose(); }
+  if (_pathMesh) removeAndDispose(_pathMesh);
   _pathMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.4, FARM_R - 6), _pathMat);
   _pathMesh.rotation.x = -Math.PI / 2; _pathMesh.position.set(0, 0.018, (FARM_R - 6) / 2 + 4);
   _pathMesh.receiveShadow = true; scene.add(_pathMesh);
@@ -6389,7 +6513,7 @@ function endGame() {
   _testMode = false;
   if (_inForest) { exitForest(); _inForest = false; }
   stopBattleTheme();
-  _biomeParticles.forEach(p => scene.remove(p.mesh));
+  _biomeParticles.forEach(p => removeAndDispose(p.mesh));
   _biomeParticles = [];
   const mcEnd = document.getElementById('merchant-corner'); if (mcEnd) mcEnd.style.display = 'none';
   const tb = document.getElementById('test-mode-badge'); if (tb) tb.style.display = 'none';
@@ -6505,6 +6629,7 @@ function loadGame() {
           glow.position.y = 0.9; g.add(glow);
         }
         const pos = new THREE.Vector3(s.x, 0, s.z);
+        trimTinyShadowCasters(g);
         g.position.copy(pos); scene.add(g);
         gs.placedPlants.push({ mesh: g, data, hp: s.hp, maxHp: data.hp, pos: pos.clone(), timer: 0 });
       });
@@ -6517,6 +6642,7 @@ function loadGame() {
         if (!data) return;
         const g = buildPlantMesh(data);
         const pos = new THREE.Vector3(s.x, 0, s.z);
+        trimTinyShadowCasters(g);
         g.position.copy(pos); scene.add(g);
         gs.defenses.push({ mesh: g, data, pos: pos.clone(), timer: 0 });
       });
@@ -6672,7 +6798,7 @@ function updateArmy(dt) {
   }
 
   gs.activeArmy = gs.activeArmy.filter(u => {
-    if (u.hp <= 0) { scene.remove(u.mesh); return false; }
+    if (u.hp <= 0) { removeAndDispose(u.mesh); return false; }
     u.timer -= dt;
     u._bobPhase += dt;
 
@@ -6728,7 +6854,7 @@ function updateArmy(dt) {
         showToast('🏆 Enemy Base DESTROYED! +150 straw!', 5000);
         spawnFX(new THREE.Vector3(0, 5, BASE_Z), 0xff4400, 3.0, 5.0);
       }
-      scene.remove(u.mesh); return false;
+      removeAndDispose(u.mesh); return false;
     }
     // Splash damage from nearby enemies
     gs.enemies.forEach(e => {
@@ -6758,16 +6884,16 @@ function updateArmy(dt) {
 }
 
 function resetGame() {
-  gs.enemies.forEach(e => scene.remove(e.mesh));
-  gs.projectiles.forEach(p => scene.remove(p.mesh));
-  gs.placedPlants.forEach(p => scene.remove(p.mesh));
-  gs.defenses.forEach(d => scene.remove(d.mesh));
-  gs.effects.forEach(ef => { if (ef.mesh) scene.remove(ef.mesh); });
-  gs.floatingTexts.forEach(f => scene.remove(f.sp));
+  gs.enemies.forEach(e => removeAndDispose(e.mesh));
+  gs.projectiles.forEach(p => removeAndDispose(p.mesh));
+  gs.placedPlants.forEach(p => removeAndDispose(p.mesh));
+  gs.defenses.forEach(d => removeAndDispose(d.mesh));
+  gs.effects.forEach(ef => releaseEffect(ef));
+  gs.floatingTexts.forEach(f => releaseFloatText(f));
   gs.enemies = []; gs.projectiles = []; gs.placedPlants = [];
   gs.defenses = []; gs.effects = []; gs.floatingTexts = [];
-  gs.wildBirds.forEach(b => scene.remove(b.mesh)); gs.wildBirds = []; gs._wildBirdTimer = 15;
-  gs.activeArmy.forEach(u => scene.remove(u.mesh)); gs.activeArmy = []; gs.recruits = []; gs._formationCenter = null;
+  gs.wildBirds.forEach(b => removeAndDispose(b.mesh)); gs.wildBirds = []; gs._wildBirdTimer = 15;
+  gs.activeArmy.forEach(u => removeAndDispose(u.mesh)); gs.activeArmy = []; gs.recruits = []; gs._formationCenter = null;
   gs._enemyBaseHP = gs._enemyBaseMaxHP;
   gs.playerHP = 100; gs.playerMaxHP = 100; gs.straw = 25;
   gs.playerPos.set(5, 0.75, 0); gs.playerVel.set(0, 0, 0); gs.playerJumpVel = 0; gs.playerOnGround = true;
@@ -6783,8 +6909,8 @@ function resetGame() {
   gs.eventTimer = 90; gs.activeEvents = {}; gs._strawRainTick = 0;
   _merchantTimer = 420; _merchantActive = false; _merchantDuration = 0; _merchantStock = [];
   if (_inForest) {
-    gs.enemies.filter(e => e._forestEnemy).forEach(e => scene.remove(e.mesh)); gs.enemies = gs.enemies.filter(e => !e._forestEnemy);
-    _forestMeshes.forEach(m => scene.remove(m)); _forestMeshes = []; _forestItems = []; _forestFireflies = null; _inForest = false; _currentArea = null;
+    gs.enemies.filter(e => e._forestEnemy).forEach(e => removeAndDispose(e.mesh)); gs.enemies = gs.enemies.filter(e => !e._forestEnemy);
+    _forestMeshes.forEach(m => removeAndDispose(m)); _forestMeshes = []; _forestItems = []; _forestFireflies = null; _inForest = false; _currentArea = null;
     scene.fog = new THREE.FogExp2(0x0d1220, 0.009);
     if (_savedLighting) {
       hemiLight.color.setHex(_savedLighting.hemiColor); hemiLight.groundColor.setHex(_savedLighting.hemiGround); hemiLight.intensity = _savedLighting.hemiInt;
@@ -7318,9 +7444,11 @@ function _playBattleTheme_deepsea(t0) {
 //  GAME LOOP
 // ═══════════════════════════════════════
 let lastT = 0;
+const _camTarget = new THREE.Vector3();
 function loop(ts) {
   const dt = Math.min((ts - lastT) / 1000, 0.05);
   lastT = ts;
+  _perfUpdate(dt);
 
   if (gameStarted) {
     updatePlayer(dt);
@@ -7403,8 +7531,9 @@ function loop(ts) {
     }
     updateBiomeParticles(dt);
 
-    // Camera follows player
-    camera.position.lerp(gs.playerPos.clone().add(CAM_OFF.clone().multiplyScalar(camZoom)), 0.06);
+    // Camera follows player (reused temp vector — no per-frame allocation)
+    _camTarget.copy(CAM_OFF).multiplyScalar(camZoom).add(gs.playerPos);
+    camera.position.lerp(_camTarget, 0.06);
     camera.lookAt(gs.playerPos);
     updateHUD();
   }
@@ -7584,7 +7713,7 @@ function _playTheme(t0) {
 // ═══════════════════════════════════════
 let _biomeParticles = [];
 function initBiomeParticles(biome) {
-  _biomeParticles.forEach(p => scene.remove(p.mesh));
+  _biomeParticles.forEach(p => removeAndDispose(p.mesh));
   _biomeParticles = [];
   if (biome === 'snow') {
     for (let i = 0; i < 55; i++) {
