@@ -1461,8 +1461,8 @@ const AREA_CAVERN = {
   floorColor:0x1a0a06,
   beacon:{ color:0xff7733, light:0xff5522 },
   particle:0xff8844,
-  fog:{ color:0x1a0402, density:0.05 },
-  lighting:{ hemi:0x552211, hemiGround:0x1a0603, hemiInt:0.7, sun:0xff6633, sunInt:0.45, fill:0.2, rim:0.5, top:0.1 },
+  fog:{ color:0x1a0402, density:0.023 },
+  lighting:{ hemi:0x663322, hemiGround:0x1a0603, hemiInt:0.85, sun:0xff6633, sunInt:0.55, fill:0.25, rim:0.55, top:0.12 },
   enterToast:'🌋 Entered the Molten Cavern — grab fiery weapons and survive the magma beasts!',
 };
 
@@ -1494,10 +1494,12 @@ function buildAreaEnemyMesh(data) {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055*sz, 5, 5), eyeM);
     eye.position.set(ex, 1.33*sz, 0.19*sz); g.add(eye);
   });
-  if (data.glow) {
-    const gc = new THREE.Color(data.glow);
-    g.children.forEach(c => { if (c.material && !c.material.emissive.equals(new THREE.Color(0xff0000))) { c.material.emissive = gc; c.material.emissiveIntensity = 0.5; } });
-  }
+  // Self-illuminate the body so enemies stay visible in dark, foggy areas.
+  // Use the glow color if defined, otherwise a lifted version of the body color.
+  const bodyC = new THREE.Color(data.color);
+  const gc = data.glow ? new THREE.Color(data.glow) : bodyC.clone().lerp(new THREE.Color(0xffffff), 0.25);
+  const glowInt = data.glow ? 0.6 : 0.5;
+  g.children.forEach(c => { if (c.material && !c.material.emissive.equals(new THREE.Color(0xff0000))) { c.material.emissive = gc; c.material.emissiveIntensity = glowInt; } });
   return g;
 }
 
