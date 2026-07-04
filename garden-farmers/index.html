@@ -2730,8 +2730,11 @@ window.addEventListener('wheel', e => {
 
   document.getElementById('attack-btn').addEventListener('touchstart', e => {
     e.preventDefault();
-    if (!gameStarted || gs.betweenWaves) return;
-    if (gs.placeMode) placeAtMouse(); else { mouseHeld = true; doAttack(); }
+    if (!gameStarted) return;
+    // Placement must work between waves too — that's when items are bought
+    if (gs.placeMode) { placeAtMouse(); return; }
+    if (gs.betweenWaves) return;
+    mouseHeld = true; doAttack();
   }, { passive: false });
   document.getElementById('attack-btn').addEventListener('touchend', () => { mouseHeld = false; });
 
@@ -2747,13 +2750,15 @@ window.addEventListener('wheel', e => {
 
   // Canvas touch: update aim direction from finger position
   document.getElementById('c').addEventListener('touchstart', e => {
-    if (!gameStarted || gs.betweenWaves) return;
+    if (!gameStarted || (gs.betweenWaves && !gs.placeMode)) return;
     for (const t of e.changedTouches) {
       if (t.identifier !== joystick.id) {
         const mx = (t.clientX / window.innerWidth) * 2 - 1;
         const my = -(t.clientY / window.innerHeight) * 2 + 1;
         raycaster.setFromCamera({ x: mx, y: my }, camera);
         raycaster.ray.intersectPlane(groundPlane, mouseWorld);
+        // In place mode a tap on the ground plants right there, like a desktop click
+        if (gs.placeMode) placeAtMouse();
         break;
       }
     }
@@ -3134,7 +3139,7 @@ function spawnProj(pos, dir, spd, data, owner, life) {
       m = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 8), em(col));
   }
   m.position.copy(pos); scene.add(m);
-  gs.projectiles.push({ mesh: m, pos: pos.clone(), vel: dir.clone().multiplyScalar(spd), data, owner, timer: life, hitSet: new Set(), bounceLeft: data.bounces || 0, _trailT: 0 });
+  gs.projectiles.push({ mesh: m, pos: pos.clone(), vel: dir.clone().multiplyScalar(spd), data, owner, timer: life, hitSet: new Set(), bounceLeft: data.bounces || data.chains || 0, _trailT: 0 });
 }
 
 function dmgEnemy(e, dmg) {
@@ -4151,21 +4156,27 @@ const eventText   = document.getElementById('event-text');
 const eventTimerBar = document.getElementById('event-timer-bar');
 let _eventBannerTimeout = null;
 
+let _bannerEvId = null;
 function showEventBanner(ev, remaining, total) {
-  eventText.textContent = ev.name + ' — ' + ev.desc;
-  eventBanner.className = 'show' + (ev.bad ? ' bad' : '');
+  // Only rewrite the banner DOM when the shown event changes — this is
+  // called every frame while an event is active.
+  if (_bannerEvId !== ev.id) {
+    _bannerEvId = ev.id;
+    eventText.textContent = ev.name + ' — ' + ev.desc;
+    eventBanner.className = 'show' + (ev.bad ? ' bad' : '');
+    eventTimerBar.style.display = ev.instant ? 'none' : 'block';
+  }
   if (ev.instant) {
-    eventTimerBar.style.display = 'none';
     clearTimeout(_eventBannerTimeout);
-    _eventBannerTimeout = setTimeout(() => { eventBanner.className = ''; }, 3000);
+    _eventBannerTimeout = setTimeout(() => { eventBanner.className = ''; _bannerEvId = null; }, 3000);
   } else {
-    eventTimerBar.style.display = 'block';
     eventTimerBar.style.width = (remaining / total * 100) + '%';
   }
 }
 
 function hideEventBanner() {
   eventBanner.className = '';
+  _bannerEvId = null;
 }
 
 function triggerRandomEvent() {
@@ -4216,7 +4227,8 @@ function updateEventSystem(dt) {
     gs.activeEvents[id] -= dt;
     if (gs.activeEvents[id] <= 0) {
       delete gs.activeEvents[id];
-      hideEventBanner();
+      if (Object.keys(gs.activeEvents).length === 0) hideEventBanner();
+      else _bannerEvId = null; // let the next still-active event repaint the banner
     } else {
       anyActive = true;
       const ev = RANDOM_EVENTS.find(e => e.id === id);
@@ -5507,6 +5519,15 @@ function updatePlacedPlants(dt) {
               spawnFX(e.pos.clone(), 0x44aaff, 0.3, 0.6);
             }
           });
+          // Healing Swan: the splash also heals nearby placed friends, as advertised
+          if (p.data.id === 'swan') {
+            gs.placedPlants.forEach(fp => {
+              if (fp !== p && fp.hp < fp.maxHp && fp.pos.distanceTo(p.pos) < p.data.range) {
+                fp.hp = Math.min(fp.maxHp, fp.hp + 12);
+                spawnFX(fp.pos.clone().add(new THREE.Vector3(0, 1, 0)), 0x66ff99, 0.35, 0.7);
+              }
+            });
+          }
           spawnFX(p.pos.clone(), 0x44aaff, 0.45, p.data.range * 0.4);
           sfxSplat();
 
@@ -5698,7 +5719,7 @@ function updateWildBirds(dt) {
     // Fade out last 5 seconds
     if (b.life < 5) {
       const op = b.life / 5;
-      b.mesh.children.forEach(c => { if (c.material) c.material.transparent = true; c.material.opacity = op; });
+      b.mesh.children.forEach(c => { if (c.material) { c.material.transparent = true; c.material.opacity = op; } });
     }
     return true;
   });
@@ -6584,7 +6605,7 @@ function saveGame() {
     const data = {
       straw: gs.straw, wave: gs.wave, skin: gs.skin, biome: gs.biome,
       barnHP: gs.barnHP, barnMaxHP: gs.barnMaxHP, barnCannons: gs.barnCannons,
-      playerHP: gs.playerHP, totalKills: gs.totalKills,
+      playerHP: gs.playerHP, playerMaxHP: gs.playerMaxHP, totalKills: gs.totalKills,
       ownedWeapons: [...gs.ownedWeapons], ownedPlaceables: [...gs.ownedPlaceables],
       hotbar: gs.hotbar, farmExpansions: gs.farmExpansions,
       savedAt: new Date().toISOString(),
@@ -6609,7 +6630,9 @@ function loadGame() {
     gs.barnHP = d.barnHP || 200; gs.barnMaxHP = d.barnMaxHP || 200;
     gs.barnCannons = d.barnCannons || 0;
     for (let i = 1; i <= gs.barnCannons; i++) addBarnCannonMesh(i);
-    gs.playerHP = d.playerHP || 100; gs.totalKills = d.totalKills || 0;
+    gs.playerMaxHP = d.playerMaxHP || 100;
+    gs.playerHP = Math.min(d.playerHP || 100, gs.playerMaxHP);
+    gs.totalKills = d.totalKills || 0;
     gs.ownedWeapons = new Set(d.ownedWeapons || ['carrot']);
     gs.ownedPlaceables = new Set(d.ownedPlaceables || []);
     gs.hotbar = d.hotbar || ['carrot', null, null, null, null];
@@ -6905,7 +6928,7 @@ function resetGame() {
   gs.ownedWeapons = new Set([_starter]); gs.ownedPlaceables = new Set();
   gs.hotbar = [_starter, null, null, null, null]; gs.activeSlot = 0;
   gs.totalKills = 0; attackCd = 0;
-  gs.playerSlowTimer = 0;
+  gs.playerSlowTimer = 0; gs.playerPoisonTimer = 0;
   gs.eventTimer = 90; gs.activeEvents = {}; gs._strawRainTick = 0;
   _merchantTimer = 420; _merchantActive = false; _merchantDuration = 0; _merchantStock = [];
   if (_inForest) {

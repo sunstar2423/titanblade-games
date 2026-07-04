@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Garden Farmers - Bug Fixes
+
+#### Fixed
+- **Mobile: purchased animals and defenses couldn't be placed between waves** — the place button and canvas taps were ignored while waiting for the next wave, exactly when players buy and place items (the straw was already spent). Tapping the ground in place mode now also plants directly at the tapped spot, matching desktop clicks
+- **Max HP upgrades were lost on reload** — the upgraded maximum was never saved, so a loaded game clamped you back to 100 max HP no matter how many upgrades you'd bought
+- **Poison carried over into a new game** — dying while poisoned by a jungle poison monkey left the poison ticking, so the next run started silently draining health
+- **Beehive and Crystal Shard never chained** — their advertised chain-attack now actually jumps between enemies (Beehive up to 6, Crystal Shard up to 8)
+- **Healing Swan never healed** — its splash now restores 12 HP to nearby placed plants and animals, as its description promises
+- Event banner no longer disappears when one event ends while another is still running, and it no longer rewrites the DOM every frame
+- Wild-bird fade-out no longer risks a crash on meshless children
+
 ### Garden Farmers - Performance Overhaul
 
 #### Fixed
